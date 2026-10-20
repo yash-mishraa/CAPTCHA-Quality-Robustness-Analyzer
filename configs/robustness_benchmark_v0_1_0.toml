@@ -1,0 +1,88 @@
+# Milestone 4B grouped robustness benchmark: occlusion and interference.
+#
+# This file is separate from the frozen Milestone 2 dataset, the Milestone 3
+# benchmark and the Milestone 4A pilot. It pins the exact inputs and declares
+# the model grid before any test-source prediction is made.
+#
+# Scope: synthetic image similarity (SSIM against the clean reference), not
+# human readability, CAPTCHA solvability, or real-world generalisation.
+
+[run]
+name = "occlusion-interference-robustness-benchmark"
+version = "v0.1.0"
+seed = 20261024
+n_bootstrap = 1000
+selection_metric = "rmse"
+output_reports = "reports/robustness_benchmark_v0_1_0"
+output_models = "models/robustness_benchmark_v0_1_0"
+
+[schema]
+feature_set_version = "v1"
+target = "ssim_target"
+feature_names = [
+  "intensity_mean",
+  "intensity_std",
+  "contrast_rms",
+  "ink_fraction",
+  "laplacian_variance",
+  "edge_density",
+  "histogram_entropy",
+  "noise_sigma_immerkaer",
+]
+split_names = ["train", "val", "test"]
+
+# Frozen Milestone 2 inputs. These files are never modified by this benchmark.
+[m3]
+dataset = "data/processed/captcha_quality_v0.1.0"
+config = "configs/dataset_v0_1_0.toml"
+dataset_version = "v0.1.0"
+generation_config_hash = "820cce7a77b5e95761f033b75e8cb2b304b6ad6293f67b5bc27bcf0823a6cef9"
+manifest_sha256 = "a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37"
+sources_sha256 = "07d50255cdc82ea77087fc64b398d62db49f96156eea9cf5aee59bc070ab5a37"
+features_sha256 = "d3715e7975cf41c41e49fa2338ca4e961a7a59981318be19149c78e89804d798"
+ground_truth_sha256 = "7a09a01a802f104b86cf69ce686a176c1cf3c98b6369c7e4578d870e4f768eea"
+summary_sha256 = "3f03e10e94c19de2747b3ae355b32fa044de658cf1bc8ad0e90f8f57e9a96787"
+split_assignment_sha256 = "70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232"
+
+# The M4A dataset is reused exactly as generated. Its clean rows duplicate the
+# M3 clean references and are excluded from expanded training/validation.
+[m4a]
+dataset = "data/processed/occlusion_interference_pilot_v0.1.0"
+config = "configs/robustness_pilot_occlusion_v0_1_0.toml"
+dataset_version = "v0.1.0"
+pilot_config_hash = "dc1a9b1557b3e8e49e86dc4e59beabf1d35d53c9f3a59300399a9f5a4e49e6f0"
+manifest_sha256 = "d08c1824ba81e3bc40a585b3047eec6c5f9aa2da0b0b9eb126057ab27fdcc92b"
+sources_sha256 = "73cd759adb7ebaea55fc1558e33783ff5bd102fb1df416fcbc6df8d2753622ef"
+features_sha256 = "261cfe9a5e2c3910f08361c800f7bcd7252c86d7b56c32006c7970bfb63a1ad9"
+summary_sha256 = "cd9dc97ff3a25c85976b26367da4a5b5f475d8dc8aeba671a55aecb981705ed4"
+image_pixel_hash_set = "8d64799026841a5987976fcc39e29bb003181db5d7275fdb6efe57490ff094d6"
+n_samples = 540
+n_sources = 60
+
+# The frozen M3 primary model is loaded through the existing verification path.
+[model]
+model_dir = "models/benchmark_v0_1_0"
+model_stem = "primary_model"
+card_sha256 = "26d89292a59964846acf3e8bab4b84a2bf41b17863608c620c35d75975ecca73"
+artifact_sha256 = "d727bdd48b1511c2e8e59a072bf43868c5dd997d71e6a884aa505c7b275fa085"
+
+# Small predeclared grid. It includes one linear model, ridge regularisation,
+# a bagged nonlinear forest and boosted trees. Selection uses expanded
+# validation sources only; test sources are not passed to the fit or selector.
+[grid]
+include_ols = true
+
+[grid.ridge]
+alphas = [0.01, 0.1, 1.0]
+
+[grid.random_forest]
+n_estimators = 300
+max_depths = [8, 0]
+min_samples_leafs = [1, 3]
+
+[grid.hist_gradient_boosting]
+max_iter = 200
+learning_rates = [0.05, 0.1]
+max_leaf_nodes = [15, 31]
+min_samples_leaf = 10
+l2_regularization = 0.0

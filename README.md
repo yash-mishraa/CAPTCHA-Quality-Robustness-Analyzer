@@ -4,11 +4,12 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–3 complete — the metric-validation pilot, a
-> reproducible dataset/feature pipeline, and a leakage-safe conventional-ML
-> benchmark with a held-out-font stress test have been run and logged. The CNN
-> comparison and dashboard are **not implemented yet**, and the project does
-> **not** predict human CAPTCHA solvability. See
+> **Status:** Milestones 0–3, M4A and M4B complete — the metric-validation
+> pilot, a reproducible dataset/feature pipeline, a leakage-safe conventional-ML
+> benchmark, an occlusion/interference feasibility pilot, and a grouped
+> occlusion/interference robustness benchmark have been run and logged. The CNN
+> comparison and dashboard are **not implemented**, and the project does **not**
+> predict human CAPTCHA solvability. See
 > [Current status](#current-status).
 
 ## Overview
@@ -69,6 +70,9 @@ fact.
 - Robustness/error analysis grouped by corruption family, severity and ink
   coverage for the conventional benchmark (**implemented**; a broader M5 error
   taxonomy is planned).
+- A grouped occlusion/interference robustness benchmark comparing frozen M3,
+  controlled conventional retraining and naive baselines on held-out sources
+  (**implemented**).
 - A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
@@ -134,12 +138,12 @@ fact.
                                   +--------------------------+
 ```
 
-Stages 1–7 are implemented. Stage 8 is partially implemented for the
-conventional benchmark (grouped uncertainty, corruption/coverage slices and a
-held-out-font stress test); the full error taxonomy is planned for M5. Stage 9
-is planned. Each implemented stage writes artifacts with an explicit schema and
-a recorded configuration hash, so a result can be traced back to the exact data
-and parameters that produced it. Manifests and summaries are timestamp-free,
+Stages 1–8 are implemented for the conventional benchmark and the M4B grouped
+robustness benchmark (grouped uncertainty, corruption/coverage slices, a
+held-out-font stress test and source-isolated interference evaluation). The full
+M5 error taxonomy and Stage 9 dashboard are planned. Each implemented stage
+writes artifacts with an explicit schema and a recorded configuration hash, so a
+result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
 which makes repeated runs byte-comparable.
 
 ## Technology stack
@@ -254,7 +258,7 @@ environment files are required at this stage.
 | M1 | Target definition and validation: confirm the reference-based quality target is stable, sensitive, and worth modelling | **Complete** — SSIM passes for blur and noise; PSNR passes for noise, fails for blur |
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
-| M4 | CNN comparison (small CNN and transfer learning) under the same splits; occlusion/interference robustness benchmark | Planned — M4A feasibility pilot complete (gate PASS), full benchmark not started |
+| M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
 | M5 | Robustness analysis by corruption family/severity and error taxonomy | Planned |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
@@ -263,8 +267,9 @@ that validated target into a versioned dataset and asks whether the target is
 trivially predictable from cheap features. Milestone 3 compares conventional
 models on that frozen dataset and tests whether the result survives a held-out
 font. Milestone 4A adds a separate feasibility pilot for occlusion and visual
-interference before any full robustness benchmark. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all four recorded
+interference; M4B uses its frozen source assignment for a grouped zero-shot and
+controlled-adaptation benchmark. See
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all five recorded
 experiments.
 
 ## Quick start: dataset pipeline
@@ -355,6 +360,29 @@ predeclared feasibility gate returns `FAIL`; dataset/config errors exit 2.
 The gate and findings are recorded in `EXP-0004` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.9.
 
+## Quick start: grouped robustness benchmark
+
+M4B reads the frozen M3 dataset and the M4A pilot dataset, re-verifies both, and
+writes only to its own Git-ignored output directories.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-robustness-benchmark run \
+    --config configs/robustness_benchmark_v0_1_0.toml
+
+uv run --extra image --extra ml captcha-robustness-benchmark verify \
+    --config configs/robustness_benchmark_v0_1_0.toml
+```
+
+The run evaluates the frozen M3 model zero-shot on the 12 held-out M4A test
+sources, fits a 12-candidate conventional grid on M3 plus M4A training-source
+rows, selects on validation sources only, and evaluates once on test. It writes
+`reports/robustness_benchmark_v0_1_0/` and
+`models/robustness_benchmark_v0_1_0/`, both Git-ignored. `verify` replays both
+models and checks the recorded hashes. See
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.10.
+
 ## Current status
 
 Implemented:
@@ -405,14 +433,46 @@ Implemented:
   thin lines and curved arcs, nested deterministic stroke pools, exact clean
   re-rendering, geometry replay, grouped bootstrap, feature contrast against
   blur/noise, and a predeclared feasibility gate.
+- A grouped robustness benchmark (`robustness_benchmark.py`,
+  `configs/robustness_benchmark_v0_1_0.toml`): frozen-M3 zero-shot evaluation,
+  expanded-data conventional grid, validation-only selection, source-grouped
+  bootstrap, clean-reference handling, data accounting, target-distribution
+  comparison and a run/verify CLI.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 285 tests in total, all passing, including byte-identical dataset
+- 292 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
-  geometry replay, pilot tamper detection, and CLI/report generation.
+  geometry replay, pilot tamper detection, M4B source isolation/merge checks,
+  frozen-model zero-shot replay, adaptation determinism and CLI/report
+  generation.
+
+Milestone 4B findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **Zero-shot absolute calibration does not transfer.** The frozen M3 model
+  scored MAE/RMSE/R² **0.1295 / 0.1612 / -1.0455** on the 12 held-out M4A test
+  sources. Clean references remained near-perfect (MAE 0.0004), but corrupted
+  rows were systematically under-predicted; on corrupted rows alone the paired
+  MAE difference from the M3 training mean was -0.0060 with 95% interval
+  [-0.0307, 0.0129], which includes zero.
+- **Controlled conventional adaptation worked.** Validation selected
+  `random_forest_depth_unlimited_leaf_1` (validation RMSE 0.0201). Test
+  MAE/RMSE/R² was **0.0131 / 0.0178 / 0.9752**, an 89.0% RMSE reduction versus
+  frozen M3; the paired RMSE interval was [-0.1558, -0.1256]. The expanded
+  training-mean baseline scored 0.1261 / 0.1466 / -0.6912 on the same rows.
+- **The M3 result was preserved.** On the original M3 test rows the retrained
+  model scored 0.0158 / 0.0239 / 0.9849, versus 0.0157 / 0.0226 / 0.9865 for
+  frozen M3.
+- **The target shift is disclosed.** Expanded training targets had mean 0.7587
+  versus 0.8524 on M4A test; the lower training mean comes from severe M3
+  blur/noise rows. No test row informed feature selection, scaling,
+  hyperparameters or calibration.
+- Intervals use only 12 source groups and are preliminary. The result supports
+  conventional modelling for this benchmark; it is not evidence that a CNN
+  would fail on a harder or human-labelled shift.
 
 Milestone 4A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -490,9 +550,9 @@ or solvability):
 - Adjacent severities were separated with large paired effects, no trial-level
   reversals occurred, and clean-vs-clean comparisons were exactly perfect.
 
-Not implemented (planned): the full occlusion/interference robustness benchmark,
-the CNN comparison, the full M5 error taxonomy, notebooks, the Streamlit
-dashboard, deployment, and any human-solvability or production-CAPTCHA claims.
+Not implemented (planned): the CNN comparison, the full M5 error taxonomy,
+notebooks, the Streamlit dashboard, deployment, and any human-solvability or
+production-CAPTCHA claims.
 The conventional model's performance is a synthetic image-similarity result, not
 a readability estimate.
 

@@ -1,7 +1,7 @@
 # Experiment Log
 
-**Status:** `EXP-0001`, `EXP-0002`, `EXP-0003` and `EXP-0004` completed. No
-other experiments have been run.
+**Status:** `EXP-0001` through `EXP-0005` completed. No other experiments have
+been run.
 
 This file is the authoritative record of experiments. An experiment is logged
 only if it can be reproduced from the recorded configuration, dataset version,
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0005` | 2026-10-20 | `robustness-analysis` | `completed` | Frozen M3 fails zero-shot absolute calibration on M4A test (R² -1.045); validation-selected retraining cuts RMSE from 0.161 to 0.018, so conventional adaptation is sufficient here |
 | `EXP-0004` | 2026-10-20 | `robustness-analysis` | `completed` | Occlusion/interference pilot is deterministic, non-degenerate and feature-distinct from blur/noise (gate PASS); no difficulty or solvability claim |
 | `EXP-0003` | 2026-10-20 | `conventional-benchmark` | `completed` | A validation-selected random forest reaches test R² 0.986 (RMSE 0.023) versus naive 0.194; held-out-font R² 0.980; CNN not justified for this target |
 | `EXP-0002` | 2026-10-20 | `dataset-generation` | `completed` | Two deterministic datasets generated; grouped splits verified; no single-feature triviality, but an eight-feature linear baseline reaches test R² 0.962 |
@@ -77,6 +78,172 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0005 — Grouped occlusion/interference benchmark: zero-shot failure, conventional adaptation success
+
+- **Date:** 2026-10-20
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Does the frozen M3 feature-only model transfer
+  zero-shot to the held-out M4A occlusion/interference test sources, and does a
+  controlled conventional model trained on M3 plus M4A training-source data
+  improve held-out performance without fitting anything on test? This is a
+  synthetic image-similarity benchmark, not a human-readability or CAPTCHA
+  solvability study.
+- **Code revision:** base `fd98fcf` plus the M4B implementation, committed as
+  `feat: benchmark interference robustness`. The reported run was repeated
+  after the commit so `run_metadata.json` records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; scikit-image 0.26.0; macOS 27.0.1 (arm64). No GPU was used.
+- **Configuration:** `configs/robustness_benchmark_v0_1_0.toml`; config sha256
+  `da1b9f95bebcf359dc920498563579fc5b56ec395c092c17689212160c8326f4`;
+  protocol hash
+  `bf85b329a27020e244651d49d695fb04c2c29e9f3c8bd66d4a3913bf86792d53`.
+  Seed `20261024`; 1000 source-grouped bootstrap replicates; selection on
+  validation RMSE. The frozen configs were not edited: dataset config sha256
+  `72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a`;
+  M3 benchmark config sha256
+  `bea99c4b5ec94bc603c381c2d70366a1a0f411c67c94f61c05df64639e92ac57`;
+  M4A pilot config sha256
+  `2ef025220beb1b17aab4593e862fbbd11d2a6618eb8d3ed43bc532f6e3924917`.
+- **Datasets:** frozen M3 `v0.1.0`, 540 rows / 60 sources, manifest sha256
+  `a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37`,
+  features sha256
+  `d3715e7975cf41c41e49fa2338ca4e961a7a59981318be19149c78e89804d798`;
+  M4A pilot `v0.1.0`, 540 rows / 60 sources (60 clean + 480 corrupted),
+  manifest sha256
+  `d08c1824ba81e3bc40a585b3047eec6c5f9aa2da0b0b9eb126057ab27fdcc92b`,
+  features sha256
+  `261cfe9a5e2c3910f08361c800f7bcd7252c86d7b56c32006c7970bfb63a1ad9`.
+- **Split:** frozen source-grouped split, assignment sha256
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`;
+  36/12/12 train/val/test sources for both datasets. All variants and severity
+  levels of a source remain in its assigned split.
+- **Merged data:** expanded train 612 rows / 36 sources = 324 M3 rows (36 clean
+  + 288 blur/noise) + 288 M4A corrupted rows; expanded validation 204 rows /
+  12 sources = 108 M3 + 96 M4A corrupted rows. M4A clean rows were excluded
+  from expanded train/validation because all 60 are exact duplicates of the M3
+  clean references. M4A test evaluation used 108 rows / 12 sources, including
+  12 clean-reference rows. No duplicate sample IDs or image hashes in the
+  expanded fit frames; all six isolation/leakage checks passed.
+- **Model:** frozen M3 primary model, card sha256
+  `26d89292a59964846acf3e8bab4b84a2bf41b17863608c620c35d75975ecca73`,
+  artifact sha256
+  `d727bdd48b1511c2e8e59a072bf43868c5dd997d71e6a884aa505c7b275fa085`.
+  Expanded grid: OLS, 3 Ridge alphas, 4 random forests and 4 histogram gradient
+  boosting configurations (12 candidates), fixed before test evaluation.
+- **Runtime:** 8.07 s through the CLI, including frozen-image verification,
+  M3/M4A target replay, 12-candidate fitting, grouped bootstrap, report and
+  model persistence.
+
+**Method.** Loaded and hash-checked both datasets and the frozen M3 bundle
+through the existing verifier. Verified M3 with the full dataset verifier and
+M4A with the pilot verifier (13 checks), then cross-checked that the two source
+tables agree on IDs, splits, fonts and text lengths and that the 60 M4A clean
+rows are exact image/feature/target duplicates of the M3 clean rows. Used the
+eight existing image-only features and the unchanged SSIM target. Experiment A
+evaluated the frozen M3 model and an M3-training-mean baseline on M4A test.
+Experiment B fitted the 12-candidate grid on expanded train rows, selected on
+expanded validation rows only, and evaluated the selected model plus an
+expanded-training-mean baseline once on M4A test. No scaler, calibration,
+feature-selection or hyperparameter decision used test rows. Source-grouped
+bootstrap resampled the 12 test sources, not images.
+
+**Experiment A — frozen M3 zero-shot on M4A test (108 rows / 12 sources).**
+
+| Model | Slice | n | MAE | RMSE | R² | Mean signed residual |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| frozen M3 | overall | 108 | 0.1295 | 0.1612 | -1.0455 | -0.1294 |
+| frozen M3 | clean | 12 | 0.0004 | 0.0012 | n/a | 0.0004 |
+| frozen M3 | corrupted | 96 | 0.1456 | 0.1710 | -1.6031 | -0.1456 |
+| frozen M3 | `thin_lines` | 48 | 0.1590 | 0.1876 | -1.6062 | -0.1590 |
+| frozen M3 | `arc_strokes` | 48 | 0.1322 | 0.1527 | -1.7624 | -0.1322 |
+| M3 training mean | overall | 108 | 0.1688 | 0.1948 | -1.9853 | 0.1589 |
+| M3 training mean | corrupted | 96 | 0.1516 | 0.1759 | -1.7545 | 0.1404 |
+
+The frozen model was near-perfect on clean references but under-predicted
+increasingly with density: MAE 0.0496, 0.0990, 0.1690 and 0.2649 at severities
+1-4. Its overall MAE advantage over the M3 training mean is therefore driven by
+the clean slice. On corrupted rows the paired source-grouped MAE difference was
+-0.0060 with 95% interval [-0.0307, 0.0129], which includes zero; on
+`thin_lines` the frozen model was descriptively worse (+0.0141, interval
+[-0.0124, 0.0388]). Negative R² means it was worse than a constant test-mean
+predictor in squared-error terms. Zero-shot absolute calibration does not
+transfer to this interference distribution.
+
+**Experiment B — conventional adaptation on M4A test.**
+
+| Model | Slice | n | MAE | RMSE | R² | Mean signed residual |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| expanded model | overall | 108 | 0.0131 | 0.0178 | 0.9752 | 0.0047 |
+| expanded model | clean | 12 | 0.0024 | 0.0074 | n/a | 0.0024 |
+| expanded model | corrupted | 96 | 0.0144 | 0.0187 | 0.9690 | 0.0050 |
+| expanded model | `thin_lines` | 48 | 0.0162 | 0.0213 | 0.9664 | 0.0053 |
+| expanded model | `arc_strokes` | 48 | 0.0126 | 0.0156 | 0.9712 | 0.0047 |
+| expanded training mean | overall | 108 | 0.1261 | 0.1466 | -0.6912 | 0.0937 |
+| expanded training mean | corrupted | 96 | 0.1117 | 0.1300 | -0.5044 | 0.0753 |
+
+Validation selected `random_forest_depth_unlimited_leaf_1` (validation RMSE
+0.0201; R² 0.9864). On test, the adapted model improved over frozen M3 by
+-0.1164 MAE (95% interval [-0.1277, -0.1003]) and -0.1435 RMSE
+([-0.1558, -0.1256]); the paired difference excluded zero at every severity and
+both variants. The clean slice was slightly worse than frozen M3 (+0.0021 MAE,
+interval [-0.0000, 0.0056]), but both were close to perfect and the interval
+includes zero. Severity RMSE rose from 0.0143 to 0.0245 and mean signed residual
+from +0.0027 to +0.0100, so the high-density end remains the hardest slice.
+Test R² is unstable at low severity (0.445 at severity 1), where target variance
+is small, despite low MAE.
+
+On the original M3 blur/noise test rows, the expanded model remained close to
+the frozen M3 reference: overall MAE/RMSE/R² 0.0158/0.0239/0.9849 versus
+0.0157/0.0226/0.9865 for frozen M3. It did not sacrifice the original families
+to gain interference performance.
+
+**Target distribution.** Expanded training targets had mean 0.7587 (SD 0.1717,
+range 0.3174-1.0); M4A test targets had mean 0.8524 (SD 0.1133, range
+0.5532-1.0). M4A corrupted test mean was 0.8340 and expanded corrupted-only
+train mean 0.8319; the lower full-expanded mean is caused by the severe M3 blur
+and noise rows. The shift is disclosed and was not used to tune anything.
+
+**Conclusion.** The frozen M3 model does not transfer useful absolute SSIM
+calibration to M4A interference, despite near-perfect clean-reference
+predictions; the failure is a target/covariate shift, not evidence about human
+difficulty. A small conventional model trained on M3 plus training-source M4A
+corrupted rows, selected on validation sources only, removes most of the error
+and generalises descriptively across both variants and all four severities. On
+this benchmark, conventional modelling is sufficient; a CNN is not justified by
+these results. The 12-source intervals are preliminary and are not significance
+claims.
+
+**Limitations.**
+
+- One synthetic renderer, one 192x64 canvas, three fonts and 60 sources.
+- Only 12 held-out test sources; all intervals are wide and preliminary.
+- M4A severity is nested stroke density, not an independent redraw at each
+  level.
+- The expanded model is trained on a mixture whose target distribution differs
+  from M4A test; the shift is reported but not corrected.
+- SSIM is a full-reference structural proxy, not readability or solvability.
+- No cross-generator, real-image, human or security evaluation was performed.
+- The clean-reference R² is undefined by construction and is not reported as a
+  perfect fit.
+
+**Next step.** Close M4B as a conventional-modelling result. Do not start a CNN,
+dashboard or deployment on the basis of this benchmark. A future shift study
+would need a new predeclared protocol, ideally with independent generators or
+human labels, before model capacity is treated as the limiting factor.
+
+**Artifacts.** Git-ignored: `reports/robustness_benchmark_v0_1_0/`
+(`benchmark.md`, data accounting, isolation checks, zero-shot/adaptation
+metrics, predictions, residuals, candidate validation, target distribution,
+uncertainty, `run_metadata.json`) and
+`models/robustness_benchmark_v0_1_0/` (`expanded_model.joblib` + card).
+Regenerate with `uv run --extra image --extra ml captcha-robustness-benchmark
+run --config configs/robustness_benchmark_v0_1_0.toml`; verify with
+`captcha-robustness-benchmark verify --config
+configs/robustness_benchmark_v0_1_0.toml`.
 
 ---
 

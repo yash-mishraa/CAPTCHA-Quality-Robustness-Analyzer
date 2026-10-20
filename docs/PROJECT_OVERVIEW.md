@@ -1,9 +1,10 @@
 # Project Overview
 
 **Status:** Milestones 0–3 complete, plus the M4A occlusion/interference
-feasibility pilot. A reproducible dataset and image-feature pipeline, a
-leakage-safe conventional-ML benchmark and the isolated pilot exist; the full
-robustness benchmark, CNN comparison and dashboard are planned.
+feasibility pilot and the M4B grouped robustness benchmark. A reproducible
+dataset and image-feature pipeline, a leakage-safe conventional-ML benchmark,
+and source-isolated zero-shot/adaptation evaluation exist. The CNN comparison
+and dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -77,9 +78,10 @@ predict human solvability or to rank real CAPTCHA products.
   with an ordered severity ladder. Severity 0 is the identity condition and is
   represented once per source as the shared clean sample rather than duplicated
   per family.
-- **M4A pilot only:** two occlusion/visual-interference variants (thin lines and
-  curved arcs) are implemented in `interference.py` and validated in a separate
-  dataset. They are deliberately not part of the frozen `v0.1.0` dataset.
+- **M4A/M4B only:** two occlusion/visual-interference variants (thin lines and
+  curved arcs) are implemented in `interference.py`, validated in a separate
+  M4A pilot dataset, and used unchanged by the M4B grouped benchmark. They are
+  deliberately not part of the frozen `v0.1.0` dataset.
 - **Deferred for the frozen dataset:** contrast/brightness shifts, geometric
   warps and compression artefacts.
 - **Rule:** each sample records its family, severity, numeric parameters, and
@@ -143,11 +145,20 @@ removes one font from fitting and validation. Model artifacts carry feature
 schema, target, dataset/split hashes and selection metadata, and a verification
 command rejects mismatches.
 
+**Implemented (M4B): grouped interference benchmark.** The frozen M3 model is
+evaluated zero-shot on the 12 M4A test sources. An expanded conventional model
+is fitted on M3 rows plus M4A corrupted rows from training sources only,
+selected on validation sources, and evaluated once on test. M4A clean rows are
+excluded from fitting because they duplicate the M3 clean references. The same
+eight image-only features and unchanged SSIM target are used; no test row
+informs preprocessing, calibration or selection. The frozen model reached test
+R² -1.045, while the validation-selected random forest reached 0.975.
+
 **Planned (M4): CNN comparison.** A small from-scratch CNN and a documented
 transfer-learning variant, under the same frozen split and held-out-font
-protocol. The M3 result (test R² 0.986 with a random forest) is the baseline a
-CNN must beat; the evidence does not justify a CNN on the current synthetic
-target.
+protocol. The M3 result (test R² 0.986) and the M4B adaptation result (0.975)
+are the baselines a CNN must beat; the evidence does not justify a CNN on the
+current synthetic target or the M4B interference split.
 
 Both tracks use the same metrics and per-slice breakdowns. Simpler models are
 the default; a CNN must justify its cost out-of-sample.
@@ -169,6 +180,14 @@ the default; a CNN must justify its cost out-of-sample.
   geometry, exact clean-reference re-rendering, geometry replay, grouped
   bootstrap, feature contrast against blur/noise, and a predeclared go/no-go
   gate. No model is trained.
+
+**Implemented for M4B (grouped robustness benchmark):**
+
+- Zero-shot frozen-M3 evaluation, expanded-data fitting with validation-only
+  selection, a naive target-mean baseline, source-grouped bootstrap intervals,
+  variant/severity/residual slices, target-distribution accounting, and
+  model/report persistence with replay verification. Twelve test sources are
+  treated as preliminary uncertainty, not significance evidence.
 
 **Planned (M5):**
 
@@ -207,14 +226,16 @@ src/captcha_quality/
 ├── benchmark.py        # frozen protocol, diagnostics, report/CLI      (implemented, M3)
 ├── interference.py     # occlusion/interference pilot corruption        (implemented, M4A)
 ├── robustness_pilot.py # pilot runner, verification, analysis, gate    (implemented, M4A)
+├── robustness_benchmark.py # grouped zero-shot/adaptation benchmark, CLI (implemented, M4B)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5)
 ```
 
 `render.py` now serves both the frozen Milestone 1 pilot and the Milestone 2
 dataset. Dataset configurations enable ink-centred placement and strict bounds;
 the pilot keeps the original defaults so `EXP-0001` remains byte-reproducible.
-`benchmark.py` and `modelling.py` implement the conventional M3 stage; no CNN
-code exists yet.
+`benchmark.py` and `modelling.py` implement the conventional M3 stage;
+`robustness_benchmark.py` implements M4B using the same feature/model
+persistence path. No CNN code exists yet.
 
 ## 4. Artifact contracts
 
@@ -233,6 +254,9 @@ code exists yet.
 | Pilot config | `configs/robustness_pilot_occlusion_v0_1_0.toml` | seed, frozen dataset hashes, two stroke ladders, predeclared gate thresholds, output paths |
 | Pilot dataset | `data/processed/occlusion_interference_pilot_v0.1.0/` (Git-ignored) | separate manifest, sources, features, summary and 540 images; no raw text |
 | Pilot reports | `reports/robustness_pilot/` (Git-ignored) | level/uncertainty/trend/feature/saturation tables, gate results, Markdown report, contact sheets |
+| Robustness benchmark config | `configs/robustness_benchmark_v0_1_0.toml` | frozen M3/M4A/model hashes, feature schema, seed, 12-candidate grid, selection metric, bootstrap count, output paths |
+| Robustness model | `models/robustness_benchmark_v0_1_0/` (Git-ignored) | expanded `.joblib` estimator + JSON card: feature names/order, target, dataset/split hashes, selected candidate, metrics, package versions, artifact SHA-256 |
+| Robustness reports | `reports/robustness_benchmark_v0_1_0/` (Git-ignored) | zero-shot/adaptation metrics, predictions, residuals, isolation checks, data accounting, candidate validation, target distribution, uncertainty, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -247,7 +271,7 @@ byte-for-byte.
 | M1 | Validate target definition and metric behaviour before scale-up (complete) |
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
-| M4 | CNN comparison; occlusion/interference robustness benchmark (M4A feasibility pilot complete, full benchmark not started) |
+| M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
 | M5 | Robustness analysis and error taxonomy |
 | M6 | Dashboard, reproducibility packaging, final report |
 
@@ -273,6 +297,13 @@ byte-for-byte.
 - **Pilot scope:** the M4A gate supports a non-degenerate, feature-distinct,
   replayable family, but does not show that it is harder for humans or that it
   generalises beyond 60 sources, three fonts and one canvas.
+- **Zero-shot shift:** frozen M3 is near-perfect on clean references but fails
+  absolute calibration on M4A interference (test R² -1.045, systematic
+  under-prediction). The benchmark reports this as a transfer failure, not as a
+  human-difficulty result.
+- **Small test support:** M4B has only 12 held-out sources. Source-grouped
+  intervals are wide and preliminary; no universal significance threshold was
+  introduced after seeing test results.
 - **Font licensing:** only redistributable fonts may be used or bundled.
 
 ## 7. Implemented today
@@ -301,5 +332,20 @@ coverage slices, grouped bootstrap, model persistence/verification, and a
 held-out-font stress test. The selected random forest reached test R² 0.9865 /
 RMSE 0.0226 versus naive 0.1942; metadata-only severity + family reached 0.9112;
 the held-out font reached 0.9799 (selected HGB) and 0.9832 (random-forest family
-winner). The evidence does **not** justify a CNN for this synthetic target. No
-CNN or dashboard exists yet.
+winner).
+
+Milestone 4A: an isolated occlusion/interference pilot with thin lines and
+curved arcs, deterministic stroke geometry, exact clean re-rendering, feature
+contrast and a predeclared gate. All five criteria passed; it established a
+replayable, non-degenerate, feature-distinct family without making a difficulty
+or solvability claim.
+
+Milestone 4B: a grouped robustness benchmark with 12 training-source expansion,
+validation-only selection among 12 conventional candidates, frozen-M3 zero-shot
+evaluation and source-grouped intervals. Frozen M3 reached test R² -1.045;
+the adapted random forest reached MAE/RMSE/R² 0.0131/0.0178/0.9752 versus
+0.1261/0.1466/-0.6912 for the expanded training mean. On the original M3 test
+rows the adapted model stayed close to frozen M3 (0.0158/0.0239/0.9849 versus
+0.0157/0.0226/0.9865). The evidence supports conventional modelling for this
+benchmark and does **not** justify a CNN on this split. No CNN or dashboard
+exists yet.

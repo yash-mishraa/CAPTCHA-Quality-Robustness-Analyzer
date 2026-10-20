@@ -1,8 +1,8 @@
 # Methodology
 
-**Status:** Milestones 0–2 complete. The target is validated for the pilot
-conditions, and a reproducible dataset/feature pipeline exists. Modelling and
-CNN comparison remain planned.
+**Status:** Milestones 0–3, M4A and M4B complete. The target and dataset are
+frozen, the conventional benchmark and grouped interference benchmark are
+implemented, and the CNN comparison and dashboard remain planned.
 **Last updated:** 2026-10-20
 
 ## 1. Research framing
@@ -11,8 +11,8 @@ CNN comparison remain planned.
 CAPTCHA-style corpus be predicted from image content alone, and how does
 predictive performance vary across corruption families?
 
-**Primary task (planned).** Supervised regression of a defined reference-based
-image-quality score.
+**Primary task (implemented).** Supervised regression of a defined
+reference-based image-quality score.
 
 **Secondary baseline task (planned).** Classification of corruption family and,
 separately, severity level. These are treated as diagnostic baselines, not the
@@ -643,7 +643,8 @@ diagnostics on the same rows. A small from-scratch CNN and a documented
 transfer-learning variant are sufficient. Parameter count, training time and
 hardware must be reported. The CNN is retained only if it improves held-out
 performance, especially under font or corruption shift, without test-set
-tuning. No CNN code or dashboard exists in Milestone 3.
+tuning. No CNN code or dashboard exists in Milestone 3. M4B evaluated a conventional
+adaptation and still found no capacity-bound limitation; see §5.10.
 
 ### 5.9 M4A occlusion/interference pilot (not a robustness benchmark)
 
@@ -727,6 +728,133 @@ predeclare its model comparison; the pilot itself trains no model. Marginal SSIM
 drop per added stroke declines with density (lines -0.057 to -0.041; arcs -0.046
 to -0.034), so a full ladder should retain the saturation caveat.
 
+### 5.10 M4B grouped occlusion/interference robustness benchmark
+
+Milestone 4B asks two questions on the frozen M4A dataset: does the unmodified
+M3 model transfer zero-shot to the held-out interference sources, and does a
+conventional model trained on M3 plus M4A training-source rows improve held-out
+performance? It is implemented in `robustness_benchmark.py` and configured by
+`configs/robustness_benchmark_v0_1_0.toml`.
+
+**Protocol freeze.** The M3 dataset, split, model bundle/card, reports and M4A
+pilot are read-only inputs. Their pinned hashes are recorded in the config and
+rechecked by `verify`. The benchmark writes only to
+`reports/robustness_benchmark_v0_1_0/` and
+`models/robustness_benchmark_v0_1_0/` (both Git-ignored). The feature schema is
+the existing eight image-only features; the target is the unchanged
+`ssim_target`. SSIM, PSNR, severity, variant family, font, text length, source
+ID, split and generation metadata are excluded from primary model inputs.
+
+**Predeclared interpretation rules.** The protocol was fixed before test
+evaluation. Zero-shot transfer is assessed from the clean-versus-corrupted
+residual pattern and R², not from a universal pass threshold: near-perfect clean
+predictions plus negative corrupted R² means absolute calibration did not
+transfer. Adaptation is reported as beneficial when the validation-selected
+model has lower held-out RMSE than frozen M3 and the paired source-grouped
+difference is consistent with improvement. Limited generalisation is flagged
+when variant or high-density slices remain worse, even if the aggregate
+improves. A CNN is justified only if a meaningful limitation persists after the
+conventional comparison; a lower aggregate loss alone is not enough. No
+universal numeric pass/fail threshold is introduced after seeing test results.
+
+**Source assignment and merge.** The M4A source assignment is the existing
+36/12/12 train/validation/test split. Every variant and severity of a source
+stays in its split. Expanded training uses all M3 training rows plus M4A
+corrupted rows from training sources only. Expanded validation uses M3
+validation rows plus M4A corrupted rows from validation sources only. M4A clean
+rows are excluded from fitting and selection because all 60 are exact
+duplicates of the M3 clean references; the 12 M4A clean test rows remain only in
+a separately reported clean-reference evaluation slice. The merged frames are:
+
+| Frame | Rows | Sources | Composition |
+| --- | ---: | ---: | --- |
+| Expanded train | 612 | 36 | 324 M3 (36 clean + 288 blur/noise) + 288 M4A corrupted |
+| Expanded validation | 204 | 12 | 108 M3 (12 clean + 96 blur/noise) + 96 M4A corrupted |
+| M4A test | 108 | 12 | 12 clean + 96 corrupted (48 per variant) |
+| M3 test reference | 108 | 12 | 12 clean + 96 blur/noise |
+
+The merge audit verifies source isolation in both datasets, identical source
+IDs/splits/fonts/text lengths, exact clean-duplicate provenance, no duplicate
+sample IDs or image hashes in the expanded fit frames, and exclusion of M4A
+clean rows from fitting. All six checks pass.
+
+**Experiment A — zero-shot frozen M3.** The frozen M3 model is loaded through
+the existing bundle verifier and evaluated once on the M4A test sources. Its
+comparison baseline is the M3 training-mean target, which keeps the naive
+baseline fixed to the frozen model's own training distribution. Experiment B
+uses a separate expanded training-mean baseline.
+
+| Model | Slice | n | MAE | RMSE | R² | Mean residual |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Frozen M3 | overall | 108 | 0.1295 | 0.1612 | -1.0455 | -0.1294 |
+| Frozen M3 | clean | 12 | 0.0004 | 0.0012 | n/a | 0.0004 |
+| Frozen M3 | corrupted | 96 | 0.1456 | 0.1710 | -1.6031 | -0.1456 |
+| Frozen M3 | `thin_lines` | 48 | 0.1590 | 0.1876 | -1.6062 | -0.1590 |
+| Frozen M3 | `arc_strokes` | 48 | 0.1322 | 0.1527 | -1.7624 | -0.1322 |
+| M3 training mean | overall | 108 | 0.1688 | 0.1948 | -1.9853 | 0.1589 |
+| M3 training mean | corrupted | 96 | 0.1516 | 0.1759 | -1.7545 | 0.1404 |
+
+The frozen model is near-perfect on clean references but under-predicts with
+increasing density: MAE 0.0496, 0.0990, 0.1690 and 0.2649 at severities 1-4.
+Its overall MAE advantage over the M3 training mean is therefore driven by the
+clean slice. The paired source-grouped MAE difference on corrupted rows is
+-0.0060 with 95% interval [-0.0307, 0.0129], which includes zero; on
+`thin_lines` the frozen model is descriptively worse (+0.0141, interval
+[-0.0124, 0.0388]). Negative R² means it is worse than a constant test-mean
+predictor in squared-error terms. Zero-shot absolute calibration does not
+transfer.
+
+**Experiment B — controlled conventional adaptation.** A fixed 12-candidate
+grid was declared before test evaluation: OLS, Ridge with three alphas, four
+random forests and four histogram gradient boosting configurations. It is
+fitted on expanded train only, selected on expanded validation RMSE only, and
+the selected model is evaluated once on M4A test. No scaler, calibration,
+feature selection or hyperparameter decision uses test rows.
+
+Validation selected `random_forest_depth_unlimited_leaf_1` (validation RMSE
+0.0201, R² 0.9864). Test results:
+
+| Model | Slice | n | MAE | RMSE | R² | Mean residual |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Expanded model | overall | 108 | 0.0131 | 0.0178 | 0.9752 | 0.0047 |
+| Expanded model | clean | 12 | 0.0024 | 0.0074 | n/a | 0.0024 |
+| Expanded model | corrupted | 96 | 0.0144 | 0.0187 | 0.9690 | 0.0050 |
+| Expanded model | `thin_lines` | 48 | 0.0162 | 0.0213 | 0.9664 | 0.0053 |
+| Expanded model | `arc_strokes` | 48 | 0.0126 | 0.0156 | 0.9712 | 0.0047 |
+| Expanded training mean | overall | 108 | 0.1261 | 0.1466 | -0.6912 | 0.0937 |
+| Expanded training mean | corrupted | 96 | 0.1117 | 0.1300 | -0.5044 | 0.0753 |
+
+The adapted model improves over frozen M3 by -0.1164 MAE (95% interval
+[-0.1277, -0.1003]) and -0.1435 RMSE ([-0.1558, -0.1256]); the paired
+difference excludes zero at every severity and both variants. The clean slice
+is slightly worse than frozen M3 (+0.0021 MAE, interval [-0.0000, 0.0056]) but
+both are close to perfect and the interval includes zero. Severity RMSE rises
+from 0.0143 to 0.0245 and mean signed residual from +0.0027 to +0.0100, so the
+high-density end remains hardest. Test R² is unstable at low severity (0.445 at
+severity 1), where target variance is small despite low MAE.
+
+On the original M3 blur/noise test rows, the expanded model remains close to the
+frozen reference: overall MAE/RMSE/R² 0.0158/0.0239/0.9849 versus
+0.0157/0.0226/0.9865 for frozen M3. It does not sacrifice the original families
+to gain interference performance.
+
+**Target distribution.** Expanded training targets have mean 0.7587 (SD 0.1717,
+range 0.3174-1.0); M4A test targets have mean 0.8524 (SD 0.1133, range
+0.5532-1.0). M4A corrupted test mean is 0.8340 and the expanded corrupted-only
+training mean is 0.8319; the lower full-expanded mean is caused by severe M3
+blur/noise rows. The shift is disclosed and is not used for tuning. The naive
+expanded-mean baseline (0.1261/0.1466/-0.6912) is reported so that the expanded
+target mean is not mistaken for learned corruption response.
+
+**Decision.** On this benchmark, conventional modelling is sufficient. The
+frozen model's failure is a target/covariate shift that controlled retraining
+addresses; there is no evidence that model capacity is the binding limitation.
+A CNN is not justified by these results. With 12 held-out sources, all intervals
+are preliminary and no significance or universal pass/fail threshold is claimed.
+The result does not measure human readability or CAPTCHA solvability, does not
+generalise beyond the synthetic renderer, and does not cover a cross-generator
+or human-labelled shift.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |
@@ -738,6 +866,7 @@ to -0.034), so a full ladder should retain the saturation caveat.
 | Tuning on the test set | Optimistic bias | Fixed validation strategy; test used once per experiment |
 | Selecting target definition after seeing test scores | Target leakage through iteration | Freeze target in M1; record any change and re-run everything |
 | Duplicate images from different configs | Hidden overlap | Hash images and manifest records; report duplicates |
+| Clean references duplicated across datasets | Double-counting or accidental clean leakage | Exact sample/image hash comparison; exclude M4A clean rows from expanded fitting and report the clean test slice separately |
 | Font memorisation | Model learns font identity | Font-held-out evaluation slice |
 | Metric code drift | Scores not comparable across runs | Pin metric implementation, log version/config hash |
 
@@ -752,8 +881,8 @@ to -0.034), so a full ladder should retain the saturation caveat.
   to the M2 diagnostic. The limitation is a noisier selection signal.
 - Bootstrap intervals resample held-out source groups, not variants, for
   headline metrics.
-- Report the number of independent groups, not just the number of images. Test
-  intervals use 12 groups; held-out-font intervals use 20.
+- Report the number of independent groups, not just the number of images. M3 and
+  M4B test intervals use 12 groups; held-out-font intervals use 20.
 - The held-out-font experiment removes one font from fitting and validation
   before selection. It is a stress test, not a replacement for the primary
   split.
