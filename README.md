@@ -58,7 +58,8 @@ fact.
 - A deterministic synthetic text-image renderer with recorded metadata
   (**implemented**).
 - A configurable distortion engine with two controlled corruption families and
-  severity ladders (**implemented**).
+  severity ladders in the frozen dataset, plus two isolated
+  occlusion/interference pilot variants (**implemented**).
 - Reference-based image-quality targets (SSIM primary, PSNR secondary for noise)
   and eight documented handcrafted features (**implemented**).
 - A versioned dataset with a public manifest, grouped splits, and programmatic
@@ -253,7 +254,7 @@ environment files are required at this stage.
 | M1 | Target definition and validation: confirm the reference-based quality target is stable, sensitive, and worth modelling | **Complete** — SSIM passes for blur and noise; PSNR passes for noise, fails for blur |
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
-| M4 | CNN comparison (small CNN and transfer learning) under the same splits | Planned |
+| M4 | CNN comparison (small CNN and transfer learning) under the same splits; occlusion/interference robustness benchmark | Planned — M4A feasibility pilot complete (gate PASS), full benchmark not started |
 | M5 | Robustness analysis by corruption family/severity and error taxonomy | Planned |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
@@ -261,8 +262,10 @@ Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
 that validated target into a versioned dataset and asks whether the target is
 trivially predictable from cheap features. Milestone 3 compares conventional
 models on that frozen dataset and tests whether the result survives a held-out
-font. See [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all three
-recorded experiments.
+font. Milestone 4A adds a separate feasibility pilot for occlusion and visual
+interference before any full robustness benchmark. See
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all four recorded
+experiments.
 
 ## Quick start: dataset pipeline
 
@@ -329,6 +332,29 @@ The command exits 2 on configuration/dataset errors and 1 if model verification
 fails. See [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5 for the frozen
 protocol, model grid, metrics, leakage controls and held-out-font design.
 
+## Quick start: occlusion/interference pilot
+
+This is a feasibility pilot, not a robustness benchmark. It reads the frozen
+reference dataset, verifies and re-renders every clean source, writes a separate
+pilot dataset, and does not train or retune a model.
+
+```bash
+uv sync --extra dev --extra image
+
+uv run --extra image captcha-robustness-pilot run \
+    --config configs/robustness_pilot_occlusion_v0_1_0.toml
+
+# Optional: verify the written pilot dataset against its recorded geometry
+uv run --extra image captcha-robustness-pilot verify \
+    --config configs/robustness_pilot_occlusion_v0_1_0.toml
+```
+
+The run writes `data/processed/occlusion_interference_pilot_v0.1.0/` and
+`reports/robustness_pilot/` (both Git-ignored). It exits 1 only when the
+predeclared feasibility gate returns `FAIL`; dataset/config errors exit 2.
+The gate and findings are recorded in `EXP-0004` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.9.
+
 ## Current status
 
 Implemented:
@@ -374,13 +400,32 @@ Implemented:
   search, validation-only selection, test evaluated once per family winner,
   metadata diagnostics, corruption/severity/coverage slices, grouped bootstrap,
   and a held-out-font stress test.
+- An isolated occlusion/interference pilot (`interference.py`,
+  `robustness_pilot.py`, `configs/robustness_pilot_occlusion_v0_1_0.toml`):
+  thin lines and curved arcs, nested deterministic stroke pools, exact clean
+  re-rendering, geometry replay, grouped bootstrap, feature contrast against
+  blur/noise, and a predeclared feasibility gate.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 230 tests in total, all passing, including byte-identical dataset
+- 285 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
-  held-out-font isolation, persistence checks and CLI/report generation.
+  held-out-font isolation, persistence checks, interference determinism and
+  geometry replay, pilot tamper detection, and CLI/report generation.
+
+Milestone 4A findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- The occlusion/interference pilot passed all five predeclared gate criteria:
+  deterministic and exactly replayable, non-degenerate, monotone in density,
+  feature-distinct from blur/noise, and duplicate-free.
+- 60 sources × (1 clean + 2 variants × 4 severities) = 540 samples. Mean SSIM
+  fell from 0.943 to 0.662 for `thin_lines` and 0.947 to 0.715 for
+  `arc_strokes`; 0/360 adjacent steps increased.
+- The pilot does **not** show the family is harder for humans or more
+  solvable/unsolvable. It is evidence for proceeding to a separate grouped
+  robustness benchmark, not a benchmark result.
 
 Milestone 3 findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -445,10 +490,11 @@ or solvability):
 - Adjacent severities were separated with large paired effects, no trial-level
   reversals occurred, and clean-vs-clean comparisons were exactly perfect.
 
-Not implemented (planned): the CNN comparison, the full M5 error taxonomy,
-notebooks, the Streamlit dashboard, deployment, and any human-solvability or
-production-CAPTCHA claims. The conventional model's performance is a synthetic
-image-similarity result, not a readability estimate.
+Not implemented (planned): the full occlusion/interference robustness benchmark,
+the CNN comparison, the full M5 error taxonomy, notebooks, the Streamlit
+dashboard, deployment, and any human-solvability or production-CAPTCHA claims.
+The conventional model's performance is a synthetic image-similarity result, not
+a readability estimate.
 
 ## License
 

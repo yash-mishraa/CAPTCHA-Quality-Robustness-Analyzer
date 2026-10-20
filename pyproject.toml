@@ -69,6 +69,7 @@ Repository = "https://github.com/yash-mishraa/CAPTCHA-Quality-Robustness-Analyze
 captcha-pilot = "captcha_quality.pilot:main"
 captcha-dataset = "captcha_quality.cli:main"
 captcha-benchmark = "captcha_quality.benchmark:main"
+captcha-robustness-pilot = "captcha_quality.robustness_pilot:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

@@ -124,6 +124,46 @@ scikit-learn's documented persistence format but is **not** safe for untrusted
 files; only load artifacts generated locally. `captcha-benchmark verify-model`
 checks the cards and performs an eight-feature smoke prediction.
 
+## M4A occlusion/interference pilot artifacts
+
+The M4A feasibility pilot is separate from the frozen reference dataset and the
+M3 benchmark. It reads the frozen `v0.1.0` sources without modifying them and
+writes:
+
+```text
+data/processed/occlusion_interference_pilot_v0.1.0/
+  manifest.csv                 # one row per clean/corrupted pilot sample
+  sources.csv                  # frozen split/font provenance + pilot clean paths
+  features.csv                 # sample_id + the same eight features
+  pilot_summary.json           # config, hashes, determinism, verification, gate
+  images/
+    clean/<source_id>.png
+    thin_lines/<sample_id>.png
+    arc_strokes/<sample_id>.png
+
+reports/robustness_pilot/
+  pilot.md                     # feasibility report
+  level_summary.csv
+  uncertainty.csv
+  trend_by_source.csv
+  trend_violations.csv
+  feature_summary.csv
+  feature_effect_sizes.csv
+  feature_distinctness.csv
+  feature_target_correlations.csv
+  saturation.csv
+  gate_results.json
+  examples_thin_lines.png
+  examples_arc_strokes.png
+```
+
+The pilot manifest records the exact stroke geometry, seed, width, intensity,
+targets and image/reference hashes. Verification replays every corrupted image
+from the recorded geometry. These artifacts are Git-ignored and are **not**
+part of the frozen dataset or its test split. Regenerate with
+`captcha-robustness-pilot run --config
+configs/robustness_pilot_occlusion_v0_1_0.toml`.
+
 ## Retention and cleanup
 
 - `data/raw/` and `data/processed/` are safe to delete; regenerate from configs.

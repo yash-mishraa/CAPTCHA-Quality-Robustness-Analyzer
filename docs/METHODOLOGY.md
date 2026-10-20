@@ -49,7 +49,9 @@ Each source starts as a clean rendering of a known string:
 - **Bounds:** dataset configurations enable `center_ink` (centre the actual ink
   bounding box, not the draw anchor) and `strict_bounds` (refuse a render whose
   ink touches the canvas edge).
-- **Out of scope:** rotation, colour, texture backgrounds, occlusion.
+- **Out of scope for the frozen dataset:** rotation, colour, texture backgrounds
+  and occlusion. The separate M4A pilot adds two occlusion/visual-interference
+  variants without changing the frozen dataset.
 
 Rendering is deterministic given the source seed and configuration. The M1
 pilot keeps the original defaults (`center_ink=False`, `strict_bounds=False`,
@@ -65,7 +67,8 @@ shared clean sample, not duplicated for every family.
 | --- | --- | --- |
 | Gaussian blur | Pillow Gaussian blur radius in pixels; `[0, 1, 2, 3.5, 5]` | implemented |
 | Additive Gaussian noise | Gaussian sigma on the 0–255 scale; `[0, 6, 12, 20, 32]`; independent seeded realisation per `(source, family, severity)` | implemented |
-| Contrast / brightness, geometric warp, occlusion, compression | — | deferred; not needed for the current question |
+| Contrast / brightness, geometric warp, compression | — | deferred for the frozen dataset |
+| Occlusion / visual interference (`thin_lines`, `arc_strokes`) | density ladder `[1, 2, 4, 7]` strokes; fixed 1 px black; seeded geometry | M4A pilot only (§5.9), not in the frozen dataset |
 
 The ladders are not re-tuned per image. Each variant records family, severity,
 numeric parameters, and the seed used, so effects are attributable. In the
@@ -641,6 +644,88 @@ transfer-learning variant are sufficient. Parameter count, training time and
 hardware must be reported. The CNN is retained only if it improves held-out
 performance, especially under font or corruption shift, without test-set
 tuning. No CNN code or dashboard exists in Milestone 3.
+
+### 5.9 M4A occlusion/interference pilot (not a robustness benchmark)
+
+Milestone 4A asks a narrower question than a benchmark: before adding a new
+corruption family to the grouped protocol, does it produce a reproducible,
+non-degenerate SSIM target with an interpretable severity response and a feature
+pattern that is not merely a reparameterisation of blur or noise? The pilot is
+implemented in `interference.py` and `robustness_pilot.py` and is configured by
+`configs/robustness_pilot_occlusion_v0_1_0.toml`.
+
+**Isolation.** The pilot reads the frozen `v0.1.0` dataset, verifies its hashes,
+and re-renders all 60 clean sources from `configs/dataset_v0_1_0.toml` to prove
+the references are the existing renderer's images. It writes only to
+`data/processed/occlusion_interference_pilot_v0.1.0/` and
+`reports/robustness_pilot/` (both Git-ignored). It does not modify the frozen
+dataset, split, M3 reports or model artifacts, and it does not train or tune a
+model.
+
+**Variants.** Both use a 1 px black stroke (intensity 0) on the existing
+192x64 canvas:
+
+- `thin_lines`: straight strokes through a seeded pivot inside the clean image's
+  ink bounding box, extended to the canvas boundary in both directions. The
+  line angle is drawn from `[-60, 60]` degrees.
+- `arc_strokes`: elliptical arcs through a seeded ink pivot, with sweep drawn
+  from `[120, 240]` degrees, horizontal radius `0.20-0.55` of image width, and
+  vertical/horizontal aspect `0.50-1.50`.
+
+Severity levels are 1, 2, 4 and 7 strokes. For each `(source, variant)` the
+pilot plans a shared seven-stroke pool from an explicit seed derived from the
+pilot seed `20261023`, the source ID and the variant. Severity `k` draws the
+first `k` strokes and every severity is rendered from the unmodified clean
+reference. This makes severity a nested density dose rather than an independent
+redraw. The full geometry is recorded per sample, and verification replays every
+corrupted image from that geometry without consulting an RNG.
+
+**Target and gate.** SSIM uses the same conventions as §3.1 and is structural
+similarity to the clean reference, not human readability or CAPTCHA
+solvability. PSNR is a secondary sanity diagnostic. The predeclared gate before
+generation was:
+
+| Criterion | Threshold |
+| --- | --- |
+| Reproducibility | Two builds identical; all 60 clean re-renders exact; dataset verification passes |
+| Non-degeneracy | Corrupted SSIM SD ≥ 0.02; per-variant level-mean range ≥ 0.10; per-level SD ≥ 0.005 |
+| Interpretable trend | Median within-source Spearman(severity, SSIM) ≤ -0.80; increasing adjacent-step fraction ≤ 0.15 |
+| Feature distinctness | At highest severity, mean absolute Cohen's d ≥ 0.50 versus both frozen blur and noise, with at least two features at \|d\| ≥ 0.80 |
+| Duplicate-free | Duplicate corrupted-image fraction ≤ 0.0 |
+
+**Counts.** 60 frozen sources, all three fonts, split 36/12/12
+train/val/test. Samples: 540 = 60 clean + 480 corrupted (2 variants × 4
+severities × 60 sources). Pilot generation hash
+`dc1a9b1557b3e8e49e86dc4e59beabf1d35d53c9f3a59300399a9f5a4e49e6f0`;
+manifest sha256 `d08c1824ba81e3bc40a585b3047eec6c5f9aa2da0b0b9eb126057ab27fdcc92b`.
+
+**Results.** Mean SSIM by severity (SD in parentheses):
+
+| Variant | 1 stroke | 2 strokes | 4 strokes | 7 strokes |
+| --- | ---: | ---: | ---: | ---: |
+| `thin_lines` | 0.943 (0.020) | 0.887 (0.032) | 0.785 (0.041) | 0.662 (0.044) |
+| `arc_strokes` | 0.947 (0.022) | 0.902 (0.029) | 0.818 (0.037) | 0.715 (0.042) |
+
+Across all 480 corrupted samples, SSIM mean was 0.832, SD 0.105, range
+0.545-0.979. Every one of the 120 source-variant ladders had Spearman -1.0;
+there were 0 increasing and 0 tied adjacent steps out of 360. PSNR fell from
+22.20 to 13.15 dB for lines and 22.47 to 13.96 dB for arcs, consistently with
+SSIM. At the highest severity, mean absolute Cohen's d was 8.29 versus blur and
+4.02 versus noise for lines, and 7.06 versus blur and 3.58 versus noise for
+arcs; 7-8 of the 8 features exceeded \|d\| = 0.8. All 13 verification checks
+passed, including exact clean-reference re-rendering, 480 geometry replays, and
+zero duplicate images. Two independent builds produced identical manifests,
+features and image hashes. The predeclared gate returned **PASS**.
+
+**Decision.** Proceed to a separate grouped robustness benchmark for this
+family. The pilot supports non-degeneracy, determinism, an interpretable
+density response and a feature pattern distinct from blur/noise. It does **not**
+show that the family is harder for humans, does not measure solvability, and
+does not establish cross-generator generalisation. The full benchmark must use a
+separate grouped protocol, keep the family out of the frozen M3 test set, and
+predeclare its model comparison; the pilot itself trains no model. Marginal SSIM
+drop per added stroke declines with density (lines -0.057 to -0.041; arcs -0.046
+to -0.034), so a full ladder should retain the saturation caveat.
 
 ## 6. Data leakage risks and controls
 

@@ -1,7 +1,7 @@
 # Experiment Log
 
-**Status:** `EXP-0001`, `EXP-0002` and `EXP-0003` completed. No other experiments
-have been run.
+**Status:** `EXP-0001`, `EXP-0002`, `EXP-0003` and `EXP-0004` completed. No
+other experiments have been run.
 
 This file is the authoritative record of experiments. An experiment is logged
 only if it can be reproduced from the recorded configuration, dataset version,
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0004` | 2026-10-20 | `robustness-analysis` | `completed` | Occlusion/interference pilot is deterministic, non-degenerate and feature-distinct from blur/noise (gate PASS); no difficulty or solvability claim |
 | `EXP-0003` | 2026-10-20 | `conventional-benchmark` | `completed` | A validation-selected random forest reaches test R² 0.986 (RMSE 0.023) versus naive 0.194; held-out-font R² 0.980; CNN not justified for this target |
 | `EXP-0002` | 2026-10-20 | `dataset-generation` | `completed` | Two deterministic datasets generated; grouped splits verified; no single-feature triviality, but an eight-feature linear baseline reaches test R² 0.962 |
 | `EXP-0001` | 2026-10-20 | `target-validation` | `completed` | SSIM passes in both families; PSNR passes for noise but fails for blur on an ink-coverage confound; MS-SSIM deferred |
@@ -305,6 +306,157 @@ correlations, held-out-font tables, uncertainty, `run_metadata.json`) and
 `uv run --extra image --extra ml captcha-benchmark run --config
 configs/benchmark_v0_1_0.toml --dataset data/processed/captcha_quality_v0.1.0`;
 verification is `captcha-benchmark verify-model`.
+
+---
+
+### EXP-0004 — Occlusion/interference pilot: reproducible and distinct, not a difficulty result
+
+- **Date:** 2026-10-20
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Before adding a new corruption family to a grouped
+  robustness benchmark, do two occlusion/interference variants produce a
+  reproducible, non-degenerate SSIM target with an interpretable density
+  response, and do their image features differ from the existing blur and noise
+  families? This is a synthetic image-similarity pilot, not a human-readability,
+  solvability or security study.
+- **Code revision:** base `c781938` plus the M4A implementation, committed as
+  `feat: pilot occlusion and interference robustness`. The reported run was
+  repeated after the commit so `pilot_summary.json` records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; Pillow 12.3.0;
+  scikit-image 0.26.0; macOS 27.0.1 (arm64). No GPU was used.
+- **Configuration:** `configs/robustness_pilot_occlusion_v0_1_0.toml`; config
+  sha256 `2ef025220beb1b17…`; pilot generation hash
+  `dc1a9b1557b3e8e49e86dc4e59beabf1d35d53c9f3a59300399a9f5a4e49e6f0`.
+  The frozen configs were not edited: `configs/dataset_v0_1_0.toml` sha256
+  `72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a`;
+  `configs/benchmark_v0_1_0.toml` sha256
+  `bea99c4b5ec94bc603c381c2d70366a1a0f411c67c94f61c05df64639e92ac57`.
+- **Dataset:** frozen `v0.1.0`; generation hash
+  `820cce7a77b5e95761f033b75e8cb2b304b6ad6293f67b5bc27bcf0823a6cef9`;
+  manifest sha256 `a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37`.
+  Pilot dataset: manifest sha256
+  `d08c1824ba81e3bc40a585b3047eec6c5f9aa2da0b0b9eb126057ab27fdcc92b`,
+  features sha256
+  `261cfe9a5e2c3910f08361c800f7bcd7252c86d7b56c32006c7970bfb63a1ad9`,
+  60 clean + 480 corrupted images.
+- **Split:** frozen source-grouped, font-stratified split; assignment sha256
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`.
+  36/12/12 train/val/test sources; 324/108/108 frozen samples. The pilot
+  preserves the source split and adds no pilot sample to the frozen test set.
+- **Seeds:** pilot seed `20261023`; per-source/per-variant stroke-pool seeds
+  derived from `(seed, "interference", source_id, variant)`; bootstrap seeds
+  derived from `(seed, "bootstrap", variant, severity)`. All randomness is
+  explicit; no global RNG state.
+- **Runtime:** 2.91 s wall through the CLI on this machine, including the
+  frozen-reference audit, two full in-memory builds, dataset verification,
+  480 provenance replays, bootstrap, report generation and contact sheets.
+
+**Method.** Verified every frozen artifact hash, re-rendered all 60 clean
+sources from the frozen dataset config, and compared source IDs, render seeds,
+text hashes, split labels and pixels. Generated two variants with 1 px black
+strokes on the existing 192x64 canvas: `thin_lines` through an ink pivot with
+line angles in [-60, 60]°, and `arc_strokes` with sweep 120-240°, radius
+0.20-0.55 of width and aspect 0.50-1.50. Severity levels were 1, 2, 4 and 7
+strokes. A shared seven-stroke pool was planned per `(source, variant)`, and
+severity `k` used its first `k` strokes; every severity was rendered from the
+same clean reference, never from another corrupted image. Geometry, seed,
+width, intensity, hashes, changed-pixel fractions and border contact were
+recorded. SSIM used the frozen M1 conventions; PSNR was secondary. The pilot
+trained no model and did not use the target or model predictions to choose
+parameters. The predeclared gate covered reproducibility, non-degeneracy,
+trend, feature distinctness from blur/noise, and duplicate freedom.
+
+**Metrics.** Source-grouped bootstrap used 1000 replicates over 60 sources, not
+variants.
+
+| Variant | Severity | Strokes | SSIM mean | SD | 95% CI | PSNR mean (dB) |
+| --- | ---: | ---: | ---: | ---: | --- | ---: |
+| `thin_lines` | 1 | 1 | 0.943 | 0.020 | [0.938, 0.947] | 22.20 |
+| `thin_lines` | 2 | 2 | 0.887 | 0.032 | [0.879, 0.895] | 18.84 |
+| `thin_lines` | 3 | 4 | 0.785 | 0.041 | [0.775, 0.795] | 15.65 |
+| `thin_lines` | 4 | 7 | 0.662 | 0.044 | [0.651, 0.673] | 13.15 |
+| `arc_strokes` | 1 | 1 | 0.947 | 0.022 | [0.942, 0.952] | 22.47 |
+| `arc_strokes` | 2 | 2 | 0.902 | 0.029 | [0.894, 0.909] | 19.38 |
+| `arc_strokes` | 3 | 4 | 0.818 | 0.037 | [0.809, 0.827] | 16.33 |
+| `arc_strokes` | 4 | 7 | 0.715 | 0.042 | [0.705, 0.725] | 13.96 |
+
+Across all 480 corrupted samples: SSIM mean 0.832, SD 0.105, min 0.545, max
+0.979. The clean baseline is exactly SSIM = 1.0 by construction. All 120
+source-variant ladders had Spearman(severity, SSIM) = -1.0; 0/360 adjacent
+steps increased and 0 were tied. Level-mean PSNR decreased monotonically with
+severity; per-source PSNR exceptions were not part of the gate.
+
+At the highest severity, Cohen's d against the frozen families at the same
+severity:
+
+| Variant | Versus | Mean \|d\| | Features with \|d\| ≥ 0.8 |
+| --- | --- | ---: | ---: |
+| `thin_lines` | gaussian_blur | 8.29 | 8/8 |
+| `thin_lines` | gaussian_noise | 4.02 | 7/8 |
+| `arc_strokes` | gaussian_blur | 7.06 | 8/8 |
+| `arc_strokes` | gaussian_noise | 3.58 | 7/8 |
+
+Predeclared gate:
+
+| Criterion | Threshold | Observed | Verdict |
+| --- | --- | --- | --- |
+| Reproducibility | Two builds identical; clean re-renders exact; verification passes | identical; 60/60 exact; 13/13 checks | PASS |
+| Non-degeneracy | SD ≥ 0.02; level-mean range ≥ 0.10; level SD ≥ 0.005 | SD 0.105; ranges 0.281/0.233; min level SD 0.0197 | PASS |
+| Interpretable trend | Median Spearman ≤ -0.80; increasing fraction ≤ 0.15 | -1.000; 0.000 | PASS |
+| Feature distinctness | Mean \|d\| ≥ 0.50 and ≥2 features at \|d\| ≥ 0.80 vs both families | 3.58-8.29; 7-8 features | PASS |
+| Duplicate-free | Duplicate fraction ≤ 0.0 | 0.000000 | PASS |
+
+**Observations.** The family is non-degenerate at every level and the severity
+response is strictly monotone for every source and variant under the nested
+design. Marginal SSIM drop per added stroke declines with density (`thin_lines`
+-0.057 to -0.041; `arc_strokes` -0.046 to -0.034), so the high end is mildly
+saturated but not collapsed. Every corrupted image touches the canvas border by
+construction; changed pixels cover 0.7-5.8% of the canvas and 0.6-4.8% of the
+clean ink. Fixed black intensity means a stroke that overlaps existing glyph
+cores can change fewer pixels, which is a real confound and a potential source
+of flat steps. Feature/target associations also differ from blur: for example,
+pooled Pearson between Laplacian variance and SSIM was +0.883 for blur but
+-0.964 for `thin_lines` and -0.987 for `arc_strokes`; the within-severity signs
+are reported in the tables, so the pooled values are not treated as causal.
+
+**Conclusion.** The pilot supports proceeding to a separate grouped robustness
+benchmark for this family: it is deterministic, exactly replayable from recorded
+geometry, non-degenerate, interpretable in density, and clearly distinct from
+blur/noise in the eight-feature space. It does **not** show that occlusion is
+objectively harder or more human-solvable; those claims require a different
+study. The pilot also does not establish cross-generator or real-image
+generalisation.
+
+**Limitations.**
+
+- One synthetic renderer, one 192x64 canvas, three fonts and 60 sources. The
+  feature contrast may change with other canvases, fonts or text lengths.
+- Density is the only varied parameter. Width, intensity, colour and coverage
+  are fixed; a full benchmark should predeclare whether they vary.
+- The nested pool makes the severity response a dose of the same early strokes.
+  This improves interpretability but is not an independent sample of geometry
+  at each severity.
+- Border contact is 100% by construction and is not text clipping, but it does
+  mean edge effects are not varied.
+- Fixed black strokes can disappear into glyph cores; changed-pixel fraction is
+  a better manipulation check than nominal stroke count.
+- SSIM is a full-reference structural proxy. It is not human readability or
+  CAPTCHA solvability.
+- No model was trained, so the pilot says nothing about model performance on
+  this family.
+
+**Next step.** If M4 proceeds, run a separate grouped robustness benchmark with
+a predeclared protocol, keep these samples out of the frozen M3 test set, and
+compare any model against the saved feature-only baseline. Do not treat the
+pilot's SSIM levels as a difficulty ordering.
+
+**Artifacts.** Git-ignored: `data/processed/occlusion_interference_pilot_v0.1.0/`
+(manifest, sources, features, summary, 540 PNGs) and `reports/robustness_pilot/`
+(`pilot.md`, level/uncertainty/trend/feature/saturation tables,
+`gate_results.json`, contact sheets). Regenerate with
+`uv run --extra image captcha-robustness-pilot run --config
+configs/robustness_pilot_occlusion_v0_1_0.toml`.
 
 ---
 

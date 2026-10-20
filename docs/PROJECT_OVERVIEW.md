@@ -1,8 +1,9 @@
 # Project Overview
 
-**Status:** Milestones 0–3 complete. A reproducible dataset and image-feature
-pipeline plus a leakage-safe conventional-ML benchmark exist; the CNN
-comparison and dashboard are planned.
+**Status:** Milestones 0–3 complete, plus the M4A occlusion/interference
+feasibility pilot. A reproducible dataset and image-feature pipeline, a
+leakage-safe conventional-ML benchmark and the isolated pilot exist; the full
+robustness benchmark, CNN comparison and dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -76,9 +77,11 @@ predict human solvability or to rank real CAPTCHA products.
   with an ordered severity ladder. Severity 0 is the identity condition and is
   represented once per source as the shared clean sample rather than duplicated
   per family.
-- **Deferred:** contrast/brightness shifts, geometric warps, occlusion, and
-  compression artefacts. They are not added until the current two-family
-  analysis is complete.
+- **M4A pilot only:** two occlusion/visual-interference variants (thin lines and
+  curved arcs) are implemented in `interference.py` and validated in a separate
+  dataset. They are deliberately not part of the frozen `v0.1.0` dataset.
+- **Deferred for the frozen dataset:** contrast/brightness shifts, geometric
+  warps and compression artefacts.
 - **Rule:** each sample records its family, severity, numeric parameters, and
   seed so effects are attributable and reproducible.
 
@@ -160,6 +163,13 @@ the default; a CNN must justify its cost out-of-sample.
 - Source-group bootstrap intervals (not variant-level), reported descriptively.
 - Held-out-font stress test and metadata-only/combined diagnostics.
 
+**Implemented for M4A (feasibility pilot, not a benchmark):**
+
+- Two isolated occlusion/interference variants with deterministic stroke
+  geometry, exact clean-reference re-rendering, geometry replay, grouped
+  bootstrap, feature contrast against blur/noise, and a predeclared go/no-go
+  gate. No model is trained.
+
 **Planned (M5):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -195,6 +205,8 @@ src/captcha_quality/
 ├── cli.py              # `captcha-dataset` subcommands                (implemented, M2)
 ├── modelling.py        # conventional models, metrics, persistence      (implemented, M3)
 ├── benchmark.py        # frozen protocol, diagnostics, report/CLI      (implemented, M3)
+├── interference.py     # occlusion/interference pilot corruption        (implemented, M4A)
+├── robustness_pilot.py # pilot runner, verification, analysis, gate    (implemented, M4A)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5)
 ```
 
@@ -218,6 +230,9 @@ code exists yet.
 | Benchmark config | `configs/benchmark_v0_1_0.toml` | seed, held-out font, candidate grids, coverage quantiles, bootstrap count, selection rule, output paths |
 | Model artifact | `models/benchmark_v0_1_0/` (Git-ignored) | `.joblib` estimator + JSON card: feature names/order, feature-set version, target, dataset generation/split hashes, selection rule, metrics, package/scikit-learn versions, artifact SHA-256 |
 | Benchmark artifacts | `reports/benchmark_v0_1_0/` (Git-ignored) | candidate comparison, family test metrics, predictions, residuals, metadata diagnostics, gaps, stratified rows, coverage definition, correlations, held-out-font tables, grouped uncertainty, `run_metadata.json`, Markdown report |
+| Pilot config | `configs/robustness_pilot_occlusion_v0_1_0.toml` | seed, frozen dataset hashes, two stroke ladders, predeclared gate thresholds, output paths |
+| Pilot dataset | `data/processed/occlusion_interference_pilot_v0.1.0/` (Git-ignored) | separate manifest, sources, features, summary and 540 images; no raw text |
+| Pilot reports | `reports/robustness_pilot/` (Git-ignored) | level/uncertainty/trend/feature/saturation tables, gate results, Markdown report, contact sheets |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -232,7 +247,7 @@ byte-for-byte.
 | M1 | Validate target definition and metric behaviour before scale-up (complete) |
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
-| M4 | CNN comparison |
+| M4 | CNN comparison; occlusion/interference robustness benchmark (M4A feasibility pilot complete, full benchmark not started) |
 | M5 | Robustness analysis and error taxonomy |
 | M6 | Dashboard, reproducibility packaging, final report |
 
@@ -255,6 +270,9 @@ byte-for-byte.
   degradation. Grouped splits and font-held-out evaluation are required.
 - **Synthetic-to-real gap:** results apply to the generator, not to deployed
   CAPTCHAs. This limitation is stated in every report.
+- **Pilot scope:** the M4A gate supports a non-degenerate, feature-distinct,
+  replayable family, but does not show that it is harder for humans or that it
+  generalises beyond 60 sources, three fonts and one canvas.
 - **Font licensing:** only redistributable fonts may be used or bundled.
 
 ## 7. Implemented today
