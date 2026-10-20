@@ -4,11 +4,12 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–3, M4A and M4B complete — the metric-validation
+> **Status:** Milestones 0–3, M4A, M4B and M5A complete — the metric-validation
 > pilot, a reproducible dataset/feature pipeline, a leakage-safe conventional-ML
-> benchmark, an occlusion/interference feasibility pilot, and a grouped
-> occlusion/interference robustness benchmark have been run and logged. The CNN
-> comparison and dashboard are **not implemented**, and the project does **not**
+> benchmark, an occlusion/interference feasibility pilot, a grouped
+> occlusion/interference robustness benchmark, and a geometric-distortion
+> feasibility pilot have been run and logged. The CNN comparison, full M5 error
+> taxonomy and dashboard are **not implemented**, and the project does **not**
 > predict human CAPTCHA solvability. See
 > [Current status](#current-status).
 
@@ -59,8 +60,9 @@ fact.
 - A deterministic synthetic text-image renderer with recorded metadata
   (**implemented**).
 - A configurable distortion engine with two controlled corruption families and
-  severity ladders in the frozen dataset, plus two isolated
-  occlusion/interference pilot variants (**implemented**).
+  severity ladders in the frozen dataset, two isolated occlusion/interference
+  pilot variants, and an isolated smooth elastic-warp pilot (**implemented**;
+  the geometric family is not in the frozen dataset).
 - Reference-based image-quality targets (SSIM primary, PSNR secondary for noise)
   and eight documented handcrafted features (**implemented**).
 - A versioned dataset with a public manifest, grouped splits, and programmatic
@@ -138,10 +140,11 @@ fact.
                                   +--------------------------+
 ```
 
-Stages 1–8 are implemented for the conventional benchmark and the M4B grouped
+Stages 1–8 are implemented for the conventional benchmark, the M4B grouped
 robustness benchmark (grouped uncertainty, corruption/coverage slices, a
-held-out-font stress test and source-isolated interference evaluation). The full
-M5 error taxonomy and Stage 9 dashboard are planned. Each implemented stage
+held-out-font stress test and source-isolated interference evaluation) and the
+M5A geometric-distortion feasibility pilot. The full M5 error taxonomy and Stage
+9 dashboard are planned. Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
 result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
 which makes repeated runs byte-comparable.
@@ -259,7 +262,7 @@ environment files are required at this stage.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
-| M5 | Robustness analysis by corruption family/severity and error taxonomy | Planned |
+| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A complete** — deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B not started |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -268,8 +271,9 @@ trivially predictable from cheap features. Milestone 3 compares conventional
 models on that frozen dataset and tests whether the result survives a held-out
 font. Milestone 4A adds a separate feasibility pilot for occlusion and visual
 interference; M4B uses its frozen source assignment for a grouped zero-shot and
-controlled-adaptation benchmark. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all five recorded
+controlled-adaptation benchmark. M5A adds a separate smooth elastic-warp
+feasibility pilot without training a model. See
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all six recorded
 experiments.
 
 ## Quick start: dataset pipeline
@@ -383,6 +387,29 @@ rows, selects on validation sources only, and evaluates once on test. It writes
 models and checks the recorded hashes. See
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.10.
 
+## Quick start: geometric-distortion pilot
+
+M5A is a feasibility pilot, not a robustness benchmark. It reads and verifies
+the frozen M3 dataset, re-renders every clean source, writes a separate pilot
+dataset, and trains no model.
+
+```bash
+uv sync --extra dev --extra image
+
+uv run --extra image captcha-geometric-pilot run \
+    --config configs/geometric_distortion_pilot_v0_1_0.toml
+
+# Optional: verify the written pilot dataset against recorded fields and targets
+uv run --extra image captcha-geometric-pilot verify \
+    --config configs/geometric_distortion_pilot_v0_1_0.toml
+```
+
+The run writes `data/processed/geometric_distortion_pilot_v0.1.0/` and
+`reports/geometric_distortion_pilot/` (both Git-ignored). It exits 1 only when
+the predeclared feasibility gate returns `FAIL`; dataset/config errors exit 2.
+The gate and findings are recorded in `EXP-0006` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.11.
+
 ## Current status
 
 Implemented:
@@ -438,16 +465,40 @@ Implemented:
   expanded-data conventional grid, validation-only selection, source-grouped
   bootstrap, clean-reference handling, data accounting, target-distribution
   comparison and a run/verify CLI.
+- An isolated geometric-distortion pilot (`geometric.py`,
+  `geometric_pilot.py`, `configs/geometric_distortion_pilot_v0_1_0.toml`):
+  seeded smooth elastic fields, bilinear resampling with edge padding, identity/
+  zero-field/minimal controls, field replay, grouped uncertainty, feature
+  contrasts against blur/noise/interference, and a predeclared gate.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 292 tests in total, all passing, including byte-identical dataset
+- 308 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
   geometry replay, pilot tamper detection, M4B source isolation/merge checks,
-  frozen-model zero-shot replay, adaptation determinism and CLI/report
-  generation.
+  frozen-model zero-shot replay, adaptation determinism, elastic-field
+  determinism/replay/validation and M5A manifest/feature reproducibility.
+
+Milestone 5A findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- The smooth elastic-warp pilot is deterministic, exactly replayable, and
+  non-destructive. Identity and zero-field controls reproduce all 60 clean
+  references exactly; the 0.25 px minimal control has mean SSIM 0.998.
+- SSIM falls monotonically on **60/60** source trajectories (Spearman -1.0);
+  0/180 adjacent steps increase. Mean SSIM is 0.992, 0.971, 0.907 and 0.837 at
+  0.5, 1, 2 and 3 px maximum displacement. No elastic output is near-identity
+  or degenerate, and no elastic image duplicates another.
+- At severity 4 the eight features are strongly separated from blur, noise,
+  thin lines and arcs (mean |Cohen's d| 4.28–6.49; 4–8 features above |d| = 0.8
+  per contrast). Pooled feature/target correlations mix severity and are
+  reported alongside within-severity correlations, not treated as stable.
+- Gate: **CONDITIONAL PASS**. The only failed margin is between-source SD at
+  0.5 px (0.0025 versus 0.005), which is close to the interpolation floor.
+  This is not an unqualified pass and does not justify a separate geometric
+  benchmark without revising or dropping the lowest rung.
 
 Milestone 4B findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -550,9 +601,9 @@ or solvability):
 - Adjacent severities were separated with large paired effects, no trial-level
   reversals occurred, and clean-vs-clean comparisons were exactly perfect.
 
-Not implemented (planned): the CNN comparison, the full M5 error taxonomy,
-notebooks, the Streamlit dashboard, deployment, and any human-solvability or
-production-CAPTCHA claims.
+Not implemented (planned): the CNN comparison, M5B broader robustness analysis
+and error taxonomy, notebooks, the Streamlit dashboard, deployment, and any
+human-solvability or production-CAPTCHA claims.
 The conventional model's performance is a synthetic image-similarity result, not
 a readability estimate.
 

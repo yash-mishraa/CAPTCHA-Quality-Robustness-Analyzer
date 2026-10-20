@@ -1,0 +1,76 @@
+# Milestone 5A pilot: geometric-distortion feasibility.
+#
+# This is a pilot only. It reads the frozen Milestone 2 dataset (v0.1.0), the
+# frozen M4A occlusion/interference pilot, and the frozen M4B benchmark
+# artifacts. It never modifies them or any split/model/report in those paths.
+# Outputs go to separate, Git-ignored pilot trees.
+#
+# Scope: synthetic image similarity (SSIM against the clean reference), not
+# human readability, CAPTCHA solvability, or real-world generalisation.
+
+[pilot]
+name = "geometric-distortion-pilot"
+version = "v0.1.0"
+seed = 20261024
+bootstrap_replicates = 1000
+output_dataset = "data/processed/geometric_distortion_pilot_v0.1.0"
+output_reports = "reports/geometric_distortion_pilot"
+
+# Pinned to the actual frozen artifacts. Every hash is verified before use.
+[reference]
+dataset = "data/processed/captcha_quality_v0.1.0"
+config = "configs/dataset_v0_1_0.toml"
+dataset_version = "v0.1.0"
+generation_config_hash = "820cce7a77b5e95761f033b75e8cb2b304b6ad6293f67b5bc27bcf0823a6cef9"
+manifest_sha256 = "a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37"
+sources_sha256 = "07d50255cdc82ea77087fc64b398d62db49f96156eea9cf5aee59bc070ab5a37"
+features_sha256 = "d3715e7975cf41c41e49fa2338ca4e961a7a59981318be19149c78e89804d798"
+ground_truth_sha256 = "7a09a01a802f104b86cf69ce686a176c1cf3c98b6369c7e4578d870e4f768eea"
+summary_sha256 = "3f03e10e94c19de2747b3ae355b32fa044de658cf1bc8ad0e90f8f57e9a96787"
+split_assignment_sha256 = "70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232"
+
+# Frozen M4A comparison. It supplies the thin-line and arc-stroke families for
+# the descriptive cross-family feature analysis; it is not regenerated here.
+[comparison]
+include_interference = true
+m4a_dataset = "data/processed/occlusion_interference_pilot_v0.1.0"
+m4a_config = "configs/robustness_pilot_occlusion_v0_1_0.toml"
+m4a_config_sha256 = "2ef025220beb1b17aab4593e862fbbd11d2a6618eb8d3ed43bc532f6e3924917"
+m4a_manifest_sha256 = "d08c1824ba81e3bc40a585b3047eec6c5f9aa2da0b0b9eb126057ab27fdcc92b"
+m4a_features_sha256 = "261cfe9a5e2c3910f08361c800f7bcd7252c86d7b56c32006c7970bfb63a1ad9"
+m4a_summary_sha256 = "cd9dc97ff3a25c85976b26367da4a5b5f475d8dc8aeba671a55aecb981705ed4"
+
+# One smooth elastic family. Both control-grid dimensions include the two
+# boundary control points. The amplitude is the maximum displacement of a
+# zero-mean, unit-maximum field. The 3 px maximum is under 5% of the 64 px
+# canvas height. Severity is 1-based; controls are generated separately.
+[geometry]
+amplitudes_px = [0.5, 1.0, 2.0, 3.0]
+minimal_amplitude_px = 0.25
+grid_rows = 5
+grid_cols = 13
+smoothing_sigma_px = 2.0
+interpolation = "bilinear"
+border_mode = "edge"
+
+[analysis]
+near_identity_ssim_min = 0.9999
+min_group_samples = 10
+
+# Predeclared feasibility gate. These thresholds are fixed before generation.
+# The feature contrast is evaluated at the highest severity against every
+# available frozen family at the same severity. Cohen's d is
+# (pilot mean - reference mean) / pooled SD.
+[gate]
+ssim_std_min = 0.02
+level_mean_range_min = 0.10
+per_level_sd_min = 0.005
+median_source_spearman_max = -0.80
+increasing_step_fraction_max = 0.15
+minimal_control_ssim_min = 0.99
+border_affected_fraction_max = 0.10
+collapsed_block_fraction_max = 0.10
+feature_effect_min = 0.50
+feature_strong_effect_min = 0.80
+feature_strong_effect_count_min = 2
+duplicate_fraction_max = 0.0

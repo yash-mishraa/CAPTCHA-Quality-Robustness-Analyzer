@@ -1,10 +1,11 @@
 # Project Overview
 
 **Status:** Milestones 0–3 complete, plus the M4A occlusion/interference
-feasibility pilot and the M4B grouped robustness benchmark. A reproducible
-dataset and image-feature pipeline, a leakage-safe conventional-ML benchmark,
-and source-isolated zero-shot/adaptation evaluation exist. The CNN comparison
-and dashboard are planned.
+feasibility pilot, the M4B grouped robustness benchmark and the M5A
+geometric-distortion feasibility pilot. A reproducible dataset and image-feature
+pipeline, a leakage-safe conventional-ML benchmark, source-isolated
+zero-shot/adaptation evaluation and a replayable elastic-warp pilot exist. The
+CNN comparison, full M5 error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -82,6 +83,10 @@ predict human solvability or to rank real CAPTCHA products.
   curved arcs) are implemented in `interference.py`, validated in a separate
   M4A pilot dataset, and used unchanged by the M4B grouped benchmark. They are
   deliberately not part of the frozen `v0.1.0` dataset.
+- **M5A only:** a bounded smooth elastic warp with a 5x13 control grid, 2.0 px
+  Gaussian field smoothing, bilinear resampling and edge padding is implemented
+  in `geometric.py`. It is validated only by the isolated M5A pilot; it is not
+  in the frozen dataset and is not used by any trained model.
 - **Deferred for the frozen dataset:** contrast/brightness shifts, geometric
   warps and compression artefacts.
 - **Rule:** each sample records its family, severity, numeric parameters, and
@@ -189,7 +194,17 @@ the default; a CNN must justify its cost out-of-sample.
   model/report persistence with replay verification. Twelve test sources are
   treated as preliminary uncertainty, not significance evidence.
 
-**Planned (M5):**
+**Implemented for M5A (geometric-distortion feasibility pilot, not a benchmark):**
+
+- One seeded smooth elastic field per source, scaled to a predeclared
+  `[0.5, 1.0, 2.0, 3.0]` px maximum-displacement ladder plus identity,
+  zero-field and 0.25 px minimal controls. Bilinear resampling, edge padding,
+  exact field/pixel replay, source-grouped bootstrap, feature contrasts against
+  frozen blur/noise and M4A interference, and a predeclared gate. No model is
+  trained. The result is CONDITIONAL PASS because the lowest rung has
+  between-source SD below the declared margin.
+
+**Planned (M5B, not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
   ordinal MAE / quadratic weighted kappa for severity.
@@ -227,7 +242,9 @@ src/captcha_quality/
 ├── interference.py     # occlusion/interference pilot corruption        (implemented, M4A)
 ├── robustness_pilot.py # pilot runner, verification, analysis, gate    (implemented, M4A)
 ├── robustness_benchmark.py # grouped zero-shot/adaptation benchmark, CLI (implemented, M4B)
-└── analysis.py         # broader slices, statistics, plots             (planned, M5)
+├── geometric.py        # smooth elastic field, resampling, replay       (implemented, M5A)
+├── geometric_pilot.py  # pilot generation, analysis, gate, report, CLI  (implemented, M5A)
+└── analysis.py         # broader slices, statistics, plots             (planned, M5B)
 ```
 
 `render.py` now serves both the frozen Milestone 1 pilot and the Milestone 2
@@ -235,7 +252,8 @@ dataset. Dataset configurations enable ink-centred placement and strict bounds;
 the pilot keeps the original defaults so `EXP-0001` remains byte-reproducible.
 `benchmark.py` and `modelling.py` implement the conventional M3 stage;
 `robustness_benchmark.py` implements M4B using the same feature/model
-persistence path. No CNN code exists yet.
+persistence path. `geometric.py` and `geometric_pilot.py` implement the isolated
+M5A elastic-warp pilot. No CNN code exists yet.
 
 ## 4. Artifact contracts
 
@@ -257,6 +275,9 @@ persistence path. No CNN code exists yet.
 | Robustness benchmark config | `configs/robustness_benchmark_v0_1_0.toml` | frozen M3/M4A/model hashes, feature schema, seed, 12-candidate grid, selection metric, bootstrap count, output paths |
 | Robustness model | `models/robustness_benchmark_v0_1_0/` (Git-ignored) | expanded `.joblib` estimator + JSON card: feature names/order, target, dataset/split hashes, selected candidate, metrics, package versions, artifact SHA-256 |
 | Robustness reports | `reports/robustness_benchmark_v0_1_0/` (Git-ignored) | zero-shot/adaptation metrics, predictions, residuals, isolation checks, data accounting, candidate validation, target distribution, uncertainty, `run_metadata.json`, Markdown report |
+| Geometric pilot config | `configs/geometric_distortion_pilot_v0_1_0.toml` | seed, frozen M3/M4A hashes, amplitude ladder, field grid/smoothing, interpolation/border mode, gate thresholds, output paths |
+| Geometric pilot dataset | `data/processed/geometric_distortion_pilot_v0.1.0/` (Git-ignored) | separate manifest, sources, features, summary, field specifications and 480 images; no raw text |
+| Geometric pilot reports | `reports/geometric_distortion_pilot/` (Git-ignored) | level/uncertainty/trend/control/group tables, feature effect/contrast/correlation tables, gate results, Markdown report, contact sheet |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -272,7 +293,7 @@ byte-for-byte.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
-| M5 | Robustness analysis and error taxonomy |
+| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy (M5A complete; M5B not started) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -297,6 +318,11 @@ byte-for-byte.
 - **Pilot scope:** the M4A gate supports a non-degenerate, feature-distinct,
   replayable family, but does not show that it is harder for humans or that it
   generalises beyond 60 sources, three fonts and one canvas.
+- **Geometric interpolation confound:** M5A's bilinear resampling and edge
+  padding change pixels even at zero displacement, and the 0.5 px rung is close
+  to that floor. The pilot reports a minimal control and border/clipping
+  diagnostics; it returns CONDITIONAL PASS and does not support a low-end
+  between-source variance claim.
 - **Zero-shot shift:** frozen M3 is near-perfect on clean references but fails
   absolute calibration on M4A interference (test R² -1.045, systematic
   under-prediction). The benchmark reports this as a transfer failure, not as a
@@ -347,5 +373,14 @@ the adapted random forest reached MAE/RMSE/R² 0.0131/0.0178/0.9752 versus
 0.1261/0.1466/-0.6912 for the expanded training mean. On the original M3 test
 rows the adapted model stayed close to frozen M3 (0.0158/0.0239/0.9849 versus
 0.0157/0.0226/0.9865). The evidence supports conventional modelling for this
-benchmark and does **not** justify a CNN on this split. No CNN or dashboard
-exists yet.
+benchmark and does **not** justify a CNN on this split.
+
+Milestone 5A: an isolated smooth elastic-warp pilot with one seeded field per
+source, a 0.5–3 px maximum-displacement ladder, identity/zero-field/minimal
+controls and exact field replay. Identity and zero-field controls reproduced all
+60 clean references exactly; SSIM fell monotonically on 60/60 sources (0/180
+adjacent increases), and at severity 4 the features were strongly separated from
+blur, noise, thin lines and arcs. The predeclared gate returned CONDITIONAL PASS
+because severity 1 (0.5 px) had between-source SD 0.0025 below the 0.005 margin.
+M5A trains no model and makes no human-readability claim. No CNN, M5B analysis or
+dashboard exists yet.

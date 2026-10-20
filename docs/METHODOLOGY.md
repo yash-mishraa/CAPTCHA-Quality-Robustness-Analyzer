@@ -69,6 +69,7 @@ shared clean sample, not duplicated for every family.
 | Additive Gaussian noise | Gaussian sigma on the 0–255 scale; `[0, 6, 12, 20, 32]`; independent seeded realisation per `(source, family, severity)` | implemented |
 | Contrast / brightness, geometric warp, compression | — | deferred for the frozen dataset |
 | Occlusion / visual interference (`thin_lines`, `arc_strokes`) | density ladder `[1, 2, 4, 7]` strokes; fixed 1 px black; seeded geometry | M4A pilot only (§5.9), not in the frozen dataset |
+| Smooth elastic warp | maximum displacement ladder `[0.5, 1.0, 2.0, 3.0]` px; 5x13 smoothed field; bilinear, edge padding | M5A pilot only (§5.11), not in the frozen dataset |
 
 The ladders are not re-tuned per image. Each variant records family, severity,
 numeric parameters, and the seed used, so effects are attributable. In the
@@ -854,6 +855,104 @@ are preliminary and no significance or universal pass/fail threshold is claimed.
 The result does not measure human readability or CAPTCHA solvability, does not
 generalise beyond the synthetic renderer, and does not cover a cross-generator
 or human-labelled shift.
+
+### 5.11 M5A geometric-distortion feasibility pilot (not a robustness benchmark)
+
+Milestone 5A asks the same pre-benchmark question as M4A for one narrowly scoped
+geometric family: before adding it to a grouped protocol, is a bounded smooth
+elastic warp reproducible, replayable, non-degenerate, interpretable and not
+merely a reparameterisation of the existing corruption families? The
+implementation is `geometric.py` and `geometric_pilot.py`, configured by
+`configs/geometric_distortion_pilot_v0_1_0.toml`. It trains no model.
+
+**Isolation and frozen inputs.** The pilot verifies and re-renders all 60 clean
+M3 sources from `configs/dataset_v0_1_0.toml`; the M3 dataset, split, models and
+reports, the M4A pilot and the M4B benchmark/model are read-only. It writes only
+to `data/processed/geometric_distortion_pilot_v0.1.0/` and
+`reports/geometric_distortion_pilot/` (both Git-ignored). One seeded unit-maximum
+displacement field is generated per source and shared by every severity and
+control, so severity is a nested amplitude dose rather than an independent
+redraw. The field is zero-mean before normalisation, removing global translation.
+Every transformed row stores the full field specification and an exact SHA-256
+of the float64 field; verification regenerates the field and pixels without
+consulting the target.
+
+**Transformation.** The primary family is a smooth elastic displacement:
+
+- 192x64 8-bit grayscale input, bilinear resampling;
+- 5x13 coarse control grid including boundary points, with separable Gaussian
+  smoothing at sigma 2.0 px;
+- maximum displacement ladder `[0.5, 1.0, 2.0, 3.0]` px, plus a 0.25 px minimal
+  control; the largest value is under 5% of the 64 px canvas height;
+- border mode `edge` (out-of-canvas source coordinates clamp to the nearest
+  valid sample); the alternative `reflect` mode is implemented and tested but
+  not used in the reported run;
+- identity control bypasses resampling; zero-field control passes integer
+  coordinates through the bilinear sampler; minimal control applies 0.25 px of
+  the same field.
+
+All controls and severities are generated from the unchanged clean reference.
+The target is the unchanged `ssim_target`; PSNR is secondary. Features are the
+existing eight image-only features in fixed order.
+
+**Counts and hashes.** 60 sources, all three fonts, frozen 36/12/12 split.
+Samples: 480 = 60 clean + 180 controls (60 identity, 60 zero-field, 60 minimal)
++ 240 elastic (4 severities x 60). Pilot generation hash
+`e5901ce89fda1854d606aa41b6258222aa77e9bde061c9082971d7660a924c2a`;
+manifest sha256
+`c63be1088db591181f23fa306f955b3ba16fe80ffb2000c4a5e3db7656fa3806`;
+features sha256
+`cb82ae60d8749f21d9d5f6dd324cd075e907544aa54bcdb62bbcab988472bb65`.
+Identity and zero-field controls reproduced all clean pixels exactly. The
+minimal control had mean SSIM 0.99803 (minimum 0.99662) and changed 17.1% of
+pixels.
+
+**Results.** Mean SSIM by severity (SD in parentheses):
+
+| Severity | Amplitude (px) | Mean SSIM (SD) | Range | Mean PSNR (dB) | Changed-pixel fraction |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | 0.5 | 0.9923 (0.0025) | 0.9868-0.9975 | 31.41 | 0.212 |
+| 2 | 1.0 | 0.9713 (0.0091) | 0.9514-0.9900 | 25.54 | 0.255 |
+| 3 | 2.0 | 0.9070 (0.0260) | 0.8526-0.9625 | 19.95 | 0.290 |
+| 4 | 3.0 | 0.8372 (0.0396) | 0.7571-0.9242 | 17.13 | 0.307 |
+
+Across all 240 elastic rows, SSIM mean was 0.9270, SD 0.0653, range
+0.7571-0.9975. All 60 source ladders had Spearman -1.0; all 180 adjacent steps
+decreased, with 0 tied and 0 increasing. Grouped bootstrap 95% intervals for
+mean SSIM were 0.9917-0.9929, 0.9689-0.9735, 0.9010-0.9134 and 0.8273-0.8470.
+No elastic row was near-identity at SSIM >= 0.9999, no row was degenerate, and
+no elastic image duplicated another or a clean reference. At severity 4, mean
+outside-canvas/border-affected fraction was 0.0261, bilinear-clipped-sample
+fraction 0.0046, and collapsed 8x8 block fraction 0.0426. These are reported as
+confounds, not subtracted from SSIM.
+
+**Cross-family comparison.** Frozen blur/noise and M4A interference features were
+contrasted at the same severity. At severity 4, mean absolute Cohen's d was 5.21
+against `gaussian_blur`, 6.49 against `gaussian_noise`, 5.67 against
+`thin_lines` and 4.28 against `arc_strokes`; 4-8 of the eight features exceeded
+|d| = 0.8 in each contrast. Pooled correlations were not treated as evidence of
+a stable feature/target relationship: for example `laplacian_variance` had
+pooled Spearman 0.616 but mean within-severity Spearman -0.075, and
+`edge_density` had pooled -0.095 but within-severity -0.304. Full distributions
+and correlations are in the ignored report tables.
+
+**Gate.** The predeclared gate returned **CONDITIONAL PASS**. Reproducibility,
+identity/zero-field exactness, overall target spread, trend, interpolation/
+boundary bounds, feature distinctness and duplicate-freedom passed. The one
+failed margin was per-level SD at severity 1: 0.0025 against the predeclared
+0.005. That rung is close to the interpolation floor, so its between-source
+spread is small even though the overall target is non-degenerate and every
+source trajectory is monotonic. The failed criterion is retained in the report;
+the verdict is not an unqualified PASS.
+
+**Decision.** The family is correctly implemented, deterministic, exactly
+replayable, non-destructive and monotonic on all 60 sources, and its features
+are strongly separated from the existing families at high severity. It does not
+support a benchmark claim at the 0.5 px rung. A later benchmark should drop that
+rung or use a larger minimum amplitude, and must carry the field specification,
+controls, source grouping and interpolation/border caveat forward. No model was
+trained. Nothing here measures human readability or CAPTCHA solvability, and no
+CNN is justified by this pilot.
 
 ## 6. Data leakage risks and controls
 

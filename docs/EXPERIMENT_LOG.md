@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0005` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0006` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0006` | 2026-10-20 | `robustness-analysis` | `completed` | Smooth elastic warp is deterministic, replayable and monotonic on 60/60 sources; gate is CONDITIONAL PASS because the 0.5 px rung has between-source SD 0.0025 below the 0.005 margin |
 | `EXP-0005` | 2026-10-20 | `robustness-analysis` | `completed` | Frozen M3 fails zero-shot absolute calibration on M4A test (R² -1.045); validation-selected retraining cuts RMSE from 0.161 to 0.018, so conventional adaptation is sufficient here |
 | `EXP-0004` | 2026-10-20 | `robustness-analysis` | `completed` | Occlusion/interference pilot is deterministic, non-degenerate and feature-distinct from blur/noise (gate PASS); no difficulty or solvability claim |
 | `EXP-0003` | 2026-10-20 | `conventional-benchmark` | `completed` | A validation-selected random forest reaches test R² 0.986 (RMSE 0.023) versus naive 0.194; held-out-font R² 0.980; CNN not justified for this target |
@@ -78,6 +79,171 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0006 — Geometric-distortion feasibility pilot: replayable and monotonic, conditional pass on the lowest rung
+
+- **Date:** 2026-10-20
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Before adding a geometric family to the grouped
+  robustness protocol, does a bounded smooth elastic warp produce a valid,
+  deterministic and replayable SSIM target with an interpretable severity
+  response and a feature pattern that is not merely a reparameterisation of
+  blur, noise or occlusion/interference? This is a synthetic image-similarity
+  pilot, not a human-readability, CAPTCHA-solvability or security study.
+- **Code revision:** base `968d85b` plus the M5A implementation, committed as
+  `feat: pilot geometric distortion robustness`. The reported run was repeated
+  after the commit so generated provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-image
+  0.26.0; macOS 27.0.1 (arm64). No GPU was used.
+- **Configuration:** `configs/geometric_distortion_pilot_v0_1_0.toml`; config
+  sha256 `00b8c5caad610fb4aaf159bb8c99e329ad217aeff6450e7cd3e566387e9f0a97`;
+  pilot generation hash
+  `e5901ce89fda1854d606aa41b6258222aa77e9bde061c9082971d7660a924c2a`.
+  Seed `20261024`; 1000 source-grouped bootstrap replicates. The geometry was
+  fixed before generation: amplitudes `[0.5, 1.0, 2.0, 3.0]` px maximum
+  displacement, minimal control `0.25` px, 5x13 coarse control grid, 2.0 px
+  Gaussian smoothing, bilinear interpolation, edge border mode.
+- **Datasets:** frozen M3 `v0.1.0` used as the clean reference: 60 sources, 540
+  rows, manifest sha256
+  `a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37`,
+  features sha256
+  `d3715e7975cf41c41e49fa2338ca4e961a7a59981318be19149c78e89804d798`,
+  split-assignment sha256
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`.
+  New pilot `v0.1.0`: 60 sources, 480 rows = 60 clean + 180 controls (60
+  identity, 60 zero-field, 60 minimal) + 240 elastic (4 severities x 60);
+  manifest sha256
+  `c63be1088db591181f23fa306f955b3ba16fe80ffb2000c4a5e3db7656fa3806`,
+  sources sha256
+  `b565aed1f3d84d7d9c2685e8145868208d77c24b831a1f8c205778e2196a7ed0`,
+  features sha256
+  `cb82ae60d8749f21d9d5f6dd324cd075e907544aa54bcdb62bbcab988472bb65`,
+  image-pixel-hash set
+  `33d14063be82a33cd6518b8fd79c4a78838f601b859b2eede56de36b2a33264b`.
+  Frozen M4A comparison: manifest
+  `d08c1824ba81e3bc40a585b3047eec6c5f9aa2da0b0b9eb126057ab27fdcc92b`,
+  features
+  `261cfe9a5e2c3910f08361c800f7bcd7252c86d7b56c32006c7970bfb63a1ad9`,
+  summary
+  `cd9dc97ff3a25c85976b26367da4a5b5f475d8dc8aeba671a55aecb981705ed4`.
+- **Split:** frozen source-grouped split, 36/12/12 train/validation/test
+  sources; every clean source and all its controls/severities stay in its
+  assigned split. All 60 clean references were re-rendered exactly.
+- **Seeds:** pilot seed `20261024`; per-source field seed derived from pilot
+  seed, `geometric`, and `source_id`; 1000 source-grouped bootstrap replicates.
+- **Runtime:** 5.7 s through the CLI, including frozen-asset verification,
+  exact clean re-rendering, two independent builds, 420 transformed-image
+  replays, analysis, gate and report.
+
+**Method.** Loaded and hash-checked the frozen M3 dataset, M4A pilot and M4B
+artifacts; re-rendered all 60 clean sources from
+`configs/dataset_v0_1_0.toml` and required exact pixel equality. Generated one
+seeded unit-maximum displacement field per source, then every severity and
+control directly from the clean reference by scaling that same field. The field
+is zero-mean before normalisation, so there is no global translation. Stored the
+full deterministic field specification plus an exact SHA-256 of the float64
+field; verification regenerates the field and transformed pixels without
+consulting the target. Target and features are unchanged: `ssim_target` against
+the exact clean reference (PSNR secondary) and the existing eight image-only
+features in their fixed order. Controls: identity bypasses resampling;
+zero-field passes integer coordinates through the bilinear sampler; minimal
+applies 0.25 px of the same field. Two independent builds were compared by
+manifest, source table, feature table, targets and decoded image hashes, and the
+written dataset was re-verified from disk.
+
+**Target behaviour.**
+
+| Severity | Amplitude (px) | n | SSIM mean (SD) | SSIM range | PSNR mean (dB) | Changed pixels |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 0.5 | 60 | 0.9923 (0.0025) | 0.9868-0.9975 | 31.41 | 0.212 |
+| 2 | 1.0 | 60 | 0.9713 (0.0091) | 0.9514-0.9900 | 25.54 | 0.255 |
+| 3 | 2.0 | 60 | 0.9070 (0.0260) | 0.8526-0.9625 | 19.95 | 0.290 |
+| 4 | 3.0 | 60 | 0.8372 (0.0396) | 0.7571-0.9242 | 17.13 | 0.307 |
+
+Across all 240 elastic rows: SSIM mean 0.9270, SD 0.0653, range
+0.7571-0.9975. Every one of the 60 source ladders had Spearman -1.0; all 180
+adjacent steps decreased, with 0 tied and 0 increasing. Mean adjacent drops were
+-0.0210, -0.0643 and -0.0697 from severity 1 to 4. No elastic row was
+near-identity at `SSIM >= 0.9999`, no row was degenerate, and no elastic image
+duplicated another or a clean reference. Grouped bootstrap 95% intervals for
+mean SSIM were 0.9917-0.9929, 0.9689-0.9735, 0.9010-0.9134 and 0.8273-0.8470 for
+severities 1-4. Font and text-length slices were descriptively similar; all
+included groups showed the same ordering.
+
+**Controls and interpolation/boundary diagnostics.** Identity and zero-field
+controls reproduced all 60 clean images exactly (SSIM 1.0, no pixels changed).
+The 0.25 px minimal control had mean SSIM 0.99803 (minimum 0.99662), changed
+17.1% of pixels, and touched 2.09% of pixels through the border policy. At
+severity 4, mean outside-canvas/border-affected fraction was 0.0261, mean
+bilinear-clipped-sample fraction 0.0046, and mean collapsed 8x8 block fraction
+0.0426. These are reported as a confound, not subtracted from SSIM: the minimal
+control is a direct near-identity resampling reference, while the border and
+block diagnostics isolate different failure modes.
+
+**Cross-family comparison.** Frozen blur/noise and M4A thin-line/arc features
+were loaded and hash-verified; the elastic feature means were contrasted at the
+same severity. At severity 4, mean absolute Cohen's d was 5.21 against
+`gaussian_blur`, 6.49 against `gaussian_noise`, 5.67 against `thin_lines` and
+4.28 against `arc_strokes`; 4-8 of the 8 features exceeded |d| = 0.8 in each
+contrast. Pooled feature/target correlations still mix severity and are not the
+honest summary: for example `laplacian_variance` had pooled Spearman 0.616 but
+mean within-severity Spearman -0.075, and `edge_density` had pooled -0.095 but
+within-severity -0.304. The eight features clearly change under elastic warp,
+but the direction of the target relationship is severity-dependent; this is a
+feature-pattern result, not proof of semantic distinctness or human difficulty.
+
+**Gate.** The predeclared gate returned **CONDITIONAL PASS**. Reproducibility,
+identity/zero-field exactness, overall target spread (SD 0.065, level-mean range
+0.155), trend, interpolation/boundary bounds, feature distinctness and
+duplicate-freedom passed. The single failed margin was per-level SD at severity
+1: 0.0025 against the predeclared 0.005. That rung is close to the interpolation
+floor (0.25 px control SSIM 0.998), so its between-source spread is small even
+though the overall target is non-degenerate and every source trajectory is
+monotonic. The verdict is therefore conditional, not an unqualified PASS, and
+the failed criterion is retained in `gate_results.json` and the report.
+
+**Conclusion.** The smooth elastic family is correctly implemented, deterministic,
+exactly replayable, non-destructive, and produces an interpretable monotonic
+SSIM response across all 60 frozen sources. Its features are strongly separated
+from blur, noise and interference families at high severity. The lowest rung is
+too close to identity to support a between-source variance claim, so a separate
+benchmark should either drop that rung, use a larger minimum amplitude, or treat
+the low end as interpolation-dominated. No model was trained and no CNN claim
+follows from this pilot.
+
+**Limitations.**
+
+- One synthetic renderer, one 192x64 canvas, three fonts and 60 sources.
+- Bilinear interpolation and edge padding necessarily change pixels; the
+  minimal control and border fractions quantify but cannot eliminate the
+  confound.
+- SSIM is a full-reference structural proxy, not readability or solvability.
+- The elastic family is one smooth field design; it does not cover rotation,
+  perspective, compression or all geometric distortions.
+- The lowest severity has low between-source variance; aggregate means at that
+  rung should not be over-interpreted.
+- Feature contrasts use descriptive Cohen's d with 60 sources and no
+  significance claim.
+
+**Next step.** Stop M5A here. Do not start M5B, retrain a model, train a CNN,
+build a demo or create the final presentation. If a separate geometric benchmark
+is later approved, predeclare a revised low-end ladder or drop the 0.5 px rung,
+keep the source-grouped split, carry the field specification and controls, and
+report the interpolation confound explicitly.
+
+**Artifacts.** Git-ignored: `data/processed/geometric_distortion_pilot_v0.1.0/`
+(480 images, manifest, sources, features, summary) and
+`reports/geometric_distortion_pilot/` (`pilot.md`, level/uncertainty/trend/
+control/group/feature tables, `feature_effect_sizes.csv`,
+`feature_distinctness.csv`, `feature_target_correlations.csv`,
+`gate_results.json`, `examples_elastic.png`). Regenerate with
+`uv run --extra image captcha-geometric-pilot run --config
+configs/geometric_distortion_pilot_v0_1_0.toml`; verify with
+`captcha-geometric-pilot verify --config
+configs/geometric_distortion_pilot_v0_1_0.toml`.
 
 ---
 
