@@ -4,15 +4,15 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–3, M4A, M4B, M5A and M5B complete — the
+> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B and M5C complete — the
 > metric-validation pilot, a reproducible dataset/feature pipeline, a
 > leakage-safe conventional-ML benchmark, an occlusion/interference feasibility
 > pilot, a grouped occlusion/interference robustness benchmark, a
-> geometric-distortion feasibility pilot, and a grouped geometric-robustness
-> benchmark have been run and logged. The CNN comparison, full M5 error
-> taxonomy and dashboard are **not implemented**, and the project does **not**
-> predict human CAPTCHA solvability. See
-> [Current status](#current-status).
+> geometric-distortion feasibility pilot, a grouped geometric-robustness
+> benchmark, and a retention-aware selection and calibration study have been run
+> and logged. The CNN comparison, full M5 error taxonomy and dashboard are
+> **not implemented**, and the project does **not** predict human CAPTCHA
+> solvability. See [Current status](#current-status).
 
 ## Overview
 
@@ -79,6 +79,9 @@ fact.
 - A grouped geometric-robustness benchmark comparing frozen M3, controlled
   conventional adaptation and naive baselines on held-out geometric sources,
   with original-task retention on the untouched M3 test split (**implemented**).
+- A retention-aware selection and calibration study with predeclared candidate
+  policies, a validation-only calibration procedure and a predeclared
+  retention-aware selection rule (**implemented**).
 - A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
@@ -267,7 +270,7 @@ environment files are required at this stage.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
-| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A and M5B complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. CNN not justified |
+| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B and M5C complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. CNN not justified |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -279,8 +282,9 @@ interference; M4B uses its frozen source assignment for a grouped zero-shot and
 controlled-adaptation benchmark. M5A adds a separate smooth elastic-warp
 feasibility pilot without training a model; M5B uses the M5A dataset for a
 grouped zero-shot and controlled-adaptation benchmark on the same frozen M3
-source split. See [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all
-seven recorded experiments.
+source split, and M5C adds a retention-aware selection and calibration study
+on those same frames. See [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md)
+for all eight recorded experiments.
 
 ## Quick start: dataset pipeline
 
@@ -442,6 +446,31 @@ to evaluate if any predeclared data-integrity or leakage check fails, and it
 never fits anything on test-source rows. The results are recorded in
 `EXP-0007` and [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.12.
 
+## Quick start: retention-aware selection and calibration
+
+M5C asks whether a conventional model-selection or calibration policy can
+improve geometric prediction while retaining performance on clean references
+and on the original blur/noise task. It compares six predeclared candidate
+policies against the frozen M3 model, fits any calibration only on
+out-of-sample validation predictions, and selects using a retention-aware rule
+declared before any test evaluation.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-retention-aware run \
+    --config configs/retention_aware_selection_v0_1_0.toml
+
+# Verify the written run: artifact hashes, prediction replay and protocol
+uv run --extra image --extra ml captcha-retention-aware verify \
+    --config configs/retention_aware_selection_v0_1_0.toml
+```
+
+The run writes `reports/retention_aware_selection_v0_1_0/` and
+`models/retention_aware_selection_v0_1_0/` (both Git-ignored). The results are
+recorded in `EXP-0008` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.13.
+
 ## Current status
 
 Implemented:
@@ -508,10 +537,16 @@ Implemented:
   validation-only selection, original-task retention on the untouched M3 test
   split, the 0.5 px rung held out as a diagnostic, predeclared
   integrity/leakage checks, source-grouped uncertainty and a run/verify CLI.
+- A retention-aware selection and calibration study (`retention_aware.py`,
+  `configs/retention_aware_selection_v0_1_0.toml`): six predeclared candidate
+  policies, a univariate affine calibration fitted only on out-of-sample
+  validation predictions with leave-one-fold-out validation scoring, a
+  predeclared retention-aware selection rule, per-source consistency analysis
+  and a run/verify CLI.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 317 tests in total, all passing, including byte-identical dataset
+- 349 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -519,7 +554,11 @@ Implemented:
   frozen-model zero-shot replay, adaptation determinism, elastic-field
   determinism/replay/validation, M5A manifest/feature reproducibility and the
   M5B split/merge contracts, 0.5 px exclusion, feature-leakage guard, metric
-  correctness, grouped bootstrap and model-replay checks.
+  correctness, grouped bootstrap and model-replay checks, plus the M5C
+  validation-only selection, calibration fit-data isolation, test immutability,
+  source-group isolation, slice-score calculation, feature-schema
+  preservation, calibration serialization/reload, prediction replay and
+  deterministic-report tests.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -575,6 +614,42 @@ readability or solvability):
   step would be a predeclared retention-aware selection or calibration
   protocol, **not** a larger model. A new corruption family does not by itself
   justify a CNN.
+- **Uncertainty.** Every interval resamples whole source groups and there are
+  only 12 held-out test sources, so all intervals are preliminary and
+  descriptive. Interval overlap or non-overlap is not treated as a
+  significance test, and no universal threshold was introduced after seeing
+  test results.
+
+Milestone 5C findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **The trade-off was resolved, mostly by the model family.** A retention-aware
+  rule over six predeclared candidates selects an expanded random forest that
+  cuts primary geometric RMSE by **39.0%** (0.0590 versus the frozen 0.0967)
+  and is the only candidate with a positive geometric R² (0.1855). The frozen
+  M3 model reaches 0.0967 with R² -1.186.
+- **The original task is retained.** On the untouched M3 test rows the selected
+  policy reaches MAE 0.0156, RMSE 0.0220 and R² 0.9872, against the frozen
+  0.0157 / 0.0226 / 0.9865. The paired source-grouped RMSE difference is
+  -0.0006 with a preliminary interval of -0.0024 to 0.0005, and the
+  per-source gains and losses nearly cancel.
+- **The cost is small but real.** The clean-reference slice degrades from RMSE
+  0.0012 to 0.0023 (paired difference 0.0011, interval 0.0006 to 0.0017), and
+  the selected model is worse than the frozen model at the mildest included
+  rung (1.0 px MAE 0.0570 versus 0.0259).
+- **Calibration did not do the work.** The affine calibration was tested on
+  every base model and selected for none of them. It reduced the M5B HGB's
+  clean-reference offset (mean residual +0.0122 to +0.0038), confirming the
+  error is partly a systematic offset, but a single global affine map could not
+  remove it without moving the other slices.
+- **The improvement is broad-based.** The geometric gain holds on 11 of 12
+  held-out sources, and the single best source accounts for 22.9% of the total
+  gain.
+- **Decision.** Conventional feature-based ML remains the benchmark champion.
+  The next question, if the line continues, is whether a retention-aware
+  *training* objective rather than a post-hoc selection or calibration policy
+  can remove the remaining small clean-reference cost. The evidence does not
+  justify a CNN, and a new corruption family does not by itself justify one.
 - **Uncertainty.** Every interval resamples whole source groups and there are
   only 12 held-out test sources, so all intervals are preliminary and
   descriptive. Interval overlap or non-overlap is not treated as a

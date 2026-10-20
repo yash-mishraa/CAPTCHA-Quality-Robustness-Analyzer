@@ -2,11 +2,13 @@
 
 **Status:** Milestones 0–3 complete, plus the M4A occlusion/interference
 feasibility pilot, the M4B grouped robustness benchmark, the M5A
-geometric-distortion feasibility pilot and the M5B grouped geometric-robustness
-benchmark. A reproducible dataset and image-feature pipeline, a leakage-safe
-conventional-ML benchmark, source-isolated zero-shot/adaptation evaluation, a
-replayable elastic-warp pilot and a grouped geometric-robustness benchmark
-exist. The CNN comparison, full M5 error taxonomy and dashboard are planned.
+geometric-distortion feasibility pilot, the M5B grouped geometric-robustness
+benchmark and the M5C retention-aware selection and calibration study. A
+reproducible dataset and image-feature pipeline, a leakage-safe conventional-ML
+benchmark, source-isolated zero-shot/adaptation evaluation, a replayable
+elastic-warp pilot, a grouped geometric-robustness benchmark and a
+retention-aware selection study exist. The CNN comparison, full M5 error
+taxonomy and dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -214,6 +216,17 @@ the default; a CNN must justify its cost out-of-sample.
   diagnostic only; clean and control rows are excluded from every fit frame.
   Predeclared integrity and leakage checks run before evaluation.
 
+**Implemented for M5C (retention-aware model selection and calibration):**
+
+- Six predeclared candidate policies (frozen M3, the M5B expanded HGB and one
+  expanded conventional alternative, each raw and with a single affine
+  calibration), a calibration procedure that fits only on out-of-sample
+  validation predictions with leave-one-fold-out validation scoring, and a
+  predeclared retention-aware selection rule that prices geometric improvement
+  against clean-reference and original-task regressions. The expanded
+  alternative is justified from the existing M5B validation table, never from
+  an M5C test result.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -256,6 +269,7 @@ src/captcha_quality/
 ├── geometric.py        # smooth elastic field, resampling, replay       (implemented, M5A)
 ├── geometric_pilot.py  # pilot generation, analysis, gate, report, CLI  (implemented, M5A)
 ├── geometric_benchmark.py # grouped zero-shot/adaptation benchmark, CLI (implemented, M5B)
+├── retention_aware.py  # retention-aware selection and calibration, CLI (implemented, M5C)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -265,9 +279,9 @@ the pilot keeps the original defaults so `EXP-0001` remains byte-reproducible.
 `benchmark.py` and `modelling.py` implement the conventional M3 stage;
 `robustness_benchmark.py` implements M4B using the same feature/model
 persistence path. `geometric.py` and `geometric_pilot.py` implement the isolated
-M5A elastic-warp pilot, and `geometric_benchmark.py` implements M5B on top of it
-using the same persistence, verification and reporting conventions. No CNN code
-exists yet.
+M5A elastic-warp pilot, `geometric_benchmark.py` implements M5B on top of it
+and `retention_aware.py` implements M5C, all using the same persistence,
+verification and reporting conventions. No CNN code exists yet.
 
 ## 4. Artifact contracts
 
@@ -295,6 +309,9 @@ exists yet.
 | Geometric benchmark config | `configs/geometric_robustness_benchmark_v0_1_0.toml` | seed, frozen M3/M5A/model hashes, feature schema, primary/diagnostic severity protocol, 12-candidate grid, selection metric, bootstrap count, output paths |
 | Geometric benchmark model | `models/geometric_robustness_benchmark_v0_1_0/` (Git-ignored) | expanded `.joblib` estimator + JSON card: feature names/order, target, dataset/split hashes, selected candidate, metrics, package versions, artifact SHA-256 |
 | Geometric benchmark reports | `reports/geometric_robustness_benchmark_v0_1_0/` (Git-ignored) | zero-shot/adaptation/retention metrics, predictions, residuals, isolation checks, data accounting, candidate validation, target distribution, uncertainty, `run_metadata.json`, Markdown report |
+| Retention-aware config | `configs/retention_aware_selection_v0_1_0.toml` | seed, frozen M5B hashes, feature schema, candidate policies, calibration procedure, retention-aware selection rule and weights, bootstrap count, output paths |
+| Retention-aware models | `models/retention_aware_selection_v0_1_0/` (Git-ignored) | expanded random-forest bundle and selected-policy bundle, each with a JSON card: feature names/order, target, dataset/split hashes, selected candidate, calibration parameters, metrics, package versions, artifact SHA-256 |
+| Retention-aware reports | `reports/retention_aware_selection_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -310,7 +327,7 @@ byte-for-byte.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
-| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; broader robustness analysis and error taxonomy (M5A pilot and M5B benchmark complete) |
+| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark and M5C selection study complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -349,8 +366,16 @@ byte-for-byte.
   geometric RMSE by 31.8% but its R² stays near zero (-0.017) and it degrades
   clean-reference calibration on the original task (clean-slice MAE 0.0134
   versus 0.0004 for frozen M3). The adapted model is a geometric-robustness
-  candidate, not a drop-in replacement.
-- **Small test support:** M4B and M5B have only 12 held-out sources.
+  candidate, not a drop-in replacement. M5C resolves this on the same frames by
+  changing the model family: an expanded random forest keeps the original task
+  and clean references while improving the geometric slice further, at a small
+  clean-reference cost.
+- **Reference noise in the retention comparison:** the frozen M3 model was
+  itself selected on the M3 validation split, and its clean-reference
+  validation slice (RMSE 0.0162) is unusually noisy relative to its
+  clean-reference test slice (0.0012). M5C's measured clean regression is
+  therefore an upper bound, not a point estimate.
+- **Small test support:** M4B, M5B and M5C have only 12 held-out sources.
   Source-grouped intervals are wide and preliminary; no universal significance
   threshold was introduced after seeing test results.
 - **Font licensing:** only redistributable fonts may be used or bundled.
@@ -419,4 +444,16 @@ test rows the adapted model stayed close in aggregate (MAE 0.0179, RMSE 0.0243,
 R² 0.9843 versus 0.0157/0.0226/0.9865) but lost clean-reference calibration
 (clean-slice MAE 0.0134 versus 0.0004). Conventional feature-based ML remains
 the benchmark family; the evidence does **not** justify a CNN on this split.
+
+Milestone 5C: a retention-aware selection and calibration study on the same
+frozen frames, with six predeclared candidate policies and a predeclared
+retention-aware rule that prices geometric improvement against clean-reference
+and original-task regressions. The selected expanded random forest cuts primary
+geometric RMSE by 39.0% (0.0590 versus the frozen 0.0967, positive R2 0.1855,
+improving on 11 of 12 held-out sources) while keeping the original M3 test RMSE
+at 0.0220 versus the frozen 0.0226, at a small clean-reference cost (RMSE
+0.0023 versus 0.0012). The affine calibration was tested on every base model
+and selected for none of them; it reduced the M5B HGB's clean-reference offset
+but could not remove it without moving the other slices. The trade-off was
+resolved mostly by the model family rather than by the calibration layer.
 No dashboard, deployment or final presentation exists yet.

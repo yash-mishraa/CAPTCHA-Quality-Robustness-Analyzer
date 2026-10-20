@@ -1,0 +1,122 @@
+# Milestone 5C retention-aware model selection and calibration.
+#
+# This file is separate from the frozen Milestone 2 dataset, the Milestone 3
+# benchmark, the M4A/M4B occlusion-interference work, the M5A geometric pilot
+# and the M5B grouped geometric-robustness benchmark. It pins the exact inputs
+# and declares the candidate policies, the calibration procedure and the
+# retention-aware selection rule before any test-source prediction is made.
+#
+# Scope: synthetic image similarity (SSIM against the clean reference), not
+# human readability, CAPTCHA solvability, security or real-world generalisation.
+
+[run]
+name = "retention-aware-selection"
+version = "v0.1.0"
+seed = 20261024
+n_bootstrap = 1000
+output_reports = "reports/retention_aware_selection_v0_1_0"
+output_models = "models/retention_aware_selection_v0_1_0"
+
+[schema]
+feature_set_version = "v1"
+target = "ssim_target"
+feature_names = [
+  "intensity_mean",
+  "intensity_std",
+  "contrast_rms",
+  "ink_fraction",
+  "laplacian_variance",
+  "edge_density",
+  "histogram_entropy",
+  "noise_sigma_immerkaer",
+]
+split_names = ["train", "val", "test"]
+
+# The M5B benchmark is the upstream frozen input. M5C reuses its pinned M3/M5A
+# hashes, its source-grouped split and its merge/isolation checks verbatim by
+# loading the M5B configuration, so both milestones operate on identical frames.
+# The M5B expanded model is a reference candidate and is loaded from its
+# persisted bundle; its artifact bytes do not embed the code revision, so the
+# artifact SHA-256 below is a stable pin.
+[m5b]
+config = "configs/geometric_robustness_benchmark_v0_1_0.toml"
+config_sha256 = "fe5c66614cee83c72a80c20b807202deadd8a604e045f7432795a8abe706ddb1"
+protocol_hash = "77e41dd5de84e0bf8751c38a49b510735095f86edc8b00f6c19a6d8fde0d13ce"
+model_dir = "models/geometric_robustness_benchmark_v0_1_0"
+model_stem = "expanded_geometric_model"
+model_artifact_sha256 = "360b7d18ca5e196b5f3fcd0cbe35c3c1f1f8b1ca0cf69672eb55a61be6479f9d"
+
+# Severity protocol, carried forward unchanged from M5B. The 0.5 px rung stays
+# diagnostic only: it is never used to fit, to select or to score.
+[protocol]
+primary_amplitudes_px = [1.0, 2.0, 3.0]
+diagnostic_amplitudes_px = [0.5]
+primary_severities = [2, 3, 4]
+diagnostic_severities = [1]
+
+# Predeclared candidate policies. Each base model may be used raw or with the
+# single affine calibration declared below, giving the full candidate set
+# evaluated by the retention-aware rule.
+[candidates]
+base_models = ["frozen_m3", "m5b_expanded_hgb", "expanded_random_forest"]
+calibration_forms = ["none", "affine"]
+
+# The expanded conventional alternative is justified by the existing M5B
+# validation table, not by any M5C test result. It is the best non-HGB candidate
+# in that table, 1.5% behind the selected HGB on validation RMSE, and a bagged
+# tree ensemble quantises and extrapolates differently from boosting, so it is
+# a genuine alternative hypothesis for the clean-reference retention
+# regression. M5C re-verifies at run time that this spec exists in the M5B grid
+# and that it is still the best non-HGB candidate by validation RMSE.
+[candidates.alternative]
+spec = "random_forest_depth_unlimited_leaf_1"
+justification = "Best non-HGB candidate in the M5B validation table (val RMSE 0.0295848, third overall and 1.5% behind the selected HGB at 0.0291514); a bagged-tree model has different quantisation and extrapolation behaviour from boosting, so it is a genuine alternative hypothesis for the clean-reference retention regression."
+
+# Affine calibration policy. The base models are trained only on training
+# sources, so their predictions on the expanded validation frame are
+# out-of-sample and may be used to fit the calibration. The mapping is
+# univariate: target = intercept + slope * prediction. It uses no metadata, so
+# severity, family, font, text length, source and split identifiers never enter
+# the calibration.
+#
+# `clip_output` is false so the calibration stays a pure affine map with no
+# saturation: clipping to [0, 1] would silently absorb the clean-reference
+# residual and hide exactly the offset this milestone is trying to measure.
+[calibration]
+form = "affine"
+fit_scope = "expanded_validation"
+cross_fit_folds = 4
+clip_output = false
+
+# Retention-aware selection rule, declared before any test evaluation.
+#
+# All three slice errors are RMSE in SSIM units, so they are directly
+# comparable without any normalisation. The score is the change relative to the
+# frozen M3 model, which is the incumbent champion and therefore the retention
+# reference:
+#
+#   score = (rmse_geo - rmse_geo_ref)
+#         + w_clean * (rmse_clean - rmse_clean_ref)
+#         + w_original * (rmse_original - rmse_original_ref)
+#         + penalty * ( max(0, rmse_clean - rmse_clean_ref - tolerance)
+#                     + max(0, rmse_original - rmse_original_ref - tolerance) )
+#
+# Lower is better and the frozen M3 model scores exactly 0. Geometric
+# improvement and retention regression are charged at the same unit weight, so
+# a geometric gain only wins if it is not cancelled by a retention loss of the
+# same size. The explicit penalty term charges each retention regression twice
+# (once in the weighted term, once as a penalty), so a retention regression
+# must be more than twice as large as the geometric gain to be preferred. The
+# slope/intercept of the geometric term is 1 because geometric improvement is
+# the objective being traded against retention; the retention weights are 1
+# because a regression on the original task or on clean references is a direct
+# cost against the incumbent. `tolerance` is the RMSE increase, in SSIM units,
+# that is tolerated before the penalty applies; it is 0.0 so no regression is
+# free.
+[selection]
+rule = "retention_penalised_rmse_delta"
+w_geometric = 1.0
+w_clean = 1.0
+w_original = 1.0
+penalty_regression = 1.0
+tolerance = 0.0

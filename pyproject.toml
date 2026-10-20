@@ -73,6 +73,7 @@ captcha-robustness-pilot = "captcha_quality.robustness_pilot:main"
 captcha-robustness-benchmark = "captcha_quality.robustness_benchmark:main"
 captcha-geometric-pilot = "captcha_quality.geometric_pilot:main"
 captcha-geometric-benchmark = "captcha_quality.geometric_benchmark:main"
+captcha-retention-aware = "captcha_quality.retention_aware:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

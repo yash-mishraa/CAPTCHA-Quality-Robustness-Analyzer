@@ -1083,6 +1083,123 @@ synthetic renderer, one canvas size, three fonts and 12 held-out source groups;
 they are not a claim about real-world CAPTCHA robustness, human readability or
 solvability.
 
+### 5.13 M5C retention-aware model selection and calibration
+
+Milestone 5B left a specific trade-off open: the adapted histogram gradient
+boosting model improved the aggregate geometric score but lost clean-reference
+calibration and came close to losing the original blur/noise task. M5C asks
+whether a conventional model-selection or calibration policy can improve
+geometric prediction while retaining performance on clean references and on the
+original task. The implementation is `retention_aware.py`, configured by
+`configs/retention_aware_selection_v0_1_0.toml`. It writes only to
+`reports/retention_aware_selection_v0_1_0/` and
+`models/retention_aware_selection_v0_1_0/` (both Git-ignored).
+
+**Zero-shot transfer, controlled adaptation and retention-aware selection are
+three different questions.** Zero-shot transfer measures whether a frozen model
+generalises to a corruption family it has never seen. Controlled adaptation
+measures whether a model trained on representative rows of that family does
+better on held-out sources of it. Retention-aware selection measures a third
+thing: whether any candidate in a predeclared set can be preferred under a rule
+that prices geometric improvement against retention. M5C reports all three
+against the same frozen reference, because a poor zero-shot result says nothing
+about the adapted candidates and a good adapted result says nothing about
+whether the frozen model was the right choice.
+
+**Frozen inputs.** M5C reads the M5B configuration, verifies its hash and
+protocol hash, and reuses the M5B verified frame-building path, so both
+milestones operate on identical frames, the identical frozen M3 source-grouped
+split (36/12/12 sources) and the identical M5B isolation checks. The frozen M3
+model, the M5A pilot, the M4A pilot, the M4B benchmark and the M3 dataset are
+read-only and re-verified before and after the run.
+
+**Predeclared candidate policies.** Six candidates were fixed before any test
+prediction: the frozen M3 model, the M5B expanded HGB, and one expanded
+conventional alternative, each used raw and with a single affine calibration.
+The alternative is `random_forest_depth_unlimited_leaf_1`, justified from the
+existing M5B validation table rather than from any M5C test result: it is the
+best non-HGB candidate there (validation RMSE 0.0295848, 1.5% behind the
+selected HGB at 0.0291514) and a bagged tree ensemble quantises and
+extrapolates differently from boosting. M5C re-derives the M5B validation
+table at run time and refuses to proceed if the alternative is no longer the
+best non-HGB candidate, so the justification cannot silently rot.
+
+**Calibration procedure.** The calibration is univariate,
+`target = intercept + slope * prediction`, and uses no metadata: severity,
+family, font, text length, source and split identifiers never enter it. It is
+fitted only on the expanded validation frame, whose predictions from every base
+model are out-of-sample because the base models are trained only on training
+sources. Validation scoring of a calibrated candidate uses leave-one-fold-out
+calibration predictions over four source-grouped folds, so a candidate is
+never scored on rows that contributed to its own calibration; the frozen policy
+uses the calibration fitted on the whole validation frame. `clip_output` is
+false: clipping to [0, 1] would silently absorb the clean-reference residual
+and hide exactly the offset under study. A slice-conditional calibration was
+deliberately not attempted, because it would require the corruption family at
+inference time.
+
+**Retention-aware selection rule.** The rule was declared before any test
+evaluation. All three slice errors are RMSE in SSIM units, so they are directly
+comparable without normalisation, and the score is the change relative to the
+frozen M3 reference plus an explicit extra penalty on retention regressions:
+
+```text
+score = (rmse_geo - rmse_geo_ref)
+      + w_clean * (rmse_clean - rmse_clean_ref)
+      + w_original * (rmse_original - rmse_original_ref)
+      + penalty * ( max(0, rmse_clean - rmse_clean_ref - tolerance)
+                  + max(0, rmse_original - rmse_original_ref - tolerance) )
+```
+
+with `w_geometric = w_clean = w_original = 1.0`, `penalty_regression = 1.0` and
+`tolerance = 0.0`. Lower is better and the frozen M3 model scores exactly 0. A
+geometric gain and a retention loss of the same size cancel, and a retention
+regression is charged twice, so it must be more than twice the geometric gain
+to be preferred. Individual slice metrics are always reported next to the
+composite score, so the aggregate cannot conceal a serious regression. No
+weight or threshold was chosen after seeing a test result.
+
+**Results.** The selected policy is the uncalibrated expanded random forest.
+On the primary 1.0-3.0 px geometric test slice (36 rows / 12 sources) it
+reaches MAE 0.0493, RMSE 0.0590 and R2 0.1855, against the frozen M3 model's
+0.0777 / 0.0967 / -1.1858: a 39.0% RMSE reduction, and the only positive
+geometric R2 among the candidates. The improvement holds on 11 of 12 held-out
+sources and the single best source accounts for 22.9% of the total gain, so it
+is not driven by one outlier. By severity it is worse than the frozen model at
+1.0 px (MAE 0.0570 versus 0.0259) and better at 2.0 px (0.0195 versus 0.0662)
+and 3.0 px (0.0714 versus 0.1409). On the untouched M3 test split it stays
+level with the frozen model (MAE 0.0156 versus 0.0157, RMSE 0.0220 versus
+0.0226, R2 0.9872 versus 0.9865). The clean-reference slice costs a little:
+RMSE 0.0023 against the frozen 0.0012, a paired difference of 0.0011
+(preliminary interval 0.0006 to 0.0017). On the original blur/noise slice the
+paired RMSE difference is -0.0006 (interval -0.0026 to 0.0006), and the
+per-source gains and losses nearly cancel, so no broad improvement is claimed
+there.
+
+**What the calibration did and did not do.** The affine calibration was tested
+on every base model and was selected for none of them. It reduces the M5B
+HGB's clean-reference offset (mean residual +0.0122 to +0.0038), confirming
+that the M5B clean error is partly a systematic offset, but a single global
+affine map cannot remove it without moving the other slices: the calibrated
+HGB still leaves clean-reference RMSE at 0.0126, far above the frozen 0.0012.
+The trade-off was therefore resolved mainly by the model family rather than by
+the calibration layer.
+
+**Decision.** The retention trade-off is resolved on this protocol, mostly by
+the model family: a bagged-tree expansion retains the original task and clean
+references far better than the boosted expansion M5B selected, while scoring
+better on the geometric slice. Conventional feature-based ML remains the
+benchmark champion. The remaining small clean-reference cost and the loss at
+the mildest included severity are unresolved; the natural next question is
+whether a retention-aware *training* objective, rather than a post-hoc
+selection or calibration policy, can remove them. The evidence does not
+justify a CNN, and a new corruption family does not by itself justify one.
+These results cover one synthetic renderer, one canvas size, three fonts and 12
+held-out source groups, and the frozen reference's own validation clean slice
+is unusually noisy relative to its test clean slice, so the measured clean
+regression is an upper bound. Nothing here measures human readability or
+CAPTCHA solvability.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |
