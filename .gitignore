@@ -1,0 +1,152 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+MANIFEST
+
+# ---------------------------------------------------------------------------
+# Virtual environments
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+.venv*/
+env/
+ENV/
+
+# ---------------------------------------------------------------------------
+# Tooling caches and test/coverage output
+# ---------------------------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.cache/
+*.cover
+
+# ---------------------------------------------------------------------------
+# Jupyter / notebooks
+# ---------------------------------------------------------------------------
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+profile_default/
+
+# ---------------------------------------------------------------------------
+# IDE and editor state (local only)
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ---------------------------------------------------------------------------
+# Operating-system files
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------------
+# Secrets and environment configuration
+# Never commit real credentials. Templates such as .env.example are allowed.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+.envrc
+secrets/
+*.pem
+*.key
+*.p12
+.streamlit/secrets.toml
+kaggle.json
+
+# ---------------------------------------------------------------------------
+# Generated datasets and image dumps
+# Keep directory placeholders (and data/README.md) tracked; everything else
+# produced under the data directories stays local and reproducible.
+# ---------------------------------------------------------------------------
+data/raw/*
+data/processed/*
+data/interim/
+data/external/
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.tfrecord
+*.lmdb/
+
+# ---------------------------------------------------------------------------
+# Model checkpoints and large binary artifacts
+# ---------------------------------------------------------------------------
+models/*
+!models/.gitkeep
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.bin
+*.pkl
+*.joblib
+*.dill
+*.npy
+*.npz
+
+# ---------------------------------------------------------------------------
+# Experiment tracking, training logs, and temporary files
+# ---------------------------------------------------------------------------
+logs/
+*.log
+wandb/
+mlruns/
+lightning_logs/
+tensorboard/
+runs/
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+
+# ---------------------------------------------------------------------------
+# Generated reports
+# Keep the directory placeholder; promote specific final reports explicitly.
+# ---------------------------------------------------------------------------
+reports/*
+!reports/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Streamlit and other local application state
+# ---------------------------------------------------------------------------
+.streamlit/secrets.toml

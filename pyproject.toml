@@ -1,0 +1,119 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "captcha-quality-analyzer"
+dynamic = ["version"]
+description = "A reproducible pipeline for generating synthetic CAPTCHA-style text images and analyzing their image quality and robustness."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Yash Mishra" }]
+keywords = [
+  "captcha",
+  "computer-vision",
+  "image-quality-assessment",
+  "robustness",
+  "synthetic-data",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "pillow>=10.2",
+]
+
+[project.optional-dependencies]
+# Planned for Milestone 2 (dataset generation and image-quality features).
+image = [
+  "opencv-python-headless>=4.9",
+  "scikit-image>=0.22",
+]
+# Planned for Milestone 3-4 (conventional baselines and CNN comparison).
+ml = [
+  "scikit-learn>=1.4",
+]
+deep-learning = [
+  "torch>=2.2",
+]
+# Planned for Milestone 6 (interactive dashboard).
+app = [
+  "streamlit>=1.32",
+]
+# Needed to develop, lint, and test this repository.
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.5",
+]
+
+[project.urls]
+Repository = "https://github.com/yash-mishraa/CAPTCHA-Quality-Robustness-Analyzer"
+
+[tool.hatch.version]
+path = "src/captcha_quality/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/captcha_quality"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-config --strict-markers"
+markers = [
+  "slow: tests that take noticeably longer than the default suite",
+]
+
+[tool.coverage.run]
+source = ["src/captcha_quality"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # Pyflakes
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "B",   # flake8-bugbear
+  "UP",  # pyupgrade
+  "SIM", # flake8-simplify
+]
+ignore = [
+  "E501", # line length is enforced by the formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["captcha_quality"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
