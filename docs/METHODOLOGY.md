@@ -1409,6 +1409,88 @@ assumed. These results cover one synthetic renderer, one canvas size, three
 fonts and 12 held-out source groups; nothing here measures human readability
 or CAPTCHA solvability.
 
+### 5.16 M6B spatial resolution study
+
+M6A found that a coarse 4x2 grid of spatial features did not help, and measured
+why: the grid resolved blur about 25 times more strongly than a 1-3 px warp.
+M6B varies only the grid resolution to test whether that resolution mismatch
+was the blocker. The implementation is `spatial_resolution_study.py`,
+configured by `configs/spatial_resolution_study_v0_1_0.toml`. It writes only to
+`reports/spatial_resolution_study_v0_1_0/` and
+`models/spatial_resolution_study_v0_1_0/` (both Git-ignored).
+
+**Design.** The two M6A feature families are reused with no change to their
+mathematical definitions: regional ink occupancy uses the per-image Otsu
+threshold, and regional edge density uses the repository's Canny convention
+(sigma=1.0, low_threshold=0.1, high_threshold=0.2 on the image scaled to
+[0, 1]). Both maps are computed once per image, so all cells at a given
+resolution share one definition. The grayscale representation, the canonical
+192x64 canvas and the row-major cell ordering are unchanged. Cells are bounded
+by floor(i*height/r) .. floor((i+1)*height/r), which tiles the canonical canvas
+evenly at every declared resolution and gives any remainder to the later cells;
+an empty cell yields zero for every feature and an exactly uniform image has no
+distinguishable ink class and no edges, so all its features are zero.
+
+Four resolutions are predeclared, each in two representations. The model
+family, hyperparameters, seed, training rows and objective are identical for
+every candidate, so only the input representation and its resolution differ:
+
+| grid | cells | cell size (px) | spatial features | combined features |
+| --- | ---: | ---: | ---: | ---: |
+| 2x2 | 4 | 32x96 | 8 | 16 |
+| 4x2 | 8 | 16x96 | 16 | 24 |
+| 4x4 | 16 | 16x48 | 32 | 40 |
+| 8x8 | 64 | 8x24 | 128 | 136 |
+
+For an r x c grid each family contributes r*c features, so the spatial-only
+representation has 2*r*c features and the global-plus-spatial representation
+has 8 + 2*r*c. Because the forest considers every feature at each split
+(`max_features` is 1.0), a larger feature set dilutes the split search
+directly; the redundancy and train-versus-validation diagnostics are therefore
+reported for every resolution rather than tuned around.
+
+**Selection.** The M6A rule is used unchanged, with the same coefficients and
+tolerances, so the two studies are directly comparable, and the frozen M5C
+champion is the fallback. The 4x2 grid is a reference condition, not a reason
+to favour or reject that resolution in advance. As a cross-milestone check,
+the 4x2 candidates reproduce the M6A 4x2 candidates bit-for-bit.
+
+**Results.** No spatial candidate qualifies. Every combined candidate breaches
+the 10% original-task tolerance, and every spatial-only candidate breaches it
+plus the clean-slice and per-severity tolerances. The aggregate geometric
+validation RMSE is best at the *coarsest* grid, and no resolution produces a
+demonstrable geometric gain: every paired geometric interval includes zero.
+The retention regressions are systematic and grow monotonically with the feature
+count, with the clean-slice and original-task intervals excluding zero from
+4x2 upwards.
+
+**Why.** M6A's diagnosis is confirmed and its obvious follow-up fails. The
+training-row grid diagnostic shows the finer grid does resolve the geometric
+warp: the per-cell occupancy change against the same source's clean reference
+rises from 0.00424 at 2x2 to 0.01068 at 8x8, and its correlation with the SSIM
+drop rises from +0.453 to +0.828, closing most of the gap to blur's +0.894. The
+information is therefore present, but the model cannot use it. The extra
+features are informative about the geometric family and largely uninformative
+about blur, noise and clean references, so they dilute the search for the
+splits that matter on the other families. Redundancy is not the mechanism: mean
+absolute pairwise correlation *falls* with resolution (0.585 at 2x2 to 0.259 at
+8x8) and no feature is constant or duplicated at any grid, while the
+overfitting gap grows (0.01739 to 0.01867 for the combined candidates).
+
+**Decision.** The retention trade-off was not improved by increasing the
+spatial resolution, and the frozen M5C champion is retained. The negative
+result is sharper than M6A's because it isolates the mechanism: the blocker is
+not the resolution of the partition but the **relevance** of the resulting
+features to the other corruption families. Conventional feature-based ML
+remains the benchmark champion. The evidence does not justify a CNN, and a new
+corruption family does not by itself justify one. If the line continues, the
+defensible next experiment follows from the mechanism: whether a feature
+specifically sensitive to local *displacement*, rather than to local ink
+quantity, can add information about the geometric family without diluting the
+splits that support blur, noise and clean references. These results cover one
+synthetic renderer, one canvas size, three fonts and 12 held-out source groups;
+nothing here measures human readability or CAPTCHA solvability.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

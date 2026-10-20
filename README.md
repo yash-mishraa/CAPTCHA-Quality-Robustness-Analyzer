@@ -4,16 +4,16 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D and M6A complete —
-> the metric-validation pilot, a reproducible dataset/feature pipeline, a
-> leakage-safe conventional-ML benchmark, an occlusion/interference feasibility
-> pilot, a grouped occlusion/interference robustness benchmark, a
+> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A and M6B
+> complete — the metric-validation pilot, a reproducible dataset/feature
+> pipeline, a leakage-safe conventional-ML benchmark, an occlusion/interference
+> feasibility pilot, a grouped occlusion/interference robustness benchmark, a
 > geometric-distortion feasibility pilot, a grouped geometric-robustness
 > benchmark, a retention-aware selection and calibration study, a retention-aware
-> training-objective study, and a spatial-aware feature study have been run and
-> logged. The CNN comparison, full M5 error taxonomy and dashboard are **not
-> implemented**, and the project does **not** predict human CAPTCHA solvability.
-> See [Current status](#current-status).
+> training-objective study, a spatial-aware feature study, and a spatial
+> resolution study have been run and logged. The CNN comparison, full M5 error
+> taxonomy and dashboard are **not implemented**, and the project does **not**
+> predict human CAPTCHA solvability. See [Current status](#current-status).
 
 ## Overview
 
@@ -89,6 +89,9 @@ fact.
 - A spatial-aware feature study adding localized grid features in a separate
   versioned module, with three predeclared ablations and a grid-resolution
   diagnostic (**implemented**).
+- A spatial resolution study varying only the grid (2×2, 4×2, 4×4, 8×8) with
+  the feature definitions unchanged, plus training-only redundancy and
+  overfitting diagnostics (**implemented**).
 - A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
@@ -159,9 +162,9 @@ robustness benchmark (grouped uncertainty, corruption/coverage slices, a
 held-out-font stress test and source-isolated interference evaluation), the
 M5A geometric-distortion feasibility pilot, the M5B grouped
 geometric-robustness benchmark, the M5C retention-aware selection study, the
-M5D retention-aware training-objective study and the M6A spatial-aware feature
-study. The full M5 error taxonomy and Stage 9 dashboard are planned. Each
-implemented stage
+M5D retention-aware training-objective study, the M6A spatial-aware feature
+study and the M6B spatial resolution study. The full M5 error taxonomy and
+Stage 9 dashboard are planned. Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
 result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
 which makes repeated runs byte-comparable.
@@ -279,7 +282,7 @@ environment files are required at this stage.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
-| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D and M6A complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. CNN not justified |
+| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D, M6A and M6B complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. M6B resolution study: finer grids *do* resolve the warp (correlation +0.45 → +0.83) but still produce no demonstrable gain, so the blocker is feature relevance, not resolution. CNN not justified |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -292,9 +295,9 @@ controlled-adaptation benchmark. M5A adds a separate smooth elastic-warp
 feasibility pilot without training a model; M5B uses the M5A dataset for a
 grouped zero-shot and controlled-adaptation benchmark on the same frozen M3
 source split, M5C adds a retention-aware selection and calibration study on
-those same frames, M5D adds a retention-aware training-objective study, and
-M6A adds a spatial-aware feature study. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all ten recorded
+those same frames, M5D adds a retention-aware training-objective study, M6A adds
+a spatial-aware feature study, and M6B adds a spatial resolution study. See
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all eleven recorded
 experiments.
 
 ## Quick start: dataset pipeline
@@ -527,6 +530,28 @@ The run writes `reports/spatial_feature_study_v0_1_0/` and
 recorded in `EXP-0010` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.15.
 
+## Quick start: spatial resolution study
+
+M6B varies only the grid resolution (2×2, 4×2, 4×4, 8×8), reusing the M6A
+feature definitions unchanged, to test whether a finer partition captures
+geometric information the coarse grid missed.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-resolution-study run \
+    --config configs/spatial_resolution_study_v0_1_0.toml
+
+# Verify the written run: artifact hashes, prediction replay and protocol
+uv run --extra image --extra ml captcha-resolution-study verify \
+    --config configs/spatial_resolution_study_v0_1_0.toml
+```
+
+The run writes `reports/spatial_resolution_study_v0_1_0/` and
+`models/spatial_resolution_study_v0_1_0/` (both Git-ignored). The results are
+recorded in `EXP-0011` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.16.
+
 ## Current status
 
 Implemented:
@@ -609,10 +634,14 @@ Implemented:
   in a separate versioned module, three predeclared ablations with a fixed
   model family and training partition, a grid-resolution diagnostic, and a
   run/verify CLI.
+- A spatial resolution study (`spatial_resolution_study.py`,
+  `configs/spatial_resolution_study_v0_1_0.toml`): four predeclared grid
+  resolutions in two representations with the feature definitions unchanged,
+  training-only redundancy and overfitting diagnostics, and a run/verify CLI.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 421 tests in total, all passing, including byte-identical dataset
+- 449 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -627,9 +656,12 @@ Implemented:
   deterministic-report tests, the M5D weight validity and normalisation,
   target-independence, group-assignment, training isolation, diagnostic
   exclusion, eligibility, tie-breaking, fallback, control-reproduction and
-  deterministic-report tests, and the M6A feature names/order/dtypes, blank and
+  deterministic-report tests, the M6A feature names/order/dtypes, blank and
   degenerate images, determinism, metadata-leakage, schema immutability,
-  split-integrity, diagnostic exclusion, selection and serialization tests.
+  split-integrity, diagnostic exclusion, selection and serialization tests, and
+  the M6B per-resolution feature counts, ordering, region boundaries, uneven
+  dimensions, blank and empty regions, determinism, leakage, selection
+  isolation, fallback and deterministic-report tests.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -795,6 +827,48 @@ readability or solvability):
   declared resolution: it shows that a *coarse* spatial summary does not
   help, not that localization is useless. The remaining headroom is a
   resolution question, not an objective question.
+- **Decision.** Conventional feature-based ML remains the benchmark champion
+  and the M5C champion remains the best geometric-robustness policy found so
+  far. The evidence does not justify a CNN, and a new corruption family does
+  not by itself justify one.
+- **Uncertainty.** Every interval resamples whole source groups and there are
+  only 12 held-out test sources, so all intervals are preliminary and
+  descriptive. Interval overlap or non-overlap is not treated as a
+  significance test, and no universal threshold was introduced after seeing
+  test results.
+
+Milestone M6B findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **No spatial candidate qualified.** Every combined candidate breached the
+  10% original-task tolerance and every spatial-only candidate breached it
+  plus the clean-slice and per-severity tolerances, so the frozen M5C champion
+  is retained. This is reported as a negative result rather than a manufactured
+  winner.
+- **The finer grid does resolve the warp.** On training rows the per-cell
+  ink-occupancy change against the same source's clean reference rises from
+  0.0042 at 2×2 to 0.0107 at 8×8, and its correlation with the SSIM drop rises
+  from **+0.45 to +0.83**, closing most of the gap to blur's +0.89. M6A's
+  diagnosis was right and the obvious follow-up still fails.
+- **The model cannot use the information.** No resolution produces a
+  demonstrable geometric gain — every paired geometric interval includes zero —
+  and the aggregate geometric validation RMSE is *best* at the coarsest grid.
+  Meanwhile the retention slices degrade monotonically with the feature count,
+  because the forest considers every feature at each split and the extra
+  spatial features are informative about the geometric family but largely
+  uninformative about blur, noise and clean references.
+- **Redundancy is not the mechanism.** Mean absolute pairwise correlation
+  *falls* with resolution (0.59 at 2×2 to 0.26 at 8×8), and no feature is
+  constant or duplicated at any grid, while the overfitting gap grows.
+- **Cross-milestone check.** The 4×2 candidates reproduce the M6A 4×2 candidates
+  bit-for-bit (max difference 0.0e+00 on every test slice), confirming M6B is a
+  strict extension of M6A.
+- **What this rules in and out.** The blocker is the **relevance** of the
+  spatial features to the other corruption families, not the resolution of the
+  partition. The next defensible question is whether a feature specifically
+  sensitive to local *displacement*, rather than to local ink quantity, can add
+  information without diluting the splits that support blur, noise and clean
+  references.
 - **Decision.** Conventional feature-based ML remains the benchmark champion
   and the M5C champion remains the best geometric-robustness policy found so
   far. The evidence does not justify a CNN, and a new corruption family does

@@ -4,13 +4,14 @@
 feasibility pilot, the M4B grouped robustness benchmark, the M5A
 geometric-distortion feasibility pilot, the M5B grouped geometric-robustness
 benchmark, the M5C retention-aware selection and calibration study, the M5D
-retention-aware training-objective study and the M6A spatial-aware feature
-study. A reproducible dataset and image-feature pipeline, a leakage-safe
-conventional-ML benchmark, source-isolated zero-shot/adaptation evaluation, a
-replayable elastic-warp pilot, a grouped geometric-robustness benchmark, a
-retention-aware selection study, a retention-aware training-objective study and
-a spatial-aware feature study exist. The CNN comparison, full M5 error
-taxonomy and dashboard are planned.
+retention-aware training-objective study, the M6A spatial-aware feature study
+and the M6B spatial resolution study. A reproducible dataset and image-feature
+pipeline, a leakage-safe conventional-ML benchmark, source-isolated
+zero-shot/adaptation evaluation, a replayable elastic-warp pilot, a grouped
+geometric-robustness benchmark, a retention-aware selection study, a
+retention-aware training-objective study, a spatial-aware feature study and a
+spatial resolution study exist. The CNN comparison, full M5 error taxonomy and
+dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -248,6 +249,14 @@ the default; a CNN must justify its cost out-of-sample.
   training partition fixed. A grid-resolution diagnostic on training rows
   measures whether the declared partition can resolve the distortion at all.
 
+**Implemented for M6B (spatial resolution study):**
+
+- Four predeclared grid resolutions (2x2, 4x2, 4x4, 8x8) evaluated in two
+  representations each, reusing the M6A feature definitions unchanged and
+  varying only the resolution, with the model family, seed, training rows and
+  objective fixed. Training-only redundancy, overfitting-gap and
+  grid-resolution diagnostics accompany the predeclared selection rule.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -294,6 +303,7 @@ src/captcha_quality/
 ├── retention_aware_training.py # retention-aware training objectives, CLI (implemented, M5D)
 ├── spatial_features.py # localized grid features, versioned separately (implemented, M6A)
 ├── spatial_study.py    # spatial-aware feature ablation study, CLI (implemented, M6A)
+├── spatial_resolution_study.py # grid resolution study, CLI (implemented, M6B)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -308,7 +318,8 @@ M5A elastic-warp pilot, `geometric_benchmark.py` implements M5B on top of it,
 M5D, all using the same persistence, verification and reporting conventions.
 `spatial_features.py` and `spatial_study.py` implement M6A, keeping the
 localized features in a separate versioned module so the frozen eight-feature
-pipeline cannot be altered. No CNN code exists yet.
+pipeline cannot be altered, and `spatial_resolution_study.py` implements M6B on
+top of it. No CNN code exists yet.
 
 ## 4. Artifact contracts
 
@@ -345,6 +356,9 @@ pipeline cannot be altered. No CNN code exists yet.
 | Spatial feature config | `configs/spatial_feature_study_v0_1_0.toml` | seed, frozen M5C hashes, model family and hyperparameters, grid and feature families, ablation definitions, eligibility tolerances, selection score and weights, bootstrap count, output paths |
 | Spatial feature models | `models/spatial_feature_study_v0_1_0/` (Git-ignored) | one bundle per refitted ablation, each with a JSON card: feature names/order and count, target, seed, validation and test metrics, package versions, artifact SHA-256 |
 | Spatial feature reports | `reports/spatial_feature_study_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, the spatial feature manifest, `run_metadata.json`, Markdown report |
+| Resolution study config | `configs/spatial_resolution_study_v0_1_0.toml` | seed, frozen M5C/M6A hashes, model family and hyperparameters, the four declared grids, representations, eligibility tolerances, selection score and weights, bootstrap count, output paths |
+| Resolution study models | `models/spatial_resolution_study_v0_1_0/` (Git-ignored) | one bundle per refitted candidate, each with a JSON card: feature names/order and count, resolution, target, seed, validation and test metrics, package versions, artifact SHA-256 |
+| Resolution study reports | `reports/spatial_resolution_study_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, the per-resolution feature manifest, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -360,7 +374,7 @@ byte-for-byte.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
-| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study and M6A feature study complete) |
+| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; spatial resolution study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study, M6A feature study and M6B resolution study complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -413,12 +427,13 @@ byte-for-byte.
   *where* on the canvas a distortion occurs. M5D's negative result is
   consistent with this: within one model family, one representation and one
   training sample, sample weighting moves error between slices rather than
-  removing it. M6A narrows it further: a *coarse* spatial summary does not
-  help either, because a 4x2 partition resolves blur about 25 times more
-  strongly than a 1-3 px warp. The remaining headroom is a resolution
-  question, not an objective question. These are hypotheses consistent with the
-  evidence, not isolated causes.
-- **Small test support:** M4B, M5B, M5C, M5D and M6A have only 12 held-out
+  removing it. M6A and M6B narrow it further. A coarse grid does not help,
+  and a finer grid *does* resolve the geometric warp (occupancy/SSIM correlation
+  +0.45 to +0.83) without producing a demonstrable prediction gain. The blocker
+  is therefore the **relevance** of the spatial features to blur, noise and
+  clean references, not the resolution of the partition. These are hypotheses
+  consistent with the evidence, not isolated causes.
+- **Small test support:** M4B, M5B, M5C, M5D, M6A and M6B have only 12 held-out
   sources. Source-grouped intervals are wide and preliminary; no universal
   significance threshold was introduced after seeing test results.
 - **Font licensing:** only redistributable fonts may be used or bundled.
@@ -530,3 +545,16 @@ ink by a fraction of a 16x96-pixel cell. The negative result therefore rules
 out *coarse* regional summaries and localises the missing information to a
 resolution mismatch. The M5C champion is retained. No dashboard, deployment
 or final presentation exists yet.
+
+Milestone M6B: a spatial resolution study varying only the grid (2x2, 4x2,
+4x4, 8x8) with the M6A feature definitions unchanged. **No spatial candidate
+qualified.** M6B sharpens M6A's conclusion: the finer grid *does* resolve the
+geometric warp (the occupancy/SSIM-drop correlation rises from +0.45 at 2x2 to
++0.83 at 8x8, closing most of the gap to blur's +0.89), yet no resolution
+produces a demonstrable geometric gain — every paired geometric interval
+includes zero — while the retention cost grows monotonically with the feature
+count. Redundancy is not the mechanism (mean |r| *falls* from 0.59 to 0.26, with
+no constant or duplicated feature at any grid). The blocker is the
+**relevance** of the spatial features to the other corruption families, not
+the resolution of the partition. The M5C champion is retained. No dashboard,
+deployment or final presentation exists yet.
