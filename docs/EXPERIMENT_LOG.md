@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` completed. No other experiments have been run.
+**Status:** `EXP-0001` and `EXP-0002` completed. No other experiments have been run.
 
 This file is the authoritative record of experiments. An experiment is logged
 only if it can be reproduced from the recorded configuration, dataset version,
@@ -23,7 +23,7 @@ split, and code revision.
 | Field | Values |
 | --- | --- |
 | Status | `planned`, `running`, `completed`, `failed`, `inconclusive`, `superseded` |
-| Task | `target-validation`, `quality-regression`, `corruption-classification`, `severity-classification`, `cnn-comparison`, `robustness-analysis` |
+| Task | `target-validation`, `dataset-generation`, `quality-regression`, `corruption-classification`, `severity-classification`, `cnn-comparison`, `robustness-analysis` |
 | Split | Frozen split ID plus hash, for example `split-v1` (`<hash>`) |
 | Dataset | Dataset version plus manifest hash |
 | Metrics | Name, value, unit, and confidence interval where applicable |
@@ -32,6 +32,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0002` | 2026-10-20 | `dataset-generation` | `completed` | Two deterministic datasets generated; grouped splits verified; no single-feature triviality, but an eight-feature linear baseline reaches test R² 0.962 |
 | `EXP-0001` | 2026-10-20 | `target-validation` | `completed` | SSIM passes in both families; PSNR passes for noise but fails for blur on an ink-coverage confound; MS-SSIM deferred |
 
 ## Entries
@@ -73,6 +74,178 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0002 — Reproducible synthetic dataset, grouped splits and feature diagnostic
+
+- **Date:** 2026-10-20
+- **Status:** `completed`
+- **Task:** `dataset-generation`
+- **Hypothesis / question:** Can the two validated corruption families be turned
+  into a deterministic, versioned dataset with stable IDs, one clean reference
+  per sample, grouped splits fixed before generation, and typed image-only
+  features — and do those features make the SSIM target trivially predictable on
+  held-out groups? This is a dataset-validity and leakage experiment, not a
+  human-solvability study.
+- **Code revision:** base `92ecf33` plus the Milestone 2 implementation; this
+  entry and that implementation are committed together in
+  `feat: add reproducible dataset and image features`. Working tree: clean at
+  run apart from the files being committed.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; Pillow 12.3.0;
+  scikit-image 0.26.0; SciPy 1.18.1; macOS 26 (arm64). No GPU, no internet and
+  no Kaggle access were required.
+- **Configurations:**
+  - `configs/dataset_pilot.toml`, sha256
+    `64fb26f78cffecdb9dc8543c600a0bae8fc1c0a66e85adb72bcdb96341e73512`;
+    generation hash `f9e66dc9ca109a7b1cf8a47e98f19c0214cf723933047583edbda0faec198b1d`.
+  - `configs/dataset_v0_1_0.toml`, sha256
+    `72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a`;
+    generation hash `820cce7a77b5e95761f033b75e8cb2b304b6ad6293f67b5bc27bcf0823a6cef9`.
+  - The M1 config `configs/pilot_target_validation.toml` is unchanged (sha256
+    `6e9bdf961f36bbf70f5806e41b53661e1577bf15e13eb833348632359b886715`).
+- **Datasets:** `v0.1.0-pilot` (9 sources, 81 samples; manifest sha256
+  `2a5984c3f12efa14caf853c171dbe16a31ac8f399b8d741845be181b2f501f44`) and
+  `v0.1.0` (60 sources, 540 samples; manifest sha256
+  `a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37`).
+- **Split:** derived from the generation hash plus split seed `20261021`;
+  assignment sha256 for `v0.1.0` is
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`.
+  Groups: 60 sources (36/12/12 train/val/test); samples: 540 (324/108/108).
+- **Seeds:** dataset seed `20261020`; split seed `20261021`. Per-source text,
+  render and corruption seeds are derived independently from the dataset seed,
+  font, source index, family and severity. No global RNG state.
+- **Runtime:** pilot generation ~0.6 s; reference generation ~1.2 s in-process
+  (1.4 s wall including CLI startup); full verification 0.9 s; diagnostics
+  0.2 s. Disk usage: 503 KiB (pilot) and 3.4 MiB (reference).
+
+**Method.** Loaded a strict TOML configuration, planned one clean source per
+`(font, index)` with text length drawn from the configured distribution, and
+assigned font-stratified grouped splits **before** rendering. Rendered a clean
+192x64 grayscale reference per source, then every non-zero severity of both
+families (blur radii `[1, 2, 3.5, 5]` px; noise sigma `[6, 12, 20, 32]`), with
+an independent seeded noise realisation per variant. Computed SSIM (primary)
+and PSNR (secondary) from the exact reference/variant pair. Extracted eight
+documented image-only features from every degraded image. Wrote a public
+manifest, a separate internal `ground_truth.csv`, `sources.csv`, `features.csv`
+and `dataset_summary.json` through a staging directory, then renamed it into
+place.
+
+Verification recomputed every target from disk, checked raw-pixel hashes, path
+containment, reference↔source matching, conditional PSNR, split isolation and
+feature-table integrity. Two additional independent runs were compared
+byte-for-byte. Diagnostics fitted only on `train`: a naive mean, three metadata
+baselines, one OLS per feature, and an all-feature OLS; one-feature selection
+used validation R² and test was reported once. The pilot dataset was run first,
+then the larger reference dataset.
+
+**Metrics.**
+
+| Metric | Value | Notes |
+| --- | --- | --- |
+| Sources / samples | 60 / 540 | 1 clean + 4 blur + 4 noise per source |
+| Split sources (train/val/test) | 36 / 12 / 12 | all three fonts in every split (12/4/4) |
+| Split samples (train/val/test) | 324 / 108 / 108 | family and severity composition proportional |
+| Feature rows x features | 540 x 8 | finite; stable names and order |
+| Verification checks | 11 / 11 PASS | includes 540 recomputed target pairs |
+| Leakage checks | 4 / 4 PASS | target exclusion, group isolation, disjointness, train-only fitting |
+| Best single feature (val/test R²) | `histogram_entropy` 0.680 / 0.644 | selected on validation only |
+| All-feature OLS (val/test R²) | 0.968 / 0.962 | standardised on train |
+| Metadata severity + family (val/test R²) | 0.924 / 0.911 | oracle label baseline, not a model input |
+| Metadata font (val/test R²) | -0.001 / 0.002 | no font confounding in this split |
+| Metadata text length (val/test R²) | 0.000 / 0.000 | no length confounding in this split |
+| Reproducibility | byte-identical | two independent runs; manifest and features hashes equal |
+
+Mean SSIM by severity on `v0.1.0` (n = 60 per cell; clean = 1.000):
+
+| Family | s1 | s2 | s3 | s4 |
+| --- | --- | --- | --- | --- |
+| Gaussian blur | 0.897 (0.013) | 0.675 (0.024) | 0.475 (0.034) | 0.411 (0.053) |
+| Gaussian noise | 0.871 (0.035) | 0.742 (0.045) | 0.635 (0.043) | 0.540 (0.042) |
+
+The pilot dataset gave the same ordering: blur 0.901/0.672/0.461/0.395,
+noise 0.928/0.804/0.680/0.572.
+
+**Observations.** Facts only:
+
+1. **Determinism held end-to-end.** Repeated generation produced identical
+   manifests (`a6a2cb8654eb…`), feature tables (`d3715e7975cf…`), source and
+   ground-truth tables, and 540 identical image pixel hashes. No timestamps are
+   written into any artifact.
+2. **Split allocation needed a floor repair.** With three sources per font and
+   0.6/0.2/0.2 ratios, plain largest-remainder allocation gives `2/1/0`, silently
+   excluding a split from a font. The implemented rule reserves one group per
+   split and takes the remainder from the largest split, producing `1/1/1` and
+   satisfying the predeclared font-stratification requirement.
+3. **Text-length distribution is not balanced per split.** Train has 11/14/11
+   sources at lengths 4/5/6, validation 5/7/0, test 2/6/4. This is reported, not
+   corrected: only font was stratified by design.
+4. **The target is strongly predictable from simple statistics.** One feature
+   (`histogram_entropy`) reaches validation/test R² 0.680/0.644, below the
+   predeclared 0.70 "strong confound" threshold, so the single-feature
+   classification is **no single-feature triviality**. However, the eight-feature
+   linear baseline reaches **0.968/0.962**, classified
+   `feature_only_near_solved`.
+5. **Family-conditional relationships reverse sign.** `laplacian_variance` has
+   overall Pearson r = 0.066, but r = 0.883 within blur and r = -0.861 within
+   noise. `ink_fraction` is r = -0.930 within blur and r = 0.182 within noise.
+   Aggregate correlations are misleading here; the report includes within-family
+   and within-severity tables.
+6. **8-bit clipping still compresses heavy noise.** At nominal sigma 20
+   (severity 3), mean `intensity_std` fell from 75.29 on the clean renders to
+   73.14 on the noisy variants (58 of 60 sources), while the Immerkær estimate
+   rose from 3.77 to 15.84 on every source. Intensity variance is therefore not a
+   monotone noise indicator.
+7. **High blur removes all Canny edges for some sources.**
+   `edge_density` reaches exactly 0 on strongly blurred images, which is a valid
+   but discrete response; the feature table records it rather than hiding it.
+8. **The pilot is too small to override the larger result.** With three training
+   sources, pilot entropy R² is 0.822/0.801 (`strong_confound`) and the
+   all-feature baseline 0.985/0.974. The larger run is the reference for M3.
+
+**Conclusion.** The pipeline produces a valid, versioned, byte-reproducible
+synthetic dataset with one clean reference per sample, correct conditional PSNR
+semantics, stable IDs, and grouped splits that never cross sources. The target
+and features are leak-free by construction and by programmatic checks. The
+diagnostic supports a specific decision: the SSIM target is **not** trivially
+predictable from any single feature, but it is almost completely predictable
+from the eight simple statistics together. A CNN is therefore not justified by
+target predictability alone; M3 baselines must beat the feature-only linear
+baseline under grouped evaluation, and any claimed gain must not be explained by
+the same statistics. These findings concern synthetic image similarity only and
+say nothing about human readability or CAPTCHA solvability.
+
+**Limitations.**
+
+- Three fonts, one canvas size, flat backgrounds only, two corruption families,
+  and 60 synthetic sources. No cross-generator or cross-font claim is made; a
+  held-out font/configuration split is reserved for later.
+- The split is a random grouped split with 12 held-out source groups per split;
+  R² values are noisy and are diagnostics, not model-performance estimates.
+- Text length is sampled from a distribution but not stratified; validation has
+  no length-6 sources by chance.
+- PSNR remains secondary and is only interpreted for the noise family (M1).
+  MS-SSIM is still deferred.
+- The noise family is compressed by 8-bit clipping, so nominal sigma is not the
+  realised noise standard deviation.
+- Features describe the degraded image only; they cannot capture
+  reference-relative structure, which is why the all-feature linear baseline
+  still leaves ~4% of held-out variance.
+- System fonts are recorded by path and logical ID, not by binary content hash.
+- Single-machine run; PNG bytes may vary across Pillow/zlib versions, so
+  reproducibility is asserted on decoded pixel hashes and CSV contents, not on
+  PNG file bytes.
+
+**Next step.** Milestone 3: grouped conventional baselines (naive, ridge/linear,
+tree ensemble) trained on `features.csv`, evaluated on the frozen split, with the
+feature-only OLS baseline as the floor. Add coverage-stratified reporting and a
+held-out-font check. No CNN or dashboard work before that comparison is
+recorded.
+
+**Artifacts.** Git-ignored: `data/processed/captcha_quality_v0.1.0-pilot/`,
+`data/processed/captcha_quality_v0.1.0/`, `data/processed/repro_a/`,
+`data/processed/repro_b/`, `reports/captcha_quality_v0.1.0-pilot/` and
+`reports/captcha_quality_v0.1.0/` (diagnostics markdown plus four CSV tables).
 
 ---
 

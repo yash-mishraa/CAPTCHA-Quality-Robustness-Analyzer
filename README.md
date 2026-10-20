@@ -4,9 +4,10 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestone 1 complete — a metric-validation pilot has been run and
-> logged. The dataset pipeline, ML models, and dashboard are **not implemented
-> yet**, and the project does **not** predict human CAPTCHA solvability. See
+> **Status:** Milestones 0–2 complete — the metric-validation pilot and a
+> reproducible dataset/feature pipeline have been run and logged. ML models, the
+> CNN comparison, and the dashboard are **not implemented yet**, and the project
+> does **not** predict human CAPTCHA solvability. See
 > [Current status](#current-status).
 
 ## Overview
@@ -51,16 +52,20 @@ fact.
 
 ## Scope and limitations
 
-**In scope (planned):**
+**In scope:**
 
-- A deterministic synthetic text-image renderer with recorded metadata.
-- A configurable distortion engine with multiple corruption families and
-  severity levels.
-- Reference-based image-quality targets (for example SSIM, MS-SSIM, PSNR) and
-  feature extraction.
-- Leakage-aware conventional ML baselines and a CNN comparison.
-- Robustness/error analysis grouped by corruption family and severity.
-- A Streamlit dashboard for exploring results.
+- A deterministic synthetic text-image renderer with recorded metadata
+  (**implemented**).
+- A configurable distortion engine with two controlled corruption families and
+  severity ladders (**implemented**).
+- Reference-based image-quality targets (SSIM primary, PSNR secondary for noise)
+  and eight documented handcrafted features (**implemented**).
+- A versioned dataset with a public manifest, grouped splits, and programmatic
+  verification (**implemented**).
+- Leakage-aware conventional ML baselines and a CNN comparison (**planned**).
+- Robustness/error analysis grouped by corruption family and severity
+  (**planned**).
+- A Streamlit dashboard for exploring results (**planned**).
 
 **Explicitly out of scope / not claimed:**
 
@@ -75,9 +80,11 @@ fact.
   standard supervised learning; the contribution is a careful, reproducible
   pipeline and analysis.
 - **No deep-learning results yet.** PyTorch is a planned dependency, not an
-  implemented component.
+  implemented component. The M2 diagnostic shows that simple image statistics
+  already reconstruct the SSIM target almost completely, so a CNN is not
+  justified by target predictability alone.
 
-## Planned architecture
+## Architecture
 
 ```text
                     configs/ (seeds, fonts, corruption grid)
@@ -122,9 +129,11 @@ fact.
                                   +--------------------------+
 ```
 
-Each stage is planned to write artifacts with an explicit schema and a recorded
-configuration hash, so a result can be traced back to the exact data and
-parameters that produced it.
+Stages 1–6 are implemented; stages 7–9 are planned. Each implemented stage
+writes artifacts with an explicit schema and a recorded configuration hash, so a
+result can be traced back to the exact data and parameters that produced it.
+Manifests and summaries are timestamp-free, which makes repeated runs
+byte-comparable.
 
 ## Technology stack
 
@@ -133,7 +142,7 @@ parameters that produced it.
 | Language | Python >= 3.11 | Configured |
 | Data handling | NumPy, pandas | Core dependencies |
 | Image I/O and rendering | Pillow | Core dependency |
-| Image processing | OpenCV, scikit-image | Optional extra `image`; scikit-image used by the M1 pilot for SSIM/PSNR |
+| Image processing | OpenCV, scikit-image | Optional extra `image`; scikit-image provides SSIM/PSNR and the Otsu/Canny features |
 | Conventional ML | scikit-learn | Optional extra `ml` (planned use) |
 | Deep learning | PyTorch | Optional extra `deep-learning` (planned use) |
 | Dashboard | Streamlit | Optional extra `app` (planned use) |
@@ -183,17 +192,16 @@ during Milestone 0.
 ### Option A — uv (recommended)
 
 ```bash
-uv sync --extra dev
-uv run pytest
+uv sync --extra dev --extra image
+uv run --extra image pytest
 uv run ruff check .
 uv run ruff format --check .
 ```
 
-To reproduce the Milestone 1 target-validation pilot (requires the `image`
-extra for scikit-image):
+The `image` extra is required because the test suite exercises SSIM/PSNR and the
+Otsu/Canny features. To reproduce the Milestone 1 target-validation pilot:
 
 ```bash
-uv sync --extra dev --extra image
 uv run --extra image captcha-pilot --config configs/pilot_target_validation.toml
 ```
 
@@ -205,7 +213,7 @@ Outputs are written to `reports/pilot/`, which is Git-ignored.
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -e ".[dev]"
+pip install -e ".[dev,image]"
 pytest
 ruff check .
 ruff format --check .
@@ -219,8 +227,13 @@ environment files are required at this stage.
 - Pin the supported Python range in `pyproject.toml` (`>=3.11`).
 - Every generator and experiment run is driven by a configuration file and a
   recorded seed.
-- Datasets, checkpoints, and generated reports stay out of Git; their manifests
-  and generation configs are versioned. See [`data/README.md`](data/README.md).
+- Datasets, checkpoints, and generated reports stay out of Git; their configs are
+  versioned, and manifests are regenerated deterministically. See
+  [`data/README.md`](data/README.md).
+- Dataset generation writes to a `.partial` staging directory and renames it into
+  place only on success. Existing datasets are never overwritten silently.
+- The public manifest contains `text_sha256`, not raw text; raw strings live only
+  in the internal, Git-ignored `ground_truth.csv`.
 - Results are recorded in [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md)
   with the exact configuration and dataset version used.
 
@@ -230,15 +243,53 @@ environment files are required at this stage.
 | --- | --- | --- |
 | M0 | Repository structure, tooling, documentation foundation | **Complete** |
 | M1 | Target definition and validation: confirm the reference-based quality target is stable, sensitive, and worth modelling | **Complete** — SSIM passes for blur and noise; PSNR passes for noise, fails for blur |
-| M2 | Deterministic renderer, distortion engine, manifest schema, feature extraction | Planned |
+| M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | Planned |
 | M4 | CNN comparison (small CNN and transfer learning) under the same splits | Planned |
 | M5 | Robustness analysis by corruption family/severity and error taxonomy | Planned |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
-Milestone 1 was a validation gate, not a modelling milestone. Its outcome
-determines which target later milestones use; see
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for the recorded experiment.
+Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
+that validated target into a versioned dataset and asks whether the target is
+trivially predictable from cheap features. See
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for both recorded experiments.
+
+## Quick start: dataset pipeline
+
+```bash
+uv sync --extra dev --extra image
+
+# 1. End-to-end check on the small pilot configuration (9 sources, 81 samples)
+uv run --extra image captcha-dataset generate --config configs/dataset_pilot.toml
+
+# 2. Reference dataset (60 sources, 540 samples), then verify and diagnose
+uv run --extra image captcha-dataset generate --config configs/dataset_v0_1_0.toml
+uv run --extra image captcha-dataset verify   --dataset data/processed/captcha_quality_v0.1.0
+uv run --extra image captcha-dataset diagnose --dataset data/processed/captcha_quality_v0.1.0 \
+    --config configs/dataset_v0_1_0.toml
+
+# 3. Reproducibility: generate a second copy and compare
+uv run --extra image captcha-dataset generate --config configs/dataset_v0_1_0.toml \
+    --output-dir data/processed/repro
+uv run --extra image captcha-dataset compare \
+    --a data/processed/captcha_quality_v0.1.0 --b data/processed/repro
+```
+
+`generate` refuses to replace an existing directory unless `--overwrite` is
+passed. `verify` returns exit code 1 when any check fails; configuration and
+usage errors return 2. `diagnose` writes a markdown report plus four CSV tables
+to `reports/<dataset-name>_<version>/` by default.
+
+Outputs:
+
+| Path | Contents |
+| --- | --- |
+| `manifest.csv` | one row per sample: IDs, split, family, severity, parameters, paths, SSIM/PSNR targets, hashes; no raw text |
+| `sources.csv` | one row per clean source with its split and clean-image hash |
+| `ground_truth.csv` | internal `source_id,text` table (Git-ignored) |
+| `features.csv` | `sample_id` plus the eight documented features |
+| `dataset_summary.json` | counts, per-split summaries, font resolution, split policy and assignment hash, artifact hashes, disk usage |
+| `images/` | lossless PNGs: `clean/` and one directory per corruption family |
 
 ## Current status
 
@@ -258,9 +309,52 @@ Implemented:
 - A validation pilot (`pilot.py`, `summarise.py`, `gate.py`) with a predeclared
   acceptance gate, a `captcha-pilot` CLI, and Git-ignored CSV/JSON/Markdown
   outputs plus example contact sheets.
-- 104 tests covering rendering determinism, corruption behaviour and non-mutation,
-  metric sanity and input validation, gate statistics, configuration errors, and
-  an end-to-end pilot run.
+- The M1 pilot added 104 tests covering rendering determinism, corruption
+  behaviour and non-mutation, metric sanity and input validation, gate
+  statistics, configuration errors, and an end-to-end pilot run.
+- A typed dataset configuration (`config.py`) with strict key validation, explicit
+  text-length distributions, font IDs, background policy, corruption ladders,
+  split ratios, seeds, dataset version and output directory, plus a stable
+  content-defining generation hash.
+- Deterministic grouped splits (`splits.py`): one group per clean source,
+  font-stratified allocation, explicit failure when infeasible, and no source in
+  more than one split.
+- Dataset generation, verification and comparison (`dataset.py`): stable IDs,
+  clean reference for every sample, conditional PSNR (`null` + `psnr_infinite`),
+  raw-pixel hashes, staging/atomic rename, and recomputation of every target from
+  the exact pair.
+- Eight image-only features (`features.py`) with documented definitions and
+  fixed order; uniform-image short-circuits; no NaN/inf; batch extraction;
+  SSIM/PSNR/severity/font/length are never inputs.
+- A leakage-safe diagnostic (`diagnostics.py`): train-only fits, validation-based
+  one-feature selection, held-out test reporting, metadata baselines, and
+  family/severity-conditioned correlations.
+- A `captcha-dataset` CLI with `generate`, `verify`, `features`, `diagnose` and
+  `compare` subcommands.
+- 205 tests in total, all passing, including byte-identical regeneration,
+  tamper detection, split isolation, feature edge cases, and leakage safeguards.
+
+Milestone 2 findings (synthetic image similarity only — **not** human readability
+or solvability):
+
+- The reference dataset (60 sources, 540 samples) is byte-reproducible across
+  independent runs: identical manifest, features, sources, ground truth, and all
+  540 image pixel hashes.
+- All 11 verification checks and all 4 leakage checks pass. Splits contain
+  36/12/12 sources and 324/108/108 samples; every split contains all three fonts.
+- The best single feature (`histogram_entropy`, selected on validation) reaches
+  validation/test R² 0.680/0.644 — below the predeclared "strong confound"
+  threshold, so there is **no single-feature triviality**.
+- However, the eight-feature linear baseline reaches validation/test R²
+  0.968/0.962. The target is highly predictable from simple statistics, so a CNN
+  is not justified by target predictability alone. M3 models must beat this
+  baseline under grouped evaluation.
+- Font and text length show no confounding (held-out R² ≈ 0). Corruption severity
+  and family explain most of the target (metadata-only R² 0.924/0.911), as
+  expected, and are reported as oracle baselines rather than model inputs.
+- Family-conditional correlations can reverse sign (e.g. Laplacian variance:
+  overall r = 0.066, r = 0.883 within blur, r = -0.861 within noise), so the
+  diagnostic reports within-family and within-severity rows.
 
 Milestone 1 findings (synthetic image similarity only — **not** human readability
 or solvability):
@@ -276,8 +370,8 @@ or solvability):
 - Adjacent severities were separated with large paired effects, no trial-level
   reversals occurred, and clean-vs-clean comparisons were exactly perfect.
 
-Not implemented (planned): the Milestone 2 dataset pipeline, handcrafted feature
-extraction, ML models, notebooks, dashboard, and any model performance numbers.
+Not implemented (planned): conventional ML models, the CNN comparison, robustness
+analysis, notebooks, the dashboard, and any model-performance claims.
 
 ## License
 

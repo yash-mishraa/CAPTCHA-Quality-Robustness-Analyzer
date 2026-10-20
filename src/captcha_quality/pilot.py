@@ -23,9 +23,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
-import shutil
-import subprocess
 import sys
 import tomllib
 from collections.abc import Sequence
@@ -53,6 +50,7 @@ from captcha_quality.gate import (
     render_markdown,
 )
 from captcha_quality.imaging import validate_pair
+from captcha_quality.provenance import code_revision, json_safe, package_version
 from captcha_quality.quality_metrics import SUPPORTED_METRICS, compute_pair_metrics
 from captcha_quality.render import (
     FontResolution,
@@ -508,8 +506,8 @@ def _write_outputs(
 
     payload = {
         "pilot": result.config.provenance(),
-        "package_version": _package_version(),
-        "code_revision": _code_revision(),
+        "package_version": package_version(),
+        "code_revision": code_revision(),
         "fonts": {
             "resolved": [
                 {"key": font.key, "path": str(font.path)}
@@ -555,7 +553,7 @@ def _write_outputs(
         },
     }
     (output_dir / "gate_results.json").write_text(
-        json.dumps(_json_safe(payload), indent=2, sort_keys=False) + "\n",
+        json.dumps(json_safe(payload), indent=2, sort_keys=False) + "\n",
         encoding="utf-8",
     )
 
@@ -609,47 +607,6 @@ def _report_header(result: PilotResult) -> list[str]:
         "- **Scope:** synthetic image similarity to a clean reference. "
         "Not a measurement of human readability or CAPTCHA solvability.",
     ]
-
-
-def _package_version() -> str:
-    from captcha_quality import __version__
-
-    return __version__
-
-
-def _code_revision() -> str:
-    """Best-effort short Git revision for provenance; never fails the run."""
-    if shutil.which("git") is None:
-        return "unknown"
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True,
-            check=True,
-            text=True,
-            cwd=Path(__file__).resolve().parents[2],
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return "unknown"
-    return completed.stdout.strip() or "unknown"
-
-
-def _json_safe(value: object) -> object:
-    """Replace non-finite floats with strings so the JSON is standards-compliant."""
-    if isinstance(value, dict):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, list | tuple):
-        return [_json_safe(item) for item in value]
-    if isinstance(value, float) and not math.isfinite(value):
-        return "inf" if value > 0 else "-inf" if value < 0 else "nan"
-    if isinstance(value, np.integer):
-        return int(value)
-    if isinstance(value, np.floating):
-        return _json_safe(float(value))
-    if isinstance(value, np.bool_):
-        return bool(value)
-    return value
 
 
 def _contact_sheet(

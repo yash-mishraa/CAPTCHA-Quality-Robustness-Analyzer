@@ -1,0 +1,70 @@
+# Milestone 2 dataset configuration: the committed reference dataset.
+#
+# Generated artefacts are written beneath data/processed/ (Git-ignored). The
+# identity-defining fields below form the generation hash; output_dir and the
+# [diagnostics] thresholds are excluded from that hash so moving the output or
+# retuning the analysis does not change source/sample IDs.
+#
+# Scope: synthetic CAPTCHA-style text images and synthetic image-similarity
+# targets. Nothing here measures human readability or CAPTCHA solvability.
+# The split is a random grouped split over synthetic sources; it is not a
+# cross-generator generalisation test (see docs/METHODOLOGY.md section 2.4).
+
+[dataset]
+name = "captcha-quality"
+version = "v0.1.0"
+seed = 20261020
+output_dir = "data/processed/captcha_quality_v0.1.0"
+sources_per_font = 20
+text_lengths = [4, 5, 6]
+text_length_weights = [0.3, 0.4, 0.3]
+charset = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+
+[render]
+canvas_width = 192
+canvas_height = 64
+fit_fraction = 0.86
+vertical_padding = 0.10
+jitter_fraction = 0.05
+# Controlled layout variation, added only in the dataset configuration.
+spacing_jitter_fraction = 0.03
+placement_jitter_fraction = 0.02
+# One constant gray level per source, drawn from this inclusive range. Texture
+# backgrounds are intentionally out of scope for v0.1.0 because they would
+# confound the additive-noise family.
+background_mode = "flat_random"
+background_min = 240
+background_max = 255
+center_ink = true
+strict_bounds = true
+
+[fonts]
+keys = ["arial", "courier_new", "times_new_roman"]
+min_required = 3
+
+[families]
+names = ["gaussian_blur", "gaussian_noise"]
+
+[families.gaussian_blur]
+unit = "px"
+levels = [0.0, 1.0, 2.0, 3.5, 5.0]
+
+[families.gaussian_noise]
+unit = "sigma"
+levels = [0.0, 6.0, 12.0, 20.0, 32.0]
+
+[splits]
+train = 0.6
+val = 0.2
+test = 0.2
+seed = 20261021
+min_sources_per_split = 2
+stratify_by_font = true
+
+# Predeclared diagnostic thresholds. "potentially_trivial" requires the best
+# single feature to reach the trivial R² on BOTH validation and test groups;
+# "strong_confound" requires either split to reach the lower threshold.
+[diagnostics]
+trivial_single_feature_r2 = 0.90
+strong_confound_r2 = 0.70
+min_group_rows = 20

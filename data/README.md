@@ -9,7 +9,7 @@ any committed result without downloading large opaque blobs.
 | Path | Contents | Tracked in Git? |
 | --- | --- | --- |
 | `data/raw/` | Generated clean and degraded images, plus per-run manifests | No (only `.gitkeep`) |
-| `data/processed/` | Feature tables, train/val/test splits, derived datasets | No (only `.gitkeep`) |
+| `data/processed/` | Generated datasets: manifests, split tables, feature tables, images | No (only `.gitkeep`) |
 | `data/interim/` | Temporary intermediate products | No |
 | `data/external/` | Manually obtained third-party inputs | No |
 | `models/` | Checkpoints, serialized models, embeddings | No (only `.gitkeep`) |
@@ -29,29 +29,62 @@ for documentation; that must be a deliberate, reviewed decision, not a default.
 - Fonts or assets whose licences do not permit redistribution.
 - Large model checkpoints or datasets.
 
+## Generated dataset layout
+
+Each generated dataset lives in `data/processed/<dataset-name>_<version>/`:
+
+```text
+manifest.csv           # public: one row per clean/corrupted sample; no raw text
+sources.csv            # one row per clean source, with split and clean hash
+ground_truth.csv       # INTERNAL: source_id,text (never in the public manifest)
+features.csv           # sample_id + eight documented handcrafted features
+dataset_summary.json   # counts, per-split summaries, split policy, artifact hashes
+images/
+  clean/<source_id>.png
+  <corruption-family>/<sample_id>.png
+```
+
+The directory is written through a sibling `.partial` staging directory and
+renamed into place only on success. It is Git-ignored and reproducible from the
+committed configuration.
+
 ## Dataset versioning
 
-Each generated dataset should have:
+Each generated dataset has:
 
-1. A **generation config** committed under `configs/` (fonts, charset, image
-   size, corruption grid, split rules).
-2. A **manifest** recording, per sample: stable sample ID, seed, text label,
-   font, renderer version, corruption family, severity, parameters, relative
-   image path, and the code revision.
-3. A **content hash** of the config plus a dataset-level checksum, written into
-   the experiment log.
+1. A **generation config** committed under `configs/` (fonts, charset, text-length
+   distribution, image size, background policy, corruption ladders, split rules,
+   seeds, dataset version).
+2. A **public manifest** recording, per sample: stable `sample_id`, `source_id`,
+   `variant_id`, `split_group_id`, `split`, text length, font ID, render/variant
+   seeds, corruption family and severity, numeric parameters, relative image and
+   reference paths, SSIM/PSNR targets, content hashes, dataset version, and the
+   generation config hash.
+3. A **generation config hash** plus artifact hashes (manifest, sources, ground
+   truth, features, and the image-pixel hash set) in `dataset_summary.json` and
+   in the experiment log.
 
-Prefer regenerating data from a manifest over committing images. If a dataset
-must be shared, use an external artifact store or Git LFS deliberately; do not
-silently add binaries to the main repository.
+**Text policy.** Raw text is deliberately excluded from `manifest.csv`,
+`sources.csv`, and `dataset_summary.json`. `text_sha256` is public; the raw string
+is kept only in the internal, Git-ignored `ground_truth.csv` for reproduction and
+verification. This keeps the public manifest free of stored CAPTCHA answers while
+preserving reproducibility.
+
+Prefer regenerating data from a config and manifest over committing images. If a
+dataset must be shared, use an external artifact store or Git LFS deliberately;
+do not silently add binaries to the main repository.
 
 ## Split integrity
 
-Splits must be assigned by **generation group** (for example the seed and text
-pair that produced an image family), not per image, so augmented or
-near-duplicate variants of the same source never cross train/test boundaries.
-Split assignments belong in `data/processed/` and must be reproducible from the
-manifest.
+Splits are assigned by **clean source** (`source_id`), not per image. All clean
+and corrupted variants of a source share one `split_group_id` and one split, so
+near-duplicates never cross train/val/test boundaries. The split ratios and seed
+are declared in the config before generation; `dataset_summary.json` records the
+ratios and a stable `split_policy.assignment_sha256`.
+
+The committed reference dataset uses a random grouped split over synthetic
+sources. This is **not** evidence of cross-generator or cross-font
+generalisation; a held-out font or configuration split is reserved for later.
 
 ## Retention and cleanup
 

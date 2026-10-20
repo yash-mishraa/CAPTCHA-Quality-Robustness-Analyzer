@@ -1,9 +1,16 @@
-"""Deterministic synthetic text rendering for the target-validation pilot.
+"""Deterministic synthetic text rendering.
 
-This is the smallest renderer that satisfies the pilot's needs: a fixed canvas,
-a small configurable font set, deterministic text selection, and deterministic
-per-character jitter. It is deliberately *not* the Milestone 2 renderer: there
-are no backgrounds, colours, rotations, or text-length distributions yet.
+The renderer supports two related uses:
+
+* the Milestone 1 target-validation pilot (fixed text length, white background,
+  per-character vertical jitter only), and
+* the Milestone 2 dataset pipeline (per-source text length drawn from a
+  configured distribution, configurable flat backgrounds, and optional
+  placement/spacing variation).
+
+All variation is driven by an explicitly seeded ``numpy.random.Generator``; no
+global random state is used. Defaults reproduce the Milestone 1 behaviour
+exactly, so adding features here does not change the validated pilot.
 
 The clean render is the reference image for every reference-based metric. It is
 returned read-only (see :mod:`captcha_quality.imaging`) so that corruption code
@@ -36,6 +43,12 @@ DEFAULT_CHARSET: Final[str] = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 
 BACKGROUND: Final[int] = 255
 FOREGROUND: Final[int] = 0
+
+#: Supported background policies. ``white`` keeps the Milestone 1 condition;
+#: ``flat_random`` draws one constant gray level per source from
+#: ``RenderConfig.background_range``. Texture backgrounds are deliberately not
+#: supported yet: their statistics would confound the noise-family analysis.
+BACKGROUND_MODES: Final[tuple[str, ...]] = ("white", "flat_random")
 
 #: Supersampling factor used when rasterising glyphs, then downsampled with
 #: LANCZOS for anti-aliased edges.
@@ -188,7 +201,7 @@ def resolve_fonts(
 
 @dataclass(frozen=True, slots=True)
 class RenderConfig:
-    """Fixed, documented rendering parameters for the pilot.
+    """Documented rendering parameters for the pilot and the dataset pipeline.
 
     Attributes
     ----------
@@ -205,6 +218,25 @@ class RenderConfig:
         Fraction of canvas height kept clear at the top and bottom.
     jitter_fraction:
         Per-character vertical jitter amplitude as a fraction of canvas height.
+    spacing_jitter_fraction:
+        Per-character horizontal spacing jitter amplitude as a fraction of
+        canvas height. Zero reproduces the pilot exactly.
+    placement_jitter_fraction:
+        Whole-block placement jitter amplitude as a fraction of canvas height.
+        Zero reproduces the pilot exactly.
+    background_mode:
+        ``white`` (constant 255, the pilot condition) or ``flat_random``
+        (one constant gray level per source, drawn from ``background_range``).
+    background_range:
+        Inclusive ``(low, high)`` gray-level range for ``flat_random``.
+    center_ink:
+        Correct the block placement using the actual ink bounding box instead
+        of the anchor-relative block size. Off by default so the Milestone 1
+        pilot reproduces byte-for-byte; dataset configurations enable it to
+        keep jittered text away from the canvas edges.
+    strict_bounds:
+        Refuse to emit a render whose ink touches the canvas border. Off by
+        default for the same Milestone 1 compatibility reason.
     """
 
     canvas: tuple[int, int] = DEFAULT_CANVAS
@@ -213,6 +245,12 @@ class RenderConfig:
     fit_fraction: float = 0.86
     vertical_padding: float = 0.10
     jitter_fraction: float = 0.05
+    spacing_jitter_fraction: float = 0.0
+    placement_jitter_fraction: float = 0.0
+    background_mode: str = "white"
+    background_range: tuple[int, int] = (BACKGROUND, BACKGROUND)
+    center_ink: bool = False
+    strict_bounds: bool = False
 
     def __post_init__(self) -> None:
         width, height = self.canvas
@@ -235,6 +273,29 @@ class RenderConfig:
             raise RenderError(f"vertical_padding must be in [0, 0.5), got {self.vertical_padding}")
         if not 0.0 <= self.jitter_fraction < 0.5:
             raise RenderError(f"jitter_fraction must be in [0, 0.5), got {self.jitter_fraction}")
+        if not 0.0 <= self.spacing_jitter_fraction < 0.5:
+            raise RenderError(
+                f"spacing_jitter_fraction must be in [0, 0.5), got {self.spacing_jitter_fraction}"
+            )
+        if not 0.0 <= self.placement_jitter_fraction < 0.5:
+            raise RenderError(
+                "placement_jitter_fraction must be in [0, 0.5), got "
+                f"{self.placement_jitter_fraction}"
+            )
+        if self.background_mode not in BACKGROUND_MODES:
+            raise RenderError(
+                f"background_mode must be one of {BACKGROUND_MODES}, got {self.background_mode!r}"
+            )
+        low, high = self.background_range
+        if not 0 <= low <= high <= 255:
+            raise RenderError(
+                "background_range must be an inclusive (low, high) pair in [0, 255] "
+                f"with low <= high, got {self.background_range}"
+            )
+        if not isinstance(self.center_ink, bool):
+            raise RenderError(f"center_ink must be a boolean, got {self.center_ink!r}")
+        if not isinstance(self.strict_bounds, bool):
+            raise RenderError(f"strict_bounds must be a boolean, got {self.strict_bounds!r}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -247,14 +308,27 @@ class CleanRender:
     font_size_px: int
     ink_fraction: float
     sha256: str
+    background_level: int = BACKGROUND
 
     def __post_init__(self) -> None:
         validate_image(self.image, name="clean render")
+        if not 0 <= self.background_level <= 255:
+            raise RenderError(f"background_level must be in [0, 255], got {self.background_level}")
 
 
-def sample_text(rng: np.random.Generator, config: RenderConfig) -> str:
-    """Draw a deterministic text label from ``config.charset``."""
-    indices = rng.integers(0, len(config.charset), size=config.text_length)
+def sample_text(
+    rng: np.random.Generator, config: RenderConfig, *, length: int | None = None
+) -> str:
+    """Draw a deterministic text label from ``config.charset``.
+
+    ``length`` overrides ``config.text_length``; the dataset pipeline uses this
+    to draw the text length from its configured distribution before constructing
+    the per-source render configuration.
+    """
+    size = config.text_length if length is None else length
+    if size < 1:
+        raise RenderError(f"text length must be >= 1, got {size}")
+    indices = rng.integers(0, len(config.charset), size=size)
     return "".join(config.charset[int(index)] for index in indices)
 
 
@@ -316,14 +390,15 @@ def render_clean(
     config:
         Rendering parameters.
     rng:
-        Seeded generator controlling per-character vertical jitter. Passing a
+        Seeded generator controlling the background level (``flat_random``),
+        placement/spacing jitter, and per-character vertical jitter. Passing a
         seeded generator is what makes repeated runs reproducible.
 
     Returns
     -------
     CleanRender
         The read-only clean image plus recorded provenance (text, font, fitted
-        size, ink fraction, content hash).
+        size, ink fraction, content hash, background level).
     """
     if not text:
         raise RenderError("text must not be empty")
@@ -336,19 +411,47 @@ def render_clean(
     size_hi = _fit_font_size(font.path, text, config)
     pil_font = ImageFont.truetype(str(font.path), size_hi)
 
-    canvas_hi = Image.new("L", (width * scale, height * scale), color=BACKGROUND)
+    # The random draws below are conditional on non-default configuration so
+    # that the Milestone 1 white-background/no-extra-jitter path consumes the
+    # generator exactly as it did before the dataset features were added.
+    if config.background_mode == "flat_random":
+        low, high = config.background_range
+        background_level = int(rng.integers(low, high + 1))
+    else:
+        background_level = BACKGROUND
+
+    canvas_hi = Image.new("L", (width * scale, height * scale), color=background_level)
     draw = ImageDraw.Draw(canvas_hi)
 
-    block_width, block_height = _text_block_size(pil_font, text)
-    cursor_x = (width * scale - block_width) / 2.0
-    baseline_y = (height * scale - block_height) / 2.0
+    left, top, right, bottom = pil_font.getbbox(text)
+    block_width = right - left
+    block_height = bottom - top
+    placement_px = config.placement_jitter_fraction * height * scale
+    if placement_px > 0.0:
+        placement_x = float(rng.uniform(-placement_px, placement_px))
+        placement_y = float(rng.uniform(-placement_px, placement_px))
+    else:
+        placement_x = 0.0
+        placement_y = 0.0
+
+    if config.center_ink:
+        # bbox top/left are offsets from the draw anchor to the actual ink, so
+        # subtracting them centres the visible pixels rather than the anchor.
+        cursor_x = (width * scale - block_width) / 2.0 - left + placement_x
+        baseline_y = (height * scale - block_height) / 2.0 - top + placement_y
+    else:
+        cursor_x = (width * scale - block_width) / 2.0 + placement_x
+        baseline_y = (height * scale - block_height) / 2.0 + placement_y
     jitter_px = config.jitter_fraction * height * scale
+    spacing_px = config.spacing_jitter_fraction * height * scale
 
     for character in text:
         advance = pil_font.getlength(character)
         offset_y = float(rng.uniform(-jitter_px, jitter_px))
         draw.text((cursor_x, baseline_y + offset_y), character, font=pil_font, fill=FOREGROUND)
         cursor_x += advance
+        if spacing_px > 0.0:
+            cursor_x += float(rng.uniform(-spacing_px, spacing_px))
 
     canvas = canvas_hi.resize((width, height), resample=Image.LANCZOS)
     image = np.array(canvas, dtype=np.uint8).copy()
@@ -361,6 +464,20 @@ def render_clean(
             "check the font, canvas size, and charset"
         )
 
+    # Boundary handling is explicit for dataset runs: a clipped glyph would
+    # silently change the metric target, so refuse to emit such a render instead
+    # of accepting it. The pilot leaves this off to preserve its exact output.
+    if config.strict_bounds and (
+        np.any(image[0, :] < 128)
+        or np.any(image[-1, :] < 128)
+        or np.any(image[:, 0] < 128)
+        or np.any(image[:, -1] < 128)
+    ):
+        raise RenderError(
+            f"rendered text is clipped at the canvas boundary (font={font.key}, text={text!r}); "
+            "reduce jitter/placement or fit_fraction"
+        )
+
     return CleanRender(
         image=image,
         text=text,
@@ -368,4 +485,5 @@ def render_clean(
         font_size_px=size_hi // scale,
         ink_fraction=ink_fraction,
         sha256=hashlib.sha256(image.tobytes()).hexdigest(),
+        background_level=background_level,
     )
