@@ -4,8 +4,9 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestone 0 — repository foundation only. The generator, feature
-> extraction, models, and dashboard are **not implemented yet**. See
+> **Status:** Milestone 1 complete — a metric-validation pilot has been run and
+> logged. The dataset pipeline, ML models, and dashboard are **not implemented
+> yet**, and the project does **not** predict human CAPTCHA solvability. See
 > [Current status](#current-status).
 
 ## Overview
@@ -132,7 +133,7 @@ parameters that produced it.
 | Language | Python >= 3.11 | Configured |
 | Data handling | NumPy, pandas | Core dependencies |
 | Image I/O and rendering | Pillow | Core dependency |
-| Image processing | OpenCV, scikit-image | Optional extra `image` (planned use) |
+| Image processing | OpenCV, scikit-image | Optional extra `image`; scikit-image used by the M1 pilot for SSIM/PSNR |
 | Conventional ML | scikit-learn | Optional extra `ml` (planned use) |
 | Deep learning | PyTorch | Optional extra `deep-learning` (planned use) |
 | Dashboard | Streamlit | Optional extra `app` (planned use) |
@@ -188,6 +189,16 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+To reproduce the Milestone 1 target-validation pilot (requires the `image`
+extra for scikit-image):
+
+```bash
+uv sync --extra dev --extra image
+uv run --extra image captcha-pilot --config configs/pilot_target_validation.toml
+```
+
+Outputs are written to `reports/pilot/`, which is Git-ignored.
+
 ### Option B — standard venv and pip
 
 ```bash
@@ -218,16 +229,16 @@ environment files are required at this stage.
 | Milestone | Deliverable | Status |
 | --- | --- | --- |
 | M0 | Repository structure, tooling, documentation foundation | **Complete** |
-| M1 | Target definition and validation: confirm the reference-based quality target is stable, sensitive, and worth modelling | Planned |
+| M1 | Target definition and validation: confirm the reference-based quality target is stable, sensitive, and worth modelling | **Complete** — SSIM passes for blur and noise; PSNR passes for noise, fails for blur |
 | M2 | Deterministic renderer, distortion engine, manifest schema, feature extraction | Planned |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | Planned |
 | M4 | CNN comparison (small CNN and transfer learning) under the same splits | Planned |
 | M5 | Robustness analysis by corruption family/severity and error taxonomy | Planned |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
-Milestone 1 is a validation gate: if the proposed quality target proves unstable
-or trivially predictable from generation metadata, the modelling strategy will
-be revised before dataset scale-up.
+Milestone 1 was a validation gate, not a modelling milestone. Its outcome
+determines which target later milestones use; see
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for the recorded experiment.
 
 ## Current status
 
@@ -236,13 +247,37 @@ Implemented:
 - Repository structure, MIT license, `.gitignore`, and contributor-facing docs.
 - `pyproject.toml` with a `src/` layout, dependency extras, pytest, coverage, and
   Ruff configuration.
-- Importable `captcha_quality` package containing only `__version__`.
-- Configuration smoke tests that verify packaging metadata and layout.
+- A deterministic pilot text renderer (`render.py`) with explicit font
+  resolution, fixed 192x64 canvas, seeded text/jitter, and read-only clean
+  references.
+- Two controlled corruption families (`corruptions.py`): Gaussian blur and
+  additive Gaussian noise, each with an explicit severity ladder and validated
+  parameters.
+- Reference metrics (`quality_metrics.py`): SSIM and PSNR via scikit-image, with
+  documented range/window settings and exact `+inf` PSNR for identical images.
+- A validation pilot (`pilot.py`, `summarise.py`, `gate.py`) with a predeclared
+  acceptance gate, a `captcha-pilot` CLI, and Git-ignored CSV/JSON/Markdown
+  outputs plus example contact sheets.
+- 104 tests covering rendering determinism, corruption behaviour and non-mutation,
+  metric sanity and input validation, gate statistics, configuration errors, and
+  an end-to-end pilot run.
 
-Not implemented (planned): synthetic renderer, distortion engine, image-quality
-feature extraction, datasets, ML models, notebooks, dashboard, and any results.
+Milestone 1 findings (synthetic image similarity only — **not** human readability
+or solvability):
 
-No experiments have been run and no performance numbers are reported.
+- **SSIM passed** all predeclared criteria for both blur and noise and is the
+  candidate primary target.
+- **PSNR passed for noise**, but **failed for blur**: at fixed blur severity,
+  PSNR correlates 0.975 with the image's ink coverage, so it largely restates how
+  much text is present. It is retained only as a secondary diagnostic for the
+  noise family.
+- **MS-SSIM is deferred**: no maintained implementation is available without
+  adding PyTorch solely for one metric.
+- Adjacent severities were separated with large paired effects, no trial-level
+  reversals occurred, and clean-vs-clean comparisons were exactly perfect.
+
+Not implemented (planned): the Milestone 2 dataset pipeline, handcrafted feature
+extraction, ML models, notebooks, dashboard, and any model performance numbers.
 
 ## License
 

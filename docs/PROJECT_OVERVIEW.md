@@ -86,6 +86,9 @@ predict human solvability or to rank real CAPTCHA products.
   for human difficulty.
 - **Validation gate (M1):** check sensitivity, monotonicity across severity
   levels, and stability across fonts/seeds before scaling the dataset.
+- **M1 outcome:** SSIM passed this gate for Gaussian blur and additive noise;
+  PSNR passed for noise but not for blur (ink-coverage confound). See
+  `docs/EXPERIMENT_LOG.md`, `EXP-0001`.
 
 ### Stage 5 — Feature extraction
 
@@ -140,18 +143,26 @@ are the default; a CNN must justify its cost out-of-sample.
 
 ```text
 src/captcha_quality/
-├── __init__.py        # implemented (version only)
-├── config.py          # typed config loading and validation          (planned)
-├── render.py          # clean text-image rendering                   (planned)
-├── distortions.py     # corruption families and severity ladders    (planned)
-├── quality.py         # reference-based metrics                      (planned)
-├── features.py        # handcrafted feature extraction               (planned)
-├── dataset.py         # manifest, splits, dataset versioning         (planned)
-├── modelling.py       # baseline and CNN training/evaluation         (planned)
-└── analysis.py        # slices, statistics, plots                    (planned)
+├── __init__.py         # package metadata (implemented)
+├── imaging.py          # shared image-array contract (implemented, M1)
+├── render.py           # deterministic pilot text renderer (implemented, M1)
+├── corruptions.py      # blur + noise severity ladders (implemented, M1)
+├── quality_metrics.py  # reference-based SSIM/PSNR (implemented, M1)
+├── summarise.py        # pilot statistics (implemented, M1)
+├── gate.py             # predeclared acceptance gate + report (implemented, M1)
+├── pilot.py            # pilot runner and `captcha-pilot` CLI (implemented, M1)
+├── config.py           # typed config loading and validation          (planned)
+├── dataset.py          # manifest, splits, dataset versioning         (planned)
+├── features.py         # handcrafted feature extraction               (planned)
+├── modelling.py        # baseline and CNN training/evaluation         (planned)
+└── analysis.py         # slices, statistics, plots                    (planned)
 ```
 
-Module names are provisional until Milestone 1 validates the target definition.
+The Milestone 1 modules are a deliberately narrow pilot, not the Milestone 2
+pipeline. In particular, `render.py` implements only the fixed-canvas,
+unrotated, grayscale rendering needed to validate metrics; the Milestone 2
+renderer will add configuration, backgrounds, text-length distributions, and
+manifest output. `modeling` modules do not exist yet.
 
 ## 4. Artifact contracts (planned)
 
@@ -190,6 +201,12 @@ Module names are provisional until Milestone 1 validates the target definition.
 
 ## 7. Implemented today
 
-Only the repository foundation: packaging metadata, package version, ignore
-rules, documentation, and configuration smoke tests. No generator, metrics,
-models, datasets, or dashboard exist yet.
+Milestone 0: packaging metadata, ignore rules, documentation, and configuration
+smoke tests.
+
+Milestone 1: a deterministic pilot renderer, two corruption families with
+explicit severity ladders, reference SSIM/PSNR metrics, a predeclared gate, a
+`captcha-pilot` CLI, and a completed target-validation experiment (`EXP-0001`).
+SSIM passed the gate for blur and noise; PSNR passed for noise and failed for
+blur because of an ink-coverage confound; MS-SSIM is deferred. No dataset
+pipeline, feature extraction, model, or dashboard exists yet.

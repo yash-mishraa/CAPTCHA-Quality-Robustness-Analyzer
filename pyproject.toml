@@ -64,6 +64,9 @@ dev = [
 [project.urls]
 Repository = "https://github.com/yash-mishraa/CAPTCHA-Quality-Robustness-Analyzer"
 
+[project.scripts]
+captcha-pilot = "captcha_quality.pilot:main"
+
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"
 

@@ -1,0 +1,50 @@
+# Milestone 1 pilot configuration: reference-based target validation.
+#
+# This file is the predeclared experiment definition. The gate thresholds at the
+# bottom were chosen and committed BEFORE the pilot was run; see
+# docs/METHODOLOGY.md section 3.4 for the rationale behind each value.
+# Re-running with edited thresholds is a new experiment and needs a new ID in
+# docs/EXPERIMENT_LOG.md.
+
+[run]
+name = "target-validation-pilot"
+seed = 20261020
+repeat_seeds = [0, 1, 2]
+texts_per_font = 4
+metrics = ["ssim", "psnr"]
+deferred_metrics = ["ms_ssim"]
+output_dir = "reports/pilot"
+
+[render]
+canvas_width = 192
+canvas_height = 64
+charset = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+text_length = 5
+fit_fraction = 0.86
+vertical_padding = 0.10
+jitter_fraction = 0.05
+
+[fonts]
+keys = ["arial", "courier_new", "times_new_roman"]
+min_required = 2
+
+[families]
+names = ["gaussian_blur", "gaussian_noise"]
+
+[families.gaussian_blur]
+unit = "px"
+levels = [0.0, 1.0, 2.0, 3.5, 5.0]
+
+[families.gaussian_noise]
+unit = "sigma"
+levels = [0.0, 6.0, 12.0, 20.0, 32.0]
+
+[gate]
+spearman_max = -0.90
+paired_effect_max = -0.50
+violation_rate_max = 0.35
+group_spearman_max = -0.80
+eta_squared_min = 0.50
+ssim_range_min = 0.10
+psnr_range_min_db = 3.0
+ink_correlation_max = 0.95
