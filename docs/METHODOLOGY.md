@@ -1200,6 +1200,117 @@ is unusually noisy relative to its test clean slice, so the measured clean
 regression is an upper bound. Nothing here measures human readability or
 CAPTCHA solvability.
 
+### 5.14 M5D retention-aware training objectives
+
+M5C resolved the retention trade-off mainly by changing the *model family* and
+showed that a post-hoc affine calibration did not help. M5D asks whether a
+retention-aware *training objective* can do better. The implementation is
+`retention_aware_training.py`, configured by
+`configs/retention_aware_training_v0_1_0.toml`. It writes only to
+`reports/retention_aware_training_v0_1_0/` and
+`models/retention_aware_training_v0_1_0/` (both Git-ignored).
+
+**Design.** M5D is a controlled training-objective experiment. The model family,
+the hyperparameters, the training rows and the seed are held fixed across every
+candidate, so the *only* thing that varies is the per-example sample weight.
+That makes any observed difference attributable to the objective and to nothing
+else. Four candidates were predeclared: the frozen M5C champion (loaded, never
+refitted), an unweighted retrained control, a severity-aware weighting and a
+retention-aware weighting. The control is deliberately included: because it
+shares the champion's seed and data, it reproduces the champion's predictions
+exactly, which turns it into both a control on the effect of retraining and a
+reproducibility check on the frozen bundle.
+
+**Grouping and weighting.** Each training example is assigned to exactly one
+group using metadata already present in the training frame: `clean` (the M3
+clean references), `original` (the M3 blur and noise rows) and `geometric` (the
+M5A elastic rows at the primary rungs). The weight of an example is
+
+```text
+w(x) = group_weight[group(x)] * severity_factor[group(x), severity(x)]
+```
+
+where `severity_factor` is 1 for the clean and original groups and
+`geometric_severity_ratio ** (severity - min_primary_severity)` for the
+geometric group. The weights are rescaled so their mean over the training
+frame is exactly 1, so a larger nominal scale cannot change their
+interpretation, and every weight must be finite and strictly positive. The
+weights are passed only to `fit(sample_weight=...)` and never enter the
+predictor's feature matrix. The group assignment is verified to be unchanged
+when the target column is removed, which proves it does not depend on labels.
+
+Two properties are worth separating. The *per-row* weight is what the estimator
+receives; the *share* of total training weight a group carries is what
+determines that group's effective influence. A small group with a high per-row
+weight can still carry a smaller share than a large group, so both are recorded
+and reported. Under the severity-aware scheme the shares are clean 6.2%,
+original 49.6%, geometric 44.2%; under the retention-aware scheme they are
+clean 7.4%, original 59.3%, geometric 33.3%. The retention-aware scheme
+therefore protects both retention slices relative to the severity-aware one
+while still emphasising geometric examples per row.
+
+**Selection rule.** The rule was declared before any test evaluation. The
+champion is the reference. A candidate qualifies only if it regresses neither
+the clean slice, nor the original-task slice, nor any single primary geometric
+severity beyond the declared tolerances, and the per-severity constraint is
+what stops an aggregate geometric gain from concealing a severe regression on
+one rung. Among the qualifying candidates the score is
+
+```text
+score = w_geometric * (rmse_geo - rmse_geo_ref)
+      + w_clean     * max(0, rmse_clean - rmse_clean_ref)
+      + w_original  * max(0, rmse_orig  - rmse_orig_ref)
+      + w_severity   * sum_s max(0, rmse_s - rmse_s_ref)
+```
+
+with `w_geometric = 1.0`, `w_clean = 2.0`, `w_original = 2.0`,
+`w_severity = 1.0`, `tolerance_clean = 0.50`, `tolerance_original = 0.10` and
+`tolerance_severity = 0.25`. Lower is better and the champion scores exactly 0.
+Retention regressions are charged at twice the geometric rate per SSIM unit
+because those slices are the incumbent's defining behaviour, and a per-severity
+excess is charged again. Ties are broken by lower aggregate geometric RMSE and
+then by candidate name, and the frozen champion is the fallback if nothing
+qualifies.
+
+**Results.** No retrained candidate was selected. The unweighted control
+reproduces the champion exactly, with an identical artifact SHA-256. The
+severity-aware scheme is *ineligible*: it improves the severe geometric rung
+(severity 4 RMSE 0.05374 against the champion's 0.06240) but degrades the mild
+one badly (severity 2 RMSE 0.07152 against 0.05254, 36% worse), and its
+aggregate geometric RMSE (0.05542) is only 0.0005 different from the
+champion's on the test slice. The per-severity constraint is what rejects it;
+selecting on the aggregate alone would have hidden the regression. The
+retention-aware scheme is eligible but scores +0.00618 against the champion's
+0: it improves the clean slice (validation RMSE 0.00180 against 0.00223) but
+costs 0.00066 on the aggregate geometric slice and 0.00132 on the original
+task.
+
+**What the negative result means.** Within a single model family, a single
+shared feature representation and a single shared sample of 432 training rows,
+sample weighting redistributes error across slices rather than removing it. The
+severity-aware scheme buys accuracy at the severe rung by paying for it at the
+mild rung; the retention-aware scheme buys clean-reference accuracy by paying
+for it on the original task. The remaining headroom is more likely in the
+*representation* than in the objective: the eight image-only features are
+global whole-image statistics that do not describe *where* on the canvas a
+distortion occurs, and a geometric warp moves ink locally while leaving many of
+those statistics nearly unchanged. This is consistent with the near-zero
+between-source R2 that M5B and M5C both observed, and it explains why
+reweighting cannot help — reweighting cannot add spatial information the
+representation never exposed. This milestone does not isolate the cause and
+cannot rule out sample size or the objective itself.
+
+**Decision.** The retention trade-off was **not** improved by a retention-aware
+training objective, and the frozen M5C champion is retained. Conventional
+feature-based ML remains the benchmark champion. The evidence does not justify
+a CNN, and a new corruption family does not by itself justify one. If the line
+continues, the defensible next question is whether a representation carrying
+*spatial* information about the distortion can lift the near-zero
+between-source R2, declared and evaluated on the same frozen split, rather than
+another search over objectives or model families. These results cover one
+synthetic renderer, one canvas size, three fonts and 12 held-out source groups;
+nothing here measures human readability or CAPTCHA solvability.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

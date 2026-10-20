@@ -1,0 +1,178 @@
+# Milestone M5D retention-aware training objectives.
+#
+# This file is separate from the frozen Milestone 2 dataset, the Milestone 3
+# benchmark, the M4A/M4B occlusion-interference work, the M5A geometric pilot,
+# the M5B grouped geometric-robustness benchmark and the M5C retention-aware
+# selection study. It pins the exact inputs and declares the candidate
+# training policies, the sample-weighting formulas, the validation metrics and
+# the eligibility constraints and selection score before any test-source
+# prediction is made.
+#
+# Scope: synthetic image similarity (SSIM against the clean reference), not
+# human readability, CAPTCHA solvability, security or real-world generalisation.
+
+[run]
+name = "retention-aware-training"
+version = "v0.1.0"
+seed = 20261024
+n_bootstrap = 1000
+output_reports = "reports/retention_aware_training_v0_1_0"
+output_models = "models/retention_aware_training_v0_1_0"
+
+[schema]
+feature_set_version = "v1"
+target = "ssim_target"
+feature_names = [
+  "intensity_mean",
+  "intensity_std",
+  "contrast_rms",
+  "ink_fraction",
+  "laplacian_variance",
+  "edge_density",
+  "histogram_entropy",
+  "noise_sigma_immerkaer",
+]
+split_names = ["train", "val", "test"]
+
+# The M5C study is the upstream frozen input. M5D reuses its pinned M3/M5A
+# hashes, its source-grouped split and its verified frames verbatim by loading
+# the M5C configuration, so both milestones operate on identical data.
+# The M5C champion bundle is the primary reference candidate and is loaded
+# without refitting. The champion is the bundle M5C selected, whose card
+# records the M5C protocol hash that selected it.
+[m5c]
+config = "configs/retention_aware_selection_v0_1_0.toml"
+config_sha256 = "48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb"
+protocol_hash = "048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a"
+champion_dir = "models/retention_aware_selection_v0_1_0"
+champion_stem = "selected_policy"
+champion_artifact_sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+
+# The model family is fixed to the M5C champion's random forest so that every
+# retrained candidate differs from it only in its training objective. These
+# settings are verified at run time against the M5B grid specification, so a
+# drift in the upstream grid is detected rather than silently changing the
+# comparison.
+[model]
+family = "random_forest"
+n_estimators = 300
+max_depth = 0
+min_samples_leaf = 1
+seed = 798117391
+
+# Severity protocol, carried forward unchanged from M5B and M5C. The 0.5 px
+# rung stays diagnostic only: it never enters fitting, selection or the
+# primary score.
+[protocol]
+primary_amplitudes_px = [1.0, 2.0, 3.0]
+diagnostic_amplitudes_px = [0.5]
+primary_severities = [2, 3, 4]
+diagnostic_severities = [1]
+
+# Predeclared candidate policies. `frozen_m5c_champion` is loaded from the
+# frozen M5C bundle and is never refitted. `retrained_control` refits the same
+# model family on the same training rows with the standard unweighted
+# objective; because the seed and the data are identical it is expected to
+# reproduce the champion exactly, which makes every later difference
+# attributable to the sample weighting alone.
+#
+# `severity_aware` and `retention_aware` are the two weighted candidates. The
+# weighting scheme names below are resolved in [weighting.schemes].
+[candidates]
+names = [
+  "frozen_m5c_champion",
+  "retrained_control",
+  "severity_aware",
+  "retention_aware",
+]
+schemes.frozen_m5c_champion = "none"
+schemes.retrained_control = "none"
+schemes.severity_aware = "severity_aware"
+schemes.retention_aware = "retention_aware"
+
+# Sample-weighting design.
+#
+# Every training example is assigned to exactly one group using metadata that
+# is already present in the training frame and that never enters the
+# predictor's feature matrix:
+#
+#   clean     - the frozen M3 clean references (family "none")
+#   original  - the M3 blur and noise variants (families "gaussian_blur" and
+#               "gaussian_noise"), the original task
+#   geometric - the M5A smooth-elastic rows at the primary rungs
+#
+# The weight of an example is
+#
+#   w(x) = group_weight[group(x)] * severity_factor[group(x), severity(x)]
+#
+# where severity_factor is 1 for the clean and original groups and is
+# `geometric_severity_ratio ** (severity - min_primary_severity)` for the
+# geometric group. The resulting weights are then rescaled so that their mean
+# over the training frame is exactly 1.0, so a larger nominal scale never
+# changes their interpretation. Every weight must be finite and strictly
+# positive.
+#
+# The geometric severity ramp exists because the aggregate geometric error is
+# not spread evenly over the rungs: the M5C champion is weakest at the
+# extreme rungs, so the ramp can shift capacity between the mild and the
+# severe end of the geometric ladder.
+[weighting]
+normalise_to_mean = 1.0
+min_primary_severity = 2
+
+[weighting.schemes.severity_aware]
+clean_weight = 1.0
+original_weight = 1.0
+geometric_base_weight = 1.5
+geometric_severity_ratio = 1.5
+
+# The retention-aware scheme protects both retention slices: clean references
+# and the original blur/noise task each receive twice the unit weight, while
+# geometric examples still receive the largest emphasis at three times. The
+# values follow directly from the milestone's stated requirement and were not
+# chosen by comparing outcomes.
+[weighting.schemes.retention_aware]
+clean_weight = 2.0
+original_weight = 2.0
+geometric_base_weight = 3.0
+geometric_severity_ratio = 1.0
+
+# Validation-only selection.
+#
+# The champion is the reference: rmse_ref is the champion's validation RMSE on
+# the same slice. A candidate qualifies only if every retention constraint
+# holds on validation:
+#
+#   clean RMSE     <= champion clean RMSE    * (1 + tolerance_clean)
+#   original RMSE  <= champion original RMSE * (1 + tolerance_original)
+#   each primary geometric severity s:
+#       RMSE_s      <= champion RMSE_s       * (1 + tolerance_severity)
+#
+# The per-severity constraint is what stops an aggregate geometric gain from
+# concealing a severe regression on a single rung.
+#
+# Among the qualifying candidates the score is
+#
+#   score = w_geometric * (rmse_geo   - rmse_geo_ref)
+#         + w_clean     * max(0, rmse_clean - rmse_clean_ref)
+#         + w_original  * max(0, rmse_orig  - rmse_orig_ref)
+#         + w_severity   * sum_s max(0, rmse_s - rmse_s_ref)
+#
+# Lower is better and the champion scores exactly 0. Geometric improvement is
+# rewarded; clean and original-task regressions are charged at twice the rate
+# per SSIM unit, because those slices are the incumbent's defining behaviour,
+# and a per-severity excess is charged again. Ties are broken by lower
+# aggregate geometric RMSE, then by candidate name, so the choice is
+# deterministic. If no candidate qualifies, the frozen M5C champion is kept.
+#
+# The coefficients are round numbers fixed a priori; none was chosen by
+# inspecting a test result.
+[selection]
+rule = "retention_gated_rmse_delta"
+w_geometric = 1.0
+w_clean = 2.0
+w_original = 2.0
+w_severity = 1.0
+tolerance_clean = 0.50
+tolerance_original = 0.10
+tolerance_severity = 0.25
