@@ -12,8 +12,8 @@ any committed result without downloading large opaque blobs.
 | `data/processed/` | Generated datasets: manifests, split tables, feature tables, images | No (only `.gitkeep`) |
 | `data/interim/` | Temporary intermediate products | No |
 | `data/external/` | Manually obtained third-party inputs | No |
-| `models/` | Checkpoints, serialized models, embeddings | No (only `.gitkeep`) |
-| `reports/` | Generated figures, HTML/PDF reports, metrics dumps | No (only `.gitkeep`) |
+| `models/` | Checkpoints, serialized models, model cards, embeddings | No (only `.gitkeep`) |
+| `reports/` | Generated figures, HTML/PDF reports, metrics dumps, benchmark tables | No (only `.gitkeep`) |
 | `configs/` | Human-authored generation and experiment configs | Yes |
 | `docs/` | Methodology, overview, experiment log | Yes |
 
@@ -84,10 +84,49 @@ ratios and a stable `split_policy.assignment_sha256`.
 
 The committed reference dataset uses a random grouped split over synthetic
 sources. This is **not** evidence of cross-generator or cross-font
-generalisation; a held-out font or configuration split is reserved for later.
+generalisation. Milestone 3 adds a primary held-out-font stress test (Times New
+Roman excluded from fitting and validation); it is still only a three-font,
+same-renderer test, not broad real-world generalisation.
+
+## Conventional benchmark artifacts
+
+Milestone 3 writes two Git-ignored trees:
+
+```text
+reports/benchmark_v0_1_0/
+  benchmark.md                 # generated protocol/results report
+  model_comparison.csv         # train/validation only; no test tuning columns
+  family_test_metrics.csv      # one test row per family winner + naive
+  primary_predictions.csv
+  metadata_experiments.csv
+  performance_gaps.csv
+  stratified_metrics.csv
+  coverage_groups.csv
+  feature_correlations.csv
+  residual_summary.csv
+  heldout_font_candidates.csv
+  heldout_font_metrics.csv
+  heldout_font_stratified.csv
+  heldout_font_predictions.csv
+  uncertainty.csv
+  run_metadata.json            # hashes, versions, seeds, artifact hashes
+
+models/benchmark_v0_1_0/
+  primary_model.joblib         # selected image-only model (+ train-only scaler)
+  primary_model_card.json      # feature schema, target, hashes, metrics
+  heldout_font_model.joblib    # selected without Times New Roman
+  heldout_font_model_card.json
+```
+
+The JSON cards are the source of truth for feature order, target, dataset
+generation hash, split-assignment hash and artifact SHA-256. `joblib` is
+scikit-learn's documented persistence format but is **not** safe for untrusted
+files; only load artifacts generated locally. `captcha-benchmark verify-model`
+checks the cards and performs an eight-feature smoke prediction.
 
 ## Retention and cleanup
 
 - `data/raw/` and `data/processed/` are safe to delete; regenerate from configs.
-- `models/` artifacts are disposable unless referenced by a logged experiment.
+- `models/` artifacts are disposable unless referenced by a logged experiment
+  (`EXP-0003` references the benchmark cards); regenerate rather than commit.
 - Logs and caches are disposable at any time.

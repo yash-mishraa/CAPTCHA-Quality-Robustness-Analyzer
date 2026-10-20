@@ -43,8 +43,9 @@ image = [
   "opencv-python-headless>=4.9",
   "scikit-image>=0.22",
 ]
-# Planned for Milestone 3-4 (conventional baselines and CNN comparison).
+# Conventional baselines (Milestone 3); the CNN extra remains separate.
 ml = [
+  "joblib>=1.3",
   "scikit-learn>=1.4",
 ]
 deep-learning = [
@@ -67,6 +68,7 @@ Repository = "https://github.com/yash-mishraa/CAPTCHA-Quality-Robustness-Analyze
 [project.scripts]
 captcha-pilot = "captcha_quality.pilot:main"
 captcha-dataset = "captcha_quality.cli:main"
+captcha-benchmark = "captcha_quality.benchmark:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

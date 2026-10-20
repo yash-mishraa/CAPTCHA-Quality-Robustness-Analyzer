@@ -4,10 +4,11 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–2 complete — the metric-validation pilot and a
-> reproducible dataset/feature pipeline have been run and logged. ML models, the
-> CNN comparison, and the dashboard are **not implemented yet**, and the project
-> does **not** predict human CAPTCHA solvability. See
+> **Status:** Milestones 0–3 complete — the metric-validation pilot, a
+> reproducible dataset/feature pipeline, and a leakage-safe conventional-ML
+> benchmark with a held-out-font stress test have been run and logged. The CNN
+> comparison and dashboard are **not implemented yet**, and the project does
+> **not** predict human CAPTCHA solvability. See
 > [Current status](#current-status).
 
 ## Overview
@@ -62,9 +63,12 @@ fact.
   and eight documented handcrafted features (**implemented**).
 - A versioned dataset with a public manifest, grouped splits, and programmatic
   verification (**implemented**).
-- Leakage-aware conventional ML baselines and a CNN comparison (**planned**).
-- Robustness/error analysis grouped by corruption family and severity
-  (**planned**).
+- Leakage-aware conventional ML baselines with grouped evaluation and a
+  held-out-font stress test (**implemented**).
+- Robustness/error analysis grouped by corruption family, severity and ink
+  coverage for the conventional benchmark (**implemented**; a broader M5 error
+  taxonomy is planned).
+- A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
 **Explicitly out of scope / not claimed:**
@@ -79,10 +83,10 @@ fact.
 - **No novelty claim.** The methods use established image-quality metrics and
   standard supervised learning; the contribution is a careful, reproducible
   pipeline and analysis.
-- **No deep-learning results yet.** PyTorch is a planned dependency, not an
-  implemented component. The M2 diagnostic shows that simple image statistics
-  already reconstruct the SSIM target almost completely, so a CNN is not
-  justified by target predictability alone.
+- **No deep-learning results.** PyTorch is a planned dependency, not an
+  implemented component. The M3 benchmark shows that a conventional random
+  forest reconstructs 98.6% of held-out SSIM variance, so a CNN is not justified
+  for this synthetic target without a harder shift.
 
 ## Architecture
 
@@ -129,11 +133,13 @@ fact.
                                   +--------------------------+
 ```
 
-Stages 1–6 are implemented; stages 7–9 are planned. Each implemented stage
-writes artifacts with an explicit schema and a recorded configuration hash, so a
-result can be traced back to the exact data and parameters that produced it.
-Manifests and summaries are timestamp-free, which makes repeated runs
-byte-comparable.
+Stages 1–7 are implemented. Stage 8 is partially implemented for the
+conventional benchmark (grouped uncertainty, corruption/coverage slices and a
+held-out-font stress test); the full error taxonomy is planned for M5. Stage 9
+is planned. Each implemented stage writes artifacts with an explicit schema and
+a recorded configuration hash, so a result can be traced back to the exact data
+and parameters that produced it. Manifests and summaries are timestamp-free,
+which makes repeated runs byte-comparable.
 
 ## Technology stack
 
@@ -143,7 +149,7 @@ byte-comparable.
 | Data handling | NumPy, pandas | Core dependencies |
 | Image I/O and rendering | Pillow | Core dependency |
 | Image processing | OpenCV, scikit-image | Optional extra `image`; scikit-image provides SSIM/PSNR and the Otsu/Canny features |
-| Conventional ML | scikit-learn | Optional extra `ml` (planned use) |
+| Conventional ML | scikit-learn, joblib | Optional extra `ml`; used by the M3 benchmark |
 | Deep learning | PyTorch | Optional extra `deep-learning` (planned use) |
 | Dashboard | Streamlit | Optional extra `app` (planned use) |
 | Testing | pytest, pytest-cov | Extra `dev` |
@@ -192,14 +198,16 @@ during Milestone 0.
 ### Option A — uv (recommended)
 
 ```bash
-uv sync --extra dev --extra image
-uv run --extra image pytest
-uv run ruff check .
-uv run ruff format --check .
+uv sync --extra dev --extra image --extra ml
+uv run --extra dev --extra image --extra ml pytest
+uv run --extra dev --extra image --extra ml ruff check .
+uv run --extra dev --extra image --extra ml ruff format --check .
 ```
 
-The `image` extra is required because the test suite exercises SSIM/PSNR and the
-Otsu/Canny features. To reproduce the Milestone 1 target-validation pilot:
+The `image` extra is required for SSIM/PSNR and the Otsu/Canny features; the
+`ml` extra is required for the Milestone 3 benchmark and its tests. Benchmark
+tests skip cleanly if scikit-learn is not installed. To reproduce the Milestone
+1 target-validation pilot:
 
 ```bash
 uv run --extra image captcha-pilot --config configs/pilot_target_validation.toml
@@ -213,7 +221,7 @@ Outputs are written to `reports/pilot/`, which is Git-ignored.
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -e ".[dev,image]"
+pip install -e ".[dev,image,ml]"
 pytest
 ruff check .
 ruff format --check .
@@ -244,15 +252,17 @@ environment files are required at this stage.
 | M0 | Repository structure, tooling, documentation foundation | **Complete** |
 | M1 | Target definition and validation: confirm the reference-based quality target is stable, sensitive, and worth modelling | **Complete** — SSIM passes for blur and noise; PSNR passes for noise, fails for blur |
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
-| M3 | Conventional ML baselines with leakage-safe grouped evaluation | Planned |
+| M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | CNN comparison (small CNN and transfer learning) under the same splits | Planned |
 | M5 | Robustness analysis by corruption family/severity and error taxonomy | Planned |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
 that validated target into a versioned dataset and asks whether the target is
-trivially predictable from cheap features. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for both recorded experiments.
+trivially predictable from cheap features. Milestone 3 compares conventional
+models on that frozen dataset and tests whether the result survives a held-out
+font. See [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all three
+recorded experiments.
 
 ## Quick start: dataset pipeline
 
@@ -290,6 +300,34 @@ Outputs:
 | `features.csv` | `sample_id` plus the eight documented features |
 | `dataset_summary.json` | counts, per-split summaries, font resolution, split policy and assignment hash, artifact hashes, disk usage |
 | `images/` | lossless PNGs: `clean/` and one directory per corruption family |
+
+## Quick start: conventional benchmark
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+# 1. Run the frozen benchmark on the reference dataset
+uv run --extra image --extra ml captcha-benchmark run \
+    --config configs/benchmark_v0_1_0.toml \
+    --dataset data/processed/captcha_quality_v0.1.0
+
+# 2. Verify persisted model cards, feature schema and dataset/split hashes
+uv run --extra image --extra ml captcha-benchmark verify-model \
+    --dataset data/processed/captcha_quality_v0.1.0 \
+    --model-dir models/benchmark_v0_1_0
+```
+
+The `run` command fits 23 learned candidates on the training sources, selects on
+validation only, evaluates each family winner and the overall winner once on
+test, runs the metadata diagnostics and stratified analysis, and repeats the
+selection without Times New Roman for the held-out-font stress test. It writes
+a Markdown report plus CSV/JSON tables to `reports/benchmark_v0_1_0/` and model
+artifacts to `models/benchmark_v0_1_0/`; both are Git-ignored. Use
+`--output-dir` / `--model-dir` to redirect them.
+
+The command exits 2 on configuration/dataset errors and 1 if model verification
+fails. See [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5 for the frozen
+protocol, model grid, metrics, leakage controls and held-out-font design.
 
 ## Current status
 
@@ -331,8 +369,45 @@ Implemented:
   family/severity-conditioned correlations.
 - A `captcha-dataset` CLI with `generate`, `verify`, `features`, `diagnose` and
   `compare` subcommands.
-- 205 tests in total, all passing, including byte-identical regeneration,
-  tamper detection, split isolation, feature edge cases, and leakage safeguards.
+- A conventional benchmark (`modelling.py`, `benchmark.py`,
+  `configs/benchmark_v0_1_0.toml`): 23-candidate OLS/Ridge/random-forest/HGB
+  search, validation-only selection, test evaluated once per family winner,
+  metadata diagnostics, corruption/severity/coverage slices, grouped bootstrap,
+  and a held-out-font stress test.
+- Model persistence (`joblib` + JSON cards) with a `verify-model` command that
+  rejects mismatched feature schemas, targets, dataset/split hashes, artifact
+  hashes and incompatible scikit-learn major/minor versions.
+- 230 tests in total, all passing, including byte-identical dataset
+  regeneration, tamper detection, split isolation, feature edge cases,
+  train-only preprocessing, validation-only selection, grouped bootstrap,
+  held-out-font isolation, persistence checks and CLI/report generation.
+
+Milestone 3 findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- The selected random forest (8 features, depth 8, leaf 1) reached test
+  MAE/RMSE/R² **0.0157 / 0.0226 / 0.9865**, versus the naive mean's
+  0.1664 / 0.1942 / -0.0000. The 88.4% RMSE reduction is material under the
+  predeclared 5% rule.
+- A nonlinear forest descriptively beat the best linear family winner (Ridge
+  alpha 0.01: RMSE 0.0379, R² 0.9619), by 40.4% RMSE. The top two forest
+  configurations were nearly tied on validation, so the family result is more
+  stable than the exact hyperparameter choice.
+- Severity + family metadata alone reached test R² **0.911**; font + text length
+  reached **0.002**; image + metadata (OLS) reached 0.984 and did **not** beat
+  the image-only forest. The synthetic design explains most of the target, and
+  font/length are not shortcuts in this split.
+- Test slices: blur RMSE 0.0255 / R² 0.9824; noise 0.0223 / 0.9721; clean 0.0012
+  with R² undefined; highest ink-coverage quartile 0.0288. Grouped bootstrap 95%
+  RMSE interval [0.0157, 0.0309] over 12 source groups. No significance claim.
+- Held-out font: training on Arial + Courier New and evaluating all 20 Times New
+  Roman sources (180 samples) gave selected-HGB R² **0.9799** / RMSE 0.0271,
+  with the random-forest family winner at 0.0248 / 0.9832, versus naive 0.1910.
+  This is a preliminary three-font stress test, not broad generalisation.
+- **A CNN is not justified for this target.** The conventional forest already
+  reconstructs 98.6% of held-out variance and captures the nonlinearity. A CNN
+  would be justified only on a harder predeclared shift where it beats this
+  frozen baseline.
 
 Milestone 2 findings (synthetic image similarity only — **not** human readability
 or solvability):
@@ -370,8 +445,10 @@ or solvability):
 - Adjacent severities were separated with large paired effects, no trial-level
   reversals occurred, and clean-vs-clean comparisons were exactly perfect.
 
-Not implemented (planned): conventional ML models, the CNN comparison, robustness
-analysis, notebooks, the dashboard, and any model-performance claims.
+Not implemented (planned): the CNN comparison, the full M5 error taxonomy,
+notebooks, the Streamlit dashboard, deployment, and any human-solvability or
+production-CAPTCHA claims. The conventional model's performance is a synthetic
+image-similarity result, not a readability estimate.
 
 ## License
 

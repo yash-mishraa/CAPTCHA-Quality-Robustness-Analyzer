@@ -1,7 +1,8 @@
 # Project Overview
 
-**Status:** Milestones 0–2 complete. A reproducible dataset and image-feature
-pipeline now exists; modelling, CNN comparison, and the dashboard are planned.
+**Status:** Milestones 0–3 complete. A reproducible dataset and image-feature
+pipeline plus a leakage-safe conventional-ML benchmark exist; the CNN
+comparison and dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -131,26 +132,40 @@ predict human solvability or to rank real CAPTCHA products.
 
 ### Stage 7 — Modelling
 
-Two tracks under identical splits:
+**Implemented (M3): conventional image-only regression.** OLS, Ridge, random
+forest and histogram gradient boosting predict SSIM from the eight handcrafted
+features. Selection is validation-only; the test split is evaluated once for the
+selected model and each family winner. A separate held-out-font experiment
+removes one font from fitting and validation. Model artifacts carry feature
+schema, target, dataset/split hashes and selection metadata, and a verification
+command rejects mismatches.
 
-1. **Conventional baselines:** ridge/linear regression and tree ensembles on
-   image-quality features; secondary classification/ordinal experiments for
-   corruption family and severity.
-2. **CNN comparison:** a small CNN trained from scratch and a pretrained
-   transfer-learning variant, with matched preprocessing and early stopping.
+**Planned (M4): CNN comparison.** A small from-scratch CNN and a documented
+transfer-learning variant, under the same frozen split and held-out-font
+protocol. The M3 result (test R² 0.986 with a random forest) is the baseline a
+CNN must beat; the evidence does not justify a CNN on the current synthetic
+target.
 
-Both tracks report the same metrics and per-slice breakdowns. Simpler models
-are the default; a CNN must justify its cost out-of-sample.
+Both tracks use the same metrics and per-slice breakdowns. Simpler models are
+the default; a CNN must justify its cost out-of-sample.
 
 ### Stage 8 — Evaluation and robustness analysis
 
-- Regression: MAE, RMSE, R², Spearman correlation, residual slices by family
-  and severity.
+**Implemented for the M3 conventional benchmark:**
+
+- Regression: MAE, RMSE, R², train/validation/test reporting, residual slices by
+  family and severity.
+- Corruption/coverage slices, with coverage quartiles fixed from training
+  quantiles.
+- Source-group bootstrap intervals (not variant-level), reported descriptively.
+- Held-out-font stress test and metadata-only/combined diagnostics.
+
+**Planned (M5):**
+
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
   ordinal MAE / quadratic weighted kappa for severity.
-- Uncertainty: grouped cross-validation and bootstrap confidence intervals.
-- Error analysis: systematic failures by font, text length, corruption family,
-  and severity; examples retained as qualitative evidence.
+- Broader error taxonomy and qualitative examples.
+- Cross-family or cross-generator generalisation beyond the current split.
 
 ### Stage 9 — Dashboard and reporting
 
@@ -178,14 +193,16 @@ src/captcha_quality/
 ├── features.py         # typed handcrafted feature extraction         (implemented, M2)
 ├── diagnostics.py      # grouped correlation/baseline diagnostic      (implemented, M2)
 ├── cli.py              # `captcha-dataset` subcommands                (implemented, M2)
-├── modelling.py        # baseline and CNN training/evaluation         (planned, M3/M4)
-└── analysis.py         # slices, statistics, plots                    (planned, M5)
+├── modelling.py        # conventional models, metrics, persistence      (implemented, M3)
+├── benchmark.py        # frozen protocol, diagnostics, report/CLI      (implemented, M3)
+└── analysis.py         # broader slices, statistics, plots             (planned, M5)
 ```
 
 `render.py` now serves both the frozen Milestone 1 pilot and the Milestone 2
 dataset. Dataset configurations enable ink-centred placement and strict bounds;
 the pilot keeps the original defaults so `EXP-0001` remains byte-reproducible.
-No modelling or CNN code exists yet.
+`benchmark.py` and `modelling.py` implement the conventional M3 stage; no CNN
+code exists yet.
 
 ## 4. Artifact contracts
 
@@ -198,7 +215,9 @@ No modelling or CNN code exists yet.
 | Feature table | `data/processed/<dataset>/features.csv` | `sample_id` + the eight documented features |
 | Dataset summary | `data/processed/<dataset>/dataset_summary.json` | counts, split summaries, font resolution, config hash, artifact hashes, disk usage |
 | Diagnostic artifacts | `reports/<dataset>/` (Git-ignored) | correlations, model diagnostics, confounds, markdown report |
-| Model artifact | `models/` (planned) | model type, hyperparameters, training config hash, split hash |
+| Benchmark config | `configs/benchmark_v0_1_0.toml` | seed, held-out font, candidate grids, coverage quantiles, bootstrap count, selection rule, output paths |
+| Model artifact | `models/benchmark_v0_1_0/` (Git-ignored) | `.joblib` estimator + JSON card: feature names/order, feature-set version, target, dataset generation/split hashes, selection rule, metrics, package/scikit-learn versions, artifact SHA-256 |
+| Benchmark artifacts | `reports/benchmark_v0_1_0/` (Git-ignored) | candidate comparison, family test metrics, predictions, residuals, metadata diagnostics, gaps, stratified rows, coverage definition, correlations, held-out-font tables, grouped uncertainty, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -212,7 +231,7 @@ byte-for-byte.
 | M0 | Structure, tooling, documentation (complete) |
 | M1 | Validate target definition and metric behaviour before scale-up (complete) |
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
-| M3 | Conventional baselines with grouped evaluation |
+| M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | CNN comparison |
 | M5 | Robustness analysis and error taxonomy |
 | M6 | Dashboard, reproducibility packaging, final report |
@@ -224,8 +243,14 @@ byte-for-byte.
   conditions; it still is not a readability measure.
 - **Trivial predictability:** M2 found that no single feature makes the target
   trivial on held-out groups, but the eight-feature linear baseline reaches test
-  R² 0.962. Later models must beat that baseline; this shifts emphasis to
-  cross-family and held-out-font generalisation.
+  R² 0.962; M3's random forest reaches 0.986. A CNN must beat that frozen
+  baseline, and any gain must survive a harder shift.
+- **Metadata confounding:** severity + family alone reaches test R² 0.911. The
+  synthetic generation design explains most of the target, so high model R² is
+  not evidence of perceptual understanding.
+- **Font shift:** M3's held-out-font stress test survives (R² 0.980), but only
+  three fonts exist and the held-out font shares the renderer/corruption design.
+  It is not broad generalisation evidence.
 - **Shortcut learning:** CNNs may learn rendering/font cues instead of
   degradation. Grouped splits and font-held-out evaluation are required.
 - **Synthetic-to-real gap:** results apply to the generator, not to deployed
@@ -250,5 +275,13 @@ a staging/verification/comparison workflow (`captcha-dataset`), and a grouped
 feature/target diagnostic. Two datasets were generated: a 9-source pilot
 (81 samples) and a 60-source reference dataset (540 samples). The diagnostic
 found no single-feature triviality (best validation/test R² 0.680/0.644) but a
-near-complete eight-feature linear baseline (0.968/0.962), so a later CNN must
-beat that baseline. No model, CNN, or dashboard exists yet.
+near-complete eight-feature linear baseline (0.968/0.962).
+
+Milestone 3: a frozen conventional benchmark with 23 candidates, validation-only
+selection, test evaluated once, metadata diagnostics, corruption/severity/
+coverage slices, grouped bootstrap, model persistence/verification, and a
+held-out-font stress test. The selected random forest reached test R² 0.9865 /
+RMSE 0.0226 versus naive 0.1942; metadata-only severity + family reached 0.9112;
+the held-out font reached 0.9799 (selected HGB) and 0.9832 (random-forest family
+winner). The evidence does **not** justify a CNN for this synthetic target. No
+CNN or dashboard exists yet.

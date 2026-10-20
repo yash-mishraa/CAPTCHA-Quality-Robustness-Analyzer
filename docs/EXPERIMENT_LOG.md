@@ -1,6 +1,7 @@
 # Experiment Log
 
-**Status:** `EXP-0001` and `EXP-0002` completed. No other experiments have been run.
+**Status:** `EXP-0001`, `EXP-0002` and `EXP-0003` completed. No other experiments
+have been run.
 
 This file is the authoritative record of experiments. An experiment is logged
 only if it can be reproduced from the recorded configuration, dataset version,
@@ -23,7 +24,7 @@ split, and code revision.
 | Field | Values |
 | --- | --- |
 | Status | `planned`, `running`, `completed`, `failed`, `inconclusive`, `superseded` |
-| Task | `target-validation`, `dataset-generation`, `quality-regression`, `corruption-classification`, `severity-classification`, `cnn-comparison`, `robustness-analysis` |
+| Task | `target-validation`, `dataset-generation`, `quality-regression`, `conventional-benchmark`, `corruption-classification`, `severity-classification`, `cnn-comparison`, `robustness-analysis` |
 | Split | Frozen split ID plus hash, for example `split-v1` (`<hash>`) |
 | Dataset | Dataset version plus manifest hash |
 | Metrics | Name, value, unit, and confidence interval where applicable |
@@ -32,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0003` | 2026-10-20 | `conventional-benchmark` | `completed` | A validation-selected random forest reaches test R² 0.986 (RMSE 0.023) versus naive 0.194; held-out-font R² 0.980; CNN not justified for this target |
 | `EXP-0002` | 2026-10-20 | `dataset-generation` | `completed` | Two deterministic datasets generated; grouped splits verified; no single-feature triviality, but an eight-feature linear baseline reaches test R² 0.962 |
 | `EXP-0001` | 2026-10-20 | `target-validation` | `completed` | SSIM passes in both families; PSNR passes for noise but fails for blur on an ink-coverage confound; MS-SSIM deferred |
 
@@ -74,6 +76,235 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0003 — Conventional image-quality models, leakage-safe comparison and held-out-font stress test
+
+- **Date:** 2026-10-20
+- **Status:** `completed`
+- **Task:** `conventional-benchmark`
+- **Hypothesis / question:** On the frozen 540-sample synthetic dataset, do
+  conventional regressors on the eight image-only features improve materially
+  over a training-mean baseline; does a nonlinear model beat OLS/Ridge on
+  held-out sources; how do results vary by corruption family, severity and ink
+  coverage; how much of the target is explained by corruption metadata alone;
+  and does the selected model survive a genuinely held-out font? This is a
+  synthetic image-similarity benchmark, not a human-readability or
+  CAPTCHA-solvability study.
+- **Code revision:** base `b9d6686` plus the Milestone 3 implementation; committed
+  together in `feat: benchmark conventional image quality models`. The reported
+  run was repeated after the commit so `run_metadata.json` and both model cards
+  record a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; joblib 1.6.0; macOS 26 (arm64). No GPU, internet or Kaggle access was
+  required.
+- **Configuration:** `configs/benchmark_v0_1_0.toml`; benchmark config hash
+  `e93d2660329a4f8b7e6b99739651250e2104ca9a26c76574db6db1e2e6bc8fa5`.
+  The frozen dataset configs were not edited:
+  `configs/dataset_v0_1_0.toml` sha256
+  `72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a`;
+  `configs/pilot_target_validation.toml` sha256
+  `6e9bdf961f36bbf70f5806e41b53661e1577bf15e13eb833348632359b886715`.
+- **Dataset:** `v0.1.0`; generation hash
+  `820cce7a77b5e95761f033b75e8cb2b304b6ad6293f67b5bc27bcf0823a6cef9`;
+  manifest sha256 `a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37`.
+- **Split:** frozen source-grouped, font-stratified split; assignment sha256
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`.
+  Sources: 36/12/12 train/val/test; samples: 324/108/108. Every source group is
+  in exactly one split; no variant crosses a boundary.
+- **Seeds:** benchmark seed `20261022`; model seeds derived per candidate from
+  `(seed, "model", candidate)` and reduced to 32 bits for scikit-learn;
+  bootstrap seeds derived from `(seed, "bootstrap", scope)`.
+- **Runtime:** ~5.5 s in process, ~6.2 s wall through the CLI on this machine.
+  The run fits 23 learned candidates on train, evaluates them on validation,
+  then evaluates four family winners plus the naive baseline on test.
+
+**Method.** Loaded the frozen dataset through `load_dataset`, enforced a 1:1
+manifest/feature join, exact feature schema (`sample_id` + eight features in
+documented order), finite values, target range, split membership, source-group
+disjointness and the recorded split hash. Built a predeclared 23-candidate grid:
+OLS (1), Ridge with six alphas (6), random forest with four depths x three leaf
+sizes (12), and histogram gradient boosting with two learning rates x two leaf
+counts (4). Each candidate was fitted on the training split only; scalers were
+inside a pipeline fitted on those rows. Selection used validation RMSE only,
+with ties broken by fewer inputs then name. The best candidate in each family
+and the overall best candidate were then evaluated once on test. The candidate
+table written to disk has no test columns.
+
+Separately fitted diagnostic OLS models for severity+family, font+text length,
+and image+metadata. These use generated labels, train-only category levels and
+train-only scaling, and are not deployable image-only models. Post-selection
+test slices were computed by corruption family, severity, train-quantile
+ink-coverage quartile and font. Residuals and grouped bootstrap intervals
+(resampling source groups, not variants) were reported. A separate held-out-font
+experiment removed Times New Roman before fitting and validation, re-ran the
+same grid on Arial + Courier New train/validation sources, selected on their
+validation rows only, and evaluated once on all 20 Times New Roman sources (180
+samples). The held-out font was chosen a priori because it is the only serif
+face in the configuration; no performance information informed the choice.
+
+**Metrics.**
+
+Primary held-out test (108 samples, 12 source groups):
+
+| Model | MAE | RMSE | R² | Notes |
+| --- | ---: | ---: | ---: | --- |
+| Naive train mean | 0.1664 | 0.1942 | -0.0000 | baseline |
+| OLS, 8 features | 0.0302 | 0.0380 | 0.9618 | linear family winner |
+| Ridge, alpha 0.01 | 0.0302 | 0.0379 | 0.9619 | ridge family winner |
+| Random forest, depth 8, leaf 1 | 0.0157 | 0.0226 | 0.9865 | overall validation-selected |
+| Histogram gradient boosting, lr 0.1, 15 leaves | 0.0174 | 0.0256 | 0.9826 | boosting family winner |
+
+Selected-model train/validation/test RMSE: 0.0089 / 0.0196 / 0.0226. The
+random forest's validation-selected configuration was nearly tied with unlimited
+depth (validation RMSE 0.019635 vs 0.019665), so the exact forest winner is
+unstable even though the family-level comparison is clear. HGB overfit strongly:
+train RMSE 0.0021, validation 0.0216, test 0.0256.
+
+Metadata diagnostics on test:
+
+| Model | Inputs | MAE | RMSE | R² |
+| --- | ---: | ---: | ---: | ---: |
+| Severity + family | 3 | 0.0458 | 0.0579 | 0.9112 |
+| Font + text length | 3 | 0.1660 | 0.1940 | 0.0023 |
+| Image + metadata (OLS) | 11 | 0.0202 | 0.0242 | 0.9844 |
+
+Gaps relative to the selected image-only model on test: metadata-only has
++0.0353 RMSE and -0.0752 R²; combined image+metadata has +0.0016 RMSE and
+-0.0020 R². The combined diagnostic did not beat the selected random forest.
+
+Test slices for the selected model (all counts in the generated tables):
+
+| Slice | Samples | MAE | RMSE | R² |
+| --- | ---: | ---: | ---: | ---: |
+| Overall | 108 | 0.0157 | 0.0226 | 0.9865 |
+| Corrupted only | 96 | 0.0176 | 0.0240 | 0.9804 |
+| Blur | 48 | 0.0170 | 0.0255 | 0.9824 |
+| Noise | 48 | 0.0182 | 0.0223 | 0.9721 |
+| Clean | 12 | 0.0004 | 0.0012 | undefined |
+| Coverage Q1 | 38 | 0.0140 | 0.0189 | 0.9882 |
+| Coverage Q2 | 20 | 0.0106 | 0.0148 | 0.9902 |
+| Coverage Q3 | 22 | 0.0202 | 0.0252 | 0.9630 |
+| Coverage Q4 | 28 | 0.0180 | 0.0288 | 0.9456 |
+
+Severity slices 1–4 had RMSE 0.0210 / 0.0312 / 0.0205 / 0.0214. Their R² values
+(0.60 / 0.70 / 0.95 / 0.93) are lower at low severity because within-level target
+variance is small, not because absolute error is larger; this is why both
+absolute error and R² are reported. The clean gap is a constant-target subgroup,
+so R² is undefined and is not filled in.
+
+Grouped bootstrap (1,000 source-group replicates):
+
+| Scope | Metric | Estimate | 95% interval | Groups |
+| --- | --- | ---: | --- | ---: |
+| Primary test | MAE | 0.0157 | [0.0116, 0.0209] | 12 |
+| Primary test | RMSE | 0.0226 | [0.0157, 0.0309] | 12 |
+| Primary test | R² | 0.9865 | [0.9757, 0.9934] | 12 |
+| Held-out font | MAE | 0.0193 | [0.0157, 0.0233] | 20 |
+| Held-out font | RMSE | 0.0271 | [0.0211, 0.0325] | 20 |
+| Held-out font | R² | 0.9799 | [0.9712, 0.9876] | 20 |
+
+Held-out font (Times New Roman; 20 sources, 180 samples; training fonts Arial +
+Courier New, 24 training sources / 216 samples, 8 validation sources / 72
+samples):
+
+| Model | MAE | RMSE | R² |
+| --- | ---: | ---: | ---: |
+| Naive two-font train mean | 0.1628 | 0.1910 | -0.0006 |
+| Validation-selected HGB, lr 0.05, 31 leaves | 0.0193 | 0.0271 | 0.9799 |
+| Random-forest family winner | 0.0184 | 0.0248 | 0.9832 |
+| OLS family winner | 0.0326 | 0.0398 | 0.9566 |
+| Ridge family winner | 0.0326 | 0.0399 | 0.9564 |
+
+The random-forest family winner was descriptively better on the held-out font
+than the HGB configuration selected on the two-font validation split. The result
+is reported as-is; the model was not re-selected on the held-out data.
+
+**Observations.** Facts only:
+
+1. **Conventional models beat the mean by a large margin.** Test RMSE fell from
+   0.1942 to 0.0226 (88.4% relative), above the predeclared 5% materiality rule.
+   This is expected because SSIM varies strongly with image structure, not
+   evidence of a novel method.
+2. **The feature/target relationship is nonlinear on this split.** The best
+   nonlinear test RMSE (random forest, 0.0226) was 40.4% lower than the best
+   linear one (ridge, 0.0379; OLS 0.0380). This is descriptive on 108 test
+   samples.
+3. **The exact forest winner is unstable.** The top two forest configurations
+   differed by 0.00003 validation RMSE. The family-level result should be
+   preferred over the exact depth/leaf choice.
+4. **Tree models overfit.** HGB's training RMSE was 0.0021 versus validation
+   0.0216; random forest training was 0.0089 versus validation 0.0196. The
+   report exposes train/validation columns instead of reporting only test.
+5. **Metadata explains most of the target.** Severity + family alone reached test
+   R² 0.9112. Font + text length reached 0.0023, confirming no font/length
+   shortcut in this split. Image features still improved on metadata, and the
+   combined OLS diagnostic (0.9844) did not beat the image-only random forest
+   (0.9865).
+6. **Aggregate performance hides family and coverage variation.** Blur RMSE
+   0.0255, noise 0.0223; coverage Q4 (highest ink) was hardest at 0.0288. Clean
+   samples are near-perfect and make the pooled R² optimistic relative to
+   corrupted-only performance (0.9804).
+7. **The held-out-font stress test survives.** A model trained without Times New
+   Roman reached R² 0.9799 on its 180 samples (selected HGB), and the random
+   forest family winner reached 0.9832. This is not broad generalisation: only
+   three fonts exist, and the held-out font shares the renderer and corruption
+   design.
+8. **Model verification passes.** Both persisted bundles passed card, schema,
+   target, dataset-hash, split-hash, scikit-learn compatibility, artifact-hash,
+   load and 8-feature smoke-test checks.
+9. **Reproducibility.** The documented command was repeated; the report CSVs
+   (excluding runtime metadata) and model predictions were compared. The
+   benchmark is deterministic under the recorded seed; model artifact bytes are
+   not claimed to be byte-identical across library versions.
+
+**Conclusion.** On the frozen synthetic SSIM target, a conventional random
+forest is materially better than the naive mean and descriptively better than
+OLS/Ridge. The result is broadly stable across blur and noise but not uniform
+across severity or coverage. Metadata alone explains 91.1% of held-out variance,
+so the synthetic design is a strong confound; image-only features still explain
+98.6%. The model survives a preliminary held-out-font stress test with R² 0.980.
+For this target, a CNN is **not** justified: the conventional forest already
+reconstructs almost all held-out variance and captures the nonlinearity, so a
+CNN would mainly add cost and opacity. A CNN would be justified only on a harder,
+predeclared shift where it beats this frozen feature-only baseline. A high R²
+does not make the target scientifically interesting, and none of these numbers
+measure human readability or CAPTCHA solvability.
+
+**Limitations.**
+
+- Three fonts, one canvas, two corruption families, 60 synthetic sources. Not a
+  cross-generator or real-image evaluation.
+- Test has 12 source groups; the grouped bootstrap intervals are wide and
+  unstable. The exact forest configuration is nearly tied with alternatives.
+- Validation and test share all three fonts in the primary benchmark. The
+  held-out-font experiment removes one but leaves only two for training.
+- Severity-1/2 R² is low because within-level variance is small; absolute errors
+  are not correspondingly large.
+- Clean samples have constant SSIM = 1, so R² is undefined there and pooled R²
+  is not a corrupted-only estimate.
+- Metadata diagnostics use generated labels and are not deployable inputs; the
+  combined model is one reference, not a guaranteed upper bound.
+- The model cards record scikit-learn's major/minor version; joblib artifacts
+  are not safe for untrusted files and only locally generated bundles should be
+  loaded.
+- Text length is not stratified; validation contains no length-6 sources.
+
+**Next step.** Do not start a CNN on this target. If Milestone 4 is requested,
+first define a harder predeclared shift (for example a new corruption family or a
+small documented real-image set) and require any CNN to beat the saved random
+forest on the same grouped protocol. Otherwise retain the conventional model and
+move to robustness analysis (M5).
+
+**Artifacts.** Git-ignored: `reports/benchmark_v0_1_0/` (benchmark markdown,
+candidate/comparison tables, predictions, residuals, strata, coverage,
+correlations, held-out-font tables, uncertainty, `run_metadata.json`) and
+`models/benchmark_v0_1_0/` (`primary_model.joblib` + card,
+`heldout_font_model.joblib` + card). The benchmark CLI is
+`uv run --extra image --extra ml captcha-benchmark run --config
+configs/benchmark_v0_1_0.toml --dataset data/processed/captcha_quality_v0.1.0`;
+verification is `captcha-benchmark verify-model`.
 
 ---
 

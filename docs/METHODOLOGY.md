@@ -394,48 +394,253 @@ splits. This does not invalidate the dataset: it makes the later modelling
 question sharper and prevents a triviality claim from being discovered only
 after expensive training.
 
-## 5. ML baselines
+## 5. Conventional ML baselines (Milestone 3)
 
+The Milestone 3 question is narrow: **given only the degraded image's eight
+features, how well can a conventional model predict SSIM on sources and fonts it
+did not train on?** The dataset, target and split are frozen from M2. No
+hyperparameter, threshold or feature definition was changed after seeing test
+results. This section records the protocol and the actual result; the full run
+is `EXP-0003`.
 
-### 5.1 Feature-based regression
+### 5.1 Frozen evaluation protocol
 
-Inputs are the eight documented image-only features in §4.1: mean and standard
-deviation of intensity, RMS contrast, Otsu ink coverage, Laplacian variance,
-Canny edge density, histogram entropy, and Immerkær's noise estimate. Generation
-metadata (severity, corruption family, seed) is **not** an input to the primary
-regressor.
+| Item | Frozen value |
+| --- | --- |
+| Dataset | `data/processed/captcha_quality_v0.1.0/` (60 sources, 540 samples) |
+| Generation hash | `820cce7a77b5e95761f033b75e8cb2b304b6ad6293f67b5bc27bcf0823a6cef9` |
+| Split | source-grouped, font-stratified; assignment sha256 `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232` |
+| Train / val / test | 36 / 12 / 12 sources; 324 / 108 / 108 samples |
+| Primary inputs | the eight image features in §4.1, in fixed order |
+| Target | `ssim_target` (SSIM in `[0, 1]`); PSNR is not modelled |
+| Fitting data | train split only |
+| Selection data | validation split only |
+| Test use | once, after every candidate and family winner was fixed |
+| Benchmark config | `configs/benchmark_v0_1_0.toml`, hash `e93d2660329a4f8b7e6b99739651250e2104ca9a26c76574db6db1e2e6bc8fa5` |
+| Seed | `20261022` (model seeds and bootstrap seeds derived from it) |
+| Environment | CPython 3.13.16, scikit-learn 1.9.1, NumPy 2.5.4, pandas 3.0.6 |
 
-Models, in increasing complexity:
+Each run recomputes the split-assignment hash from `sources.csv`, requires it to
+match `dataset_summary.json`, and refuses to run if a source group crosses
+splits, a source has multiple fonts, the feature table is not exactly
+`sample_id` plus the eight features, a feature is non-finite, or the dataset
+feature-set version differs from the extractor. All 540 rows are merged 1:1 on
+`sample_id`.
 
-1. Dummy regressor (mean/median) as a floor.
-2. Linear / ridge regression on standardised features. The M2 diagnostic already
-   establishes this baseline (test R² 0.962), so M3 models must beat it.
-3. Random forest or histogram gradient boosting.
-4. Optional: gradient boosting with modest hyperparameter search.
+The test set is never used to choose a feature, preprocessing statistic,
+hyperparameter, family winner or model. The candidate table written to disk
+contains training and validation metrics only; test metrics exist only for the
+validation-selected model and the validation-selected winner of each model
+family. This is a deliberate structural guard, not a convention.
 
-Preprocessing (imputation, scaling) is fit inside each training fold only.
+### 5.2 Candidate models and search grid
 
-### 5.2 Corruption-type and severity baselines
+Only scikit-learn is used; no deep-learning framework is installed for this
+milestone. The naive baseline is the training mean. The learned grid has 23
+candidates:
 
-- Multi-class classifier for corruption family.
-- Ordinal or multi-class model for severity, evaluated with ordinal-aware
-  metrics.
-- These experiments test whether the corpus encodes the intended factors. They
-  are **not** the primary quality model and must not be presented as evidence of
-  perceptual understanding.
+| Family | Specification | Candidates |
+| --- | --- | ---: |
+| Naive | `DummyRegressor(strategy="mean")`, baseline only | 1 |
+| Linear | OLS on eight standardised features | 1 |
+| Ridge | L2 penalty, `alpha` in `{0.01, 0.1, 1, 10, 100, 1000}`, features standardised | 6 |
+| Random forest | 300 trees; depth `{4, 6, 8, unlimited}` x leaf size `{1, 3, 5}`; raw features | 12 |
+| Histogram gradient boosting | 200 iterations; learning rate `{0.05, 0.1}` x max leaves `{15, 31}`; min leaf 10; L2 0 | 4 |
 
-### 5.3 CNN comparison
+Scaling is a `StandardScaler` inside a scikit-learn `Pipeline`, so it is fitted
+on the training rows passed to `fit`. Tree models intentionally receive raw
+features. Random forests use `n_jobs=1` and a derived 32-bit seed for
+determinism. The grid is small on purpose: 540 rows and 60 source groups cannot
+support a large search, and every extra candidate increases the chance of
+validation overfitting.
 
-- A small CNN trained from scratch (appropriate for a modest dataset).
-- A pretrained backbone with a replaced regression head, using documented
-  preprocessing and partial or full fine-tuning.
-- Identical splits, target definition, and early-stopping protocol as the
-  feature-based models.
-- Report parameter count, training time, and hardware to make the cost/benefit
-  comparison explicit.
+**Selection rule (predeclared).** The lowest validation RMSE wins. Ties are
+broken by fewer inputs, then by model name. The best configuration in each
+family is selected the same way; this lets the report compare linear and
+nonlinear families on test without post-hoc tuning. The overall selected model
+is the best validation candidate across families. Test metrics for all family
+winners are reported for transparency; they did not influence selection.
 
-The CNN is justified only if it improves held-out performance or reveals
-structure the baselines miss. Otherwise the simpler model is retained.
+### 5.3 Metrics and grouped uncertainty
+
+For every reported model and slice:
+
+- **MAE** = mean absolute error, in SSIM units.
+- **RMSE** = population root mean squared error, in SSIM units.
+- **R²** = `1 - SS_res / SS_tot`. It is reported as undefined (`nan`, with
+  `r2_defined = false`) when `SS_tot = 0`, notably the constant clean-only
+  subset. It is never fabricated as zero or one.
+- `n_rows` and `n_sources` are always reported. Variants are not independent
+  observations.
+
+Uncertainty is a **source-group bootstrap**: 1,000 replicates resample the
+source groups (not individual variants) with replacement, concatenate all rows
+of each sampled group, and recompute MAE/RMSE/R² with the fitted predictions held
+fixed. The 2.5th and 97.5th percentiles are descriptive intervals. With 12 test
+groups and 20 held-out-font groups they are necessarily wide and unstable; no
+significance test or confidence claim is made. The same procedure is applied to
+the held-out-font results.
+
+### 5.4 Explicitly diagnostic metadata experiments
+
+These models use generated labels and are **not** the intended image-only
+model. They exist to measure how much of the target the synthetic generation
+design explains and to expose confounding.
+
+| Diagnostic | Inputs | Purpose |
+| --- | --- | --- |
+| `metadata_severity_family` | severity + corruption-family indicators (3 columns) | oracle-label baseline |
+| `metadata_font_text_length` | font indicators + text length (3 columns) | font/length control |
+| `image_plus_metadata` | eight standardised features + severity + family indicators (11 columns) | combined diagnostic reference, not a deployable model |
+
+Category levels and scaling statistics come from the training split. An unseen
+test category is an error rather than a silent all-zero encoding. These designs
+are never used to select the primary model, and the combined model is not
+guaranteed to upper-bound a nonlinear image-only model; it is one diagnostic
+reference.
+
+### 5.5 Stratified analysis
+
+After selection, the frozen test split is described by:
+
+- corruption family (`gaussian_blur`, `gaussian_noise`, clean);
+- severity level 0–4;
+- ink-coverage quartiles, with edges fixed from the **training** split's
+  `ink_fraction` quantiles (`0, 0.25, 0.5, 0.75, 1.0`); test values outside the
+  training range fall in the open outer bin. Bins are sample-level: because
+  severity changes ink coverage, one source can contribute to multiple bins, so
+  coverage-row group counts are not additive;
+- font, for descriptive comparison only.
+
+These rows are not used to re-select or tune a model. Small subgroups are shown
+with their group and sample counts and labelled descriptive. Within-family
+feature/target correlations are computed on training rows. Aggregate
+correlations are not substituted for the family-conditional ones, because
+Laplacian variance and ink coverage reverse sign between blur and noise.
+
+### 5.6 Held-out-font stress test
+
+The held-out font was fixed before fitting: **Times New Roman**, the only serif
+face in the three-font configuration. The choice uses font metadata only and is
+recorded in `configs/benchmark_v0_1_0.toml`; no performance result informed it.
+
+- Training fonts: Arial and Courier New.
+- Training data: their primary `train` sources — 24 sources, 216 samples.
+- Selection data: their primary `val` sources — 8 sources, 72 samples.
+- Held-out evaluation: all 20 Times New Roman sources — 180 samples, all
+  variants grouped.
+- No Times New Roman row enters fitting, scaling, category levels, early
+  stopping or hyperparameter selection. The same candidate grid is re-selected
+  using only the two training fonts; the held-out result is then evaluated once.
+- The naive baseline is the mean SSIM of the two-font training rows.
+
+This is a **preliminary font-shift stress test**, not proof of broad
+generalisation: only three fonts exist in total, only two remain for training,
+and the held-out font still shares the renderer, canvas, text distribution and
+corruption design. It is stronger than the random grouped split but far weaker
+than a cross-generator or real-image evaluation.
+
+### 5.7 Results and target-meaningfulness decision
+
+Full configuration, predictions, residual and stratified tables are in the
+Git-ignored `reports/benchmark_v0_1_0/`; the model cards and joblib artifacts are
+in `models/benchmark_v0_1_0/`. Headline test results (108 samples, 12 source
+groups):
+
+| Model | MAE | RMSE | R² | Note |
+| --- | ---: | ---: | ---: | --- |
+| Naive train mean | 0.1664 | 0.1942 | -0.0000 | baseline |
+| OLS (8 features) | 0.0302 | 0.0380 | 0.9618 | validation-selected linear family |
+| Ridge (`alpha=0.01`) | 0.0302 | 0.0379 | 0.9619 | validation-selected ridge family |
+| Random forest (depth 8, leaf 1) | 0.0157 | 0.0226 | 0.9865 | validation-selected overall |
+| Histogram gradient boosting (lr 0.1, 15 leaves) | 0.0174 | 0.0256 | 0.9826 | validation-selected boosting family |
+
+The selected model reduced test RMSE by 88.4% relative to the naive mean, above
+the predeclared 5% materiality rule. The random forest's test RMSE was 0.0153
+(40.4%) lower than the best linear family winner; this is descriptive evidence
+that the feature/target relationship is nonlinear on this split, not a general
+claim about forests. Both tree families overfit the training split (HGB train
+RMSE 0.0021 versus validation 0.0216), which the train/validation columns expose
+rather than hide.
+
+Metadata and gap results on test:
+
+| Comparison | RMSE | R² | Gap versus selected image-only model |
+| --- | ---: | ---: | --- |
+| Image-only selected RF | 0.0226 | 0.9865 | — |
+| Severity + family only | 0.0579 | 0.9112 | +0.0353 RMSE, -0.0752 R² |
+| Font + text length only | 0.1940 | 0.0023 | effectively no signal |
+| Image + metadata (OLS) | 0.0242 | 0.9844 | +0.0016 RMSE, -0.0020 R² |
+
+The metadata-only result confirms that the synthetic corruption design explains
+most of the target. The image-only model still beats it, and the combined
+diagnostic does not beat the image-only random forest. Font and text length are
+not confounds in this split. These facts make the image-only task genuine but
+easier than real-world quality assessment; they do not make it a readability
+measure.
+
+Family and coverage slices of the selected model's test predictions:
+
+- Blur: RMSE 0.0255, R² 0.9824 (48 samples, 12 groups).
+- Noise: RMSE 0.0223, R² 0.9721 (48 samples, 12 groups).
+- Clean: RMSE 0.0012; R² undefined because the target is constant (12 samples).
+- Coverage quartiles Q1–Q4: RMSE 0.0189, 0.0148, 0.0252, 0.0288. The highest
+  coverage quartile is hardest, descriptively.
+- Severity 1–4: RMSE 0.0210, 0.0312, 0.0205, 0.0214; the R² values at severity
+  1–2 (0.60, 0.70) are low because within-level target variance is small, not
+  because absolute error is large. Counts are shown in the report.
+
+Grouped bootstrap 95% intervals for the selected test model: RMSE
+[0.0157, 0.0309], MAE [0.0116, 0.0209], R² [0.9757, 0.9934]. These are
+descriptive and unstable at 12 groups.
+
+Held-out font (Times New Roman, 180 samples, 20 groups):
+
+| Model | MAE | RMSE | R² |
+| --- | ---: | ---: | ---: |
+| Naive (two-font train mean) | 0.1628 | 0.1910 | -0.0006 |
+| Validation-selected HGB (lr 0.05, 31 leaves) | 0.0193 | 0.0271 | 0.9799 |
+| Random-forest family winner | 0.0184 | 0.0248 | 0.9832 |
+| OLS family winner | 0.0326 | 0.0398 | 0.9566 |
+
+The selected model survives this stress test (bootstrap R² interval
+[0.9712, 0.9876]), and the random-forest family winner is descriptively slightly
+better on the held-out font even though HGB won on the two-font validation
+split. That comparison is reported as-is; the model was not re-selected on the
+held-out result.
+
+**Decision.** For this synthetic SSIM target:
+
+1. A conventional model improves materially over the naive mean (88.4% RMSE
+   reduction).
+2. A nonlinear forest beats OLS/Ridge on held-out sources by a descriptive
+   margin (40.4% lower RMSE), so model class matters here.
+3. The result is broadly stable across blur and noise, but error and R² vary by
+   severity and coverage; the aggregate hides that.
+4. Metadata alone explains 91.1% of test variance, so the synthetic design is a
+   strong confound; the image-only model is still better.
+5. The selected model survives the three-font held-out-font stress test, with
+   the caveats above.
+6. **A CNN is not justified for this target.** The selected random forest
+   already reconstructs 98.6% of held-out SSIM variance, corruption metadata
+   alone explains 91.1%, and nonlinearity is already captured by a conventional
+   forest. A CNN would mainly add capacity, training cost and
+   opacity. It would only be justified on a harder, predeclared shift if it beats
+   this frozen baseline.
+
+A high R² does not make the target scientifically interesting, and nothing here
+measures human readability or CAPTCHA solvability.
+
+### 5.8 CNN comparison criteria (Milestone 4, not implemented)
+
+If a CNN is attempted later, it must use the same frozen split, target and
+held-out-font partition; report MAE/RMSE/R² and grouped uncertainty; and be
+compared against the saved feature-only random forest and the metadata
+diagnostics on the same rows. A small from-scratch CNN and a documented
+transfer-learning variant are sufficient. Parameter count, training time and
+hardware must be reported. The CNN is retained only if it improves held-out
+performance, especially under font or corruption shift, without test-set
+tuning. No CNN code or dashboard exists in Milestone 3.
 
 ## 6. Data leakage risks and controls
 
@@ -456,24 +661,39 @@ structure the baselines miss. Otherwise the simpler model is retained.
 ### 7.1 Splits and resampling
 
 - Frozen train/validation/test split, grouped by clean source (`source_id`).
-- Grouped k-fold cross-validation on the training portion for model selection.
-- Bootstrap confidence intervals over held-out groups for headline metrics.
-- Report the number of independent groups, not just the number of images.
+- M3 uses the fixed validation split for model selection; it does **not** run
+  grouped k-fold on the training portion. With 36 training source groups, a
+  fixed validation split is simpler and keeps the selection protocol identical
+  to the M2 diagnostic. The limitation is a noisier selection signal.
+- Bootstrap intervals resample held-out source groups, not variants, for
+  headline metrics.
+- Report the number of independent groups, not just the number of images. Test
+  intervals use 12 groups; held-out-font intervals use 20.
+- The held-out-font experiment removes one font from fitting and validation
+  before selection. It is a stress test, not a replacement for the primary
+  split.
 
 ### 7.2 Regression metrics
 
-- MAE and RMSE (primary, in target units).
-- R² for explained variance, interpreted cautiously on bounded targets.
-- Spearman rank correlation for monotonic association.
-- Residual analysis by corruption family, severity, font, and text length.
-- Calibration-style plot of predicted vs. reference scores.
+- MAE and RMSE in SSIM units (primary).
+- R² for explained variance, with `nan`/`r2_defined = false` when the target is
+  constant; never zero-filled.
+- Sample and source-group counts on every row.
+- Spearman rank correlation for monotonic association in diagnostics.
+- Residual analysis by corruption family, severity, coverage and font; no
+  calibration plot is produced in M3, only tables.
+- Training, validation and test metrics are reported together so overfitting is
+  visible; test comparisons are labelled as held-out.
 
-### 7.3 Classification metrics (secondary)
+### 7.3 Classification metrics (secondary, not run in M3)
 
 - Macro-F1 and balanced accuracy for corruption family.
 - Confusion matrix with per-class support.
 - Ordinal MAE and quadratic weighted kappa for severity.
 - Explicit chance baselines.
+
+M3 focuses on SSIM regression; corruption labels are used only as diagnostic
+metadata, not as a classification target. These metrics remain planned.
 
 ### 7.4 Robustness analysis
 
@@ -485,21 +705,39 @@ structure the baselines miss. Otherwise the simpler model is retained.
 ### 7.5 Reporting standards
 
 Every experiment records: config hash, dataset version/hash, split hash, code
-revision, random seeds, metrics with confidence intervals, hardware, and
-runtime. Negative and inconclusive results are recorded with the same detail as
-positive ones. No result is reported without its split definition.
+revision, package and scikit-learn versions, random seeds, metrics with grouped
+intervals where available, and runtime. Negative and inconclusive results are
+recorded with the same detail as positive ones. No result is reported without
+its split definition. M3 additionally records the model-card hashes and a
+machine-readable `run_metadata.json`; generated artifacts remain Git-ignored.
 
 ## 8. Threats to validity
 
 - **Construct validity:** reference-based metrics are proxies, not ground-truth
-  legibility.
-- **Internal validity:** leakage is controlled by grouping and frozen splits,
-  but undiscovered near-duplicates remain possible; duplicate checks are
-  mandatory.
-- **External validity:** synthetic renderings and a small font set do not
-  represent production CAPTCHAs.
+  legibility. SSIM is a synthetic image-similarity target; it is not a
+  readability or solvability label.
+- **Internal validity:** leakage is controlled by source grouping, a frozen
+  split, train-only preprocessing and explicit feature columns. Undiscovered
+  near-duplicates remain possible; duplicate checks are mandatory.
+- **Selection instability:** model selection uses 12 validation source groups.
+  The top two random-forest candidates differ by less than 0.0001 validation
+  RMSE, so the exact winner should not be treated as a stable ranking. The
+  family-level comparison is more defensible than the individual forest
+  configuration.
+- **External validity:** synthetic renderings, three fonts, one canvas size and
+  two corruption families do not represent production CAPTCHAs. The held-out
+  font (Times New Roman) is a preliminary stress test, not broad generalisation.
+- **Confounding:** severity + family metadata alone reaches test R² 0.911.
+  Image features recover more (0.986), but the synthetic design makes the target
+  easier than real-world quality assessment.
 - **Conclusion validity:** small held-out group counts limit statistical power;
-  confidence intervals are reported and over-interpretation is avoided.
+  bootstrap intervals are wide and unstable. No significance claim is made.
+- **Target saturation:** clean samples have SSIM exactly 1 and a constant-target
+  subgroup, so R² is undefined there and the pooled R² is inflated relative to
+  corrupted-only performance. Corrupted-only and family slices are reported.
+- **Persistence safety:** joblib/pickle artifacts are not safe for untrusted
+  files. The verification step checks schema and hashes, but only locally
+  generated artifacts should be loaded.
 - **Reproducibility:** results depend on library versions and hardware; these are
   pinned and logged where they affect numerical output.
 
