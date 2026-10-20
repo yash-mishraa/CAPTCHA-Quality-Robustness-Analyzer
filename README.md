@@ -4,11 +4,12 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–3, M4A, M4B and M5A complete — the metric-validation
-> pilot, a reproducible dataset/feature pipeline, a leakage-safe conventional-ML
-> benchmark, an occlusion/interference feasibility pilot, a grouped
-> occlusion/interference robustness benchmark, and a geometric-distortion
-> feasibility pilot have been run and logged. The CNN comparison, full M5 error
+> **Status:** Milestones 0–3, M4A, M4B, M5A and M5B complete — the
+> metric-validation pilot, a reproducible dataset/feature pipeline, a
+> leakage-safe conventional-ML benchmark, an occlusion/interference feasibility
+> pilot, a grouped occlusion/interference robustness benchmark, a
+> geometric-distortion feasibility pilot, and a grouped geometric-robustness
+> benchmark have been run and logged. The CNN comparison, full M5 error
 > taxonomy and dashboard are **not implemented**, and the project does **not**
 > predict human CAPTCHA solvability. See
 > [Current status](#current-status).
@@ -75,6 +76,9 @@ fact.
 - A grouped occlusion/interference robustness benchmark comparing frozen M3,
   controlled conventional retraining and naive baselines on held-out sources
   (**implemented**).
+- A grouped geometric-robustness benchmark comparing frozen M3, controlled
+  conventional adaptation and naive baselines on held-out geometric sources,
+  with original-task retention on the untouched M3 test split (**implemented**).
 - A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
@@ -142,8 +146,9 @@ fact.
 
 Stages 1–8 are implemented for the conventional benchmark, the M4B grouped
 robustness benchmark (grouped uncertainty, corruption/coverage slices, a
-held-out-font stress test and source-isolated interference evaluation) and the
-M5A geometric-distortion feasibility pilot. The full M5 error taxonomy and Stage
+held-out-font stress test and source-isolated interference evaluation), the
+M5A geometric-distortion feasibility pilot and the M5B grouped
+geometric-robustness benchmark. The full M5 error taxonomy and Stage
 9 dashboard are planned. Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
 result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
@@ -262,7 +267,7 @@ environment files are required at this stage.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
-| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A complete** — deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B not started |
+| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A and M5B complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. CNN not justified |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -272,9 +277,10 @@ models on that frozen dataset and tests whether the result survives a held-out
 font. Milestone 4A adds a separate feasibility pilot for occlusion and visual
 interference; M4B uses its frozen source assignment for a grouped zero-shot and
 controlled-adaptation benchmark. M5A adds a separate smooth elastic-warp
-feasibility pilot without training a model. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all six recorded
-experiments.
+feasibility pilot without training a model; M5B uses the M5A dataset for a
+grouped zero-shot and controlled-adaptation benchmark on the same frozen M3
+source split. See [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all
+seven recorded experiments.
 
 ## Quick start: dataset pipeline
 
@@ -410,6 +416,32 @@ the predeclared feasibility gate returns `FAIL`; dataset/config errors exit 2.
 The gate and findings are recorded in `EXP-0006` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.11.
 
+## Quick start: grouped geometric-robustness benchmark
+
+M5B benchmarks the frozen M3 model against the M5A geometric dataset. It
+measures two different things: **zero-shot transfer** (the frozen M3 model,
+never refitted, on unseen geometric sources) and **controlled adaptation** (a
+conventional model trained on representative geometric rows, selected on
+validation only). The primary geometric score uses the 1.0, 2.0 and 3.0 px
+rungs; the 0.5 px rung is reported only as a separately labelled diagnostic.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-geometric-benchmark run \
+    --config configs/geometric_robustness_benchmark_v0_1_0.toml
+
+# Verify the written run: artifact hashes, prediction replay and protocol
+uv run --extra image --extra ml captcha-geometric-benchmark verify \
+    --config configs/geometric_robustness_benchmark_v0_1_0.toml
+```
+
+The run writes `reports/geometric_robustness_benchmark_v0_1_0/` and
+`models/geometric_robustness_benchmark_v0_1_0/` (both Git-ignored). It refuses
+to evaluate if any predeclared data-integrity or leakage check fails, and it
+never fits anything on test-source rows. The results are recorded in
+`EXP-0007` and [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.12.
+
 ## Current status
 
 Implemented:
@@ -470,16 +502,24 @@ Implemented:
   seeded smooth elastic fields, bilinear resampling with edge padding, identity/
   zero-field/minimal controls, field replay, grouped uncertainty, feature
   contrasts against blur/noise/interference, and a predeclared gate.
+- A grouped geometric-robustness benchmark (`geometric_benchmark.py`,
+  `configs/geometric_robustness_benchmark_v0_1_0.toml`): frozen-M3 zero-shot
+  evaluation on the M5A test sources, controlled conventional adaptation with
+  validation-only selection, original-task retention on the untouched M3 test
+  split, the 0.5 px rung held out as a diagnostic, predeclared
+  integrity/leakage checks, source-grouped uncertainty and a run/verify CLI.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 308 tests in total, all passing, including byte-identical dataset
+- 317 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
   geometry replay, pilot tamper detection, M4B source isolation/merge checks,
   frozen-model zero-shot replay, adaptation determinism, elastic-field
-  determinism/replay/validation and M5A manifest/feature reproducibility.
+  determinism/replay/validation, M5A manifest/feature reproducibility and the
+  M5B split/merge contracts, 0.5 px exclusion, feature-leakage guard, metric
+  correctness, grouped bootstrap and model-replay checks.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -499,6 +539,47 @@ readability or solvability):
   0.5 px (0.0025 versus 0.005), which is close to the interpolation floor.
   This is not an unqualified pass and does not justify a separate geometric
   benchmark without revising or dropping the lowest rung.
+
+Milestone 5B findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **Zero-shot transfer fails on the new corruption family.** On the primary
+  1.0–3.0 px geometric test slice (36 rows / 12 sources) the frozen M3 model
+  reaches MAE 0.0777, RMSE 0.0967 and R² -1.1858 with a mean residual of
+  -0.0717, against MAE 0.2030, RMSE 0.2132 and R² -9.6363 for the M3
+  training-mean baseline. It is far better than the constant but badly
+  mis-calibrated in absolute terms. On the original M3 blur/noise test rows the
+  same model reaches MAE 0.0157 and R² 0.9865, so this is a cross-corruption
+  transfer failure, not a general model failure.
+- **Controlled adaptation reduces aggregate error but not the calibration
+  failure.** A validation-selected histogram gradient boosting model (12
+  predeclared candidates) reaches MAE 0.0544, RMSE 0.0659 and R² -0.0165 on the
+  same rows; the paired source-grouped RMSE difference is -0.0307 (preliminary
+  interval -0.0472 to -0.0155), a 31.8% reduction. R² stays near zero, so the
+  aggregate error falls without the model explaining between-source variation at
+  fixed severity.
+- **The gain is not uniform across severity.** Adapted MAE is worse at 1.0 px
+  (0.0520 versus 0.0259 for frozen M3) and better at 2.0 px (0.0363 versus
+  0.0662) and 3.0 px (0.0749 versus 0.1409). At the diagnostic 0.5 px rung the
+  two models are nearly indistinguishable (0.0170 versus 0.0171).
+- **The original task is largely retained in aggregate, but not on clean
+  references.** On the untouched M3 test rows the adapted model reaches MAE
+  0.0179, RMSE 0.0243 and R² 0.9843 versus 0.0157/0.0226/0.9865 for frozen
+  M3. The aggregate paired RMSE difference includes zero (0.0017, interval
+  -0.0022 to 0.0042), but the clean-reference slice degrades clearly (MAE
+  0.0134 versus 0.0004), so the adapted model is not a drop-in replacement.
+- **Decision.** Conventional feature-based ML remains the benchmark family.
+  Zero-shot failure with successful adaptation is a distribution-shift result
+  that representative training data addresses in this synthetic setting. The
+  clean-calibration trade-off and the near-zero R² are unresolved; the next
+  step would be a predeclared retention-aware selection or calibration
+  protocol, **not** a larger model. A new corruption family does not by itself
+  justify a CNN.
+- **Uncertainty.** Every interval resamples whole source groups and there are
+  only 12 held-out test sources, so all intervals are preliminary and
+  descriptive. Interval overlap or non-overlap is not treated as a
+  significance test, and no universal threshold was introduced after seeing
+  test results.
 
 Milestone 4B findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -601,9 +682,9 @@ or solvability):
 - Adjacent severities were separated with large paired effects, no trial-level
   reversals occurred, and clean-vs-clean comparisons were exactly perfect.
 
-Not implemented (planned): the CNN comparison, M5B broader robustness analysis
-and error taxonomy, notebooks, the Streamlit dashboard, deployment, and any
-human-solvability or production-CAPTCHA claims.
+Not implemented (planned): the CNN comparison, the broader M5 error taxonomy,
+notebooks, the Streamlit dashboard, deployment, and any human-solvability or
+production-CAPTCHA claims.
 The conventional model's performance is a synthetic image-similarity result, not
 a readability estimate.
 

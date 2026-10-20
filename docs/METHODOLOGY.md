@@ -954,6 +954,135 @@ controls, source grouping and interpolation/border caveat forward. No model was
 trained. Nothing here measures human readability or CAPTCHA solvability, and no
 CNN is justified by this pilot.
 
+### 5.12 M5B grouped geometric-robustness benchmark
+
+Milestone 5B asks whether the frozen M3 model transfers zero-shot to the held-out
+geometric sources, and whether a controlled conventional model trained on
+representative geometric data improves held-out geometric performance while
+retaining the original blur/noise task. The implementation is
+`geometric_benchmark.py`, configured by
+`configs/geometric_robustness_benchmark_v0_1_0.toml`. It writes only to
+`reports/geometric_robustness_benchmark_v0_1_0/` and
+`models/geometric_robustness_benchmark_v0_1_0/` (both Git-ignored).
+
+**Zero-shot transfer and controlled adaptation are different questions.**
+Zero-shot transfer asks whether the M3 model, frozen and never refitted,
+predicts geometric SSIM correctly for sources it has never seen in any form.
+It is a measurement of cross-corruption generalisation and nothing may be fitted
+on the geometric test rows. Controlled adaptation asks a different question:
+whether a conventional model given representative geometric training rows
+learns a better mapping on held-out geometric sources, and what that costs on
+the original task. The two are reported side by side on identical test rows,
+but a poor zero-shot result is not evidence about the adapted model, and a good
+adapted result is not evidence that the original model generalised.
+
+**Frozen inputs.** The M3 dataset, split, primary model and model card, the M4A
+pilot, the M4B benchmark and its model, and the M5A pilot dataset are read-only
+and hash-verified before and after the run. The frozen M3 primary model is
+loaded through its existing card/artifact verification path, including the
+feature-order, target, dependency and smoke-prediction checks.
+
+**Split.** The frozen M3 source-grouped assignment is reused verbatim
+(36 train / 12 validation / 12 test sources, assignment sha256
+`70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`). M5A
+inherits the same source assignment; every variant of a source stays in that
+source's split, and no sample is assigned to a split independently. No
+test-source image, feature, target or metadata enters training, preprocessing
+or model selection.
+
+**Severity protocol.** The primary geometric score uses the 1.0, 2.0 and 3.0 px
+rungs (severities 2, 3, 4). The 0.5 px rung is excluded from primary training,
+validation selection and scoring, and is reported only as a separately labelled
+diagnostic, because the M5A gate found its between-source SSIM SD (0.0025) below
+the predeclared 0.005 minimum-variation margin. It is neither silently dropped
+nor merged into the primary score. Clean and control rows (the 60 clean, 60
+identity, 60 zero-field and 60 minimal rows) are excluded from every fit frame
+and from scoring: the clean rows duplicate the M3 clean references, and the
+identity/zero-field controls are exact duplicates of them.
+
+**Features and target.** Model inputs are exactly the eight existing image-only
+features in their existing order. Severity, corruption family, font, text
+length, source and split identifiers, SSIM/PSNR diagnostics and all provenance
+metadata are excluded from primary inputs, and the fit frames are checked
+programmatically for their absence. The target is the unchanged `ssim_target`,
+computed by the existing SSIM implementation against the exact clean reference.
+
+**Experiment A - frozen zero-shot.** The unmodified M3 model is evaluated on
+M5A test sources only. The naive baseline is the M3 training target mean. No
+preprocessing, calibration, threshold or parameter is fitted on geometric test
+results.
+
+**Experiment B - controlled adaptation.** The expanded training frame is the M3
+blur/noise training rows plus the M5A 1.0-3.0 px elastic rows from the same
+training sources (432 rows / 36 sources); the expanded validation frame is the
+corresponding validation sources only (144 rows / 12 sources). A small
+predeclared conventional grid (OLS, ridge at three alphas, random forest at four
+depth/leaf settings, histogram gradient boosting at four learning-rate/leaf
+settings; 12 candidates) is fitted on the expanded training frame and selected
+on expanded validation RMSE only. Test sources are never passed to the fit or
+the selector. The comparison set is the frozen M3 model, the validation-selected
+adapted model, and a naive baseline fitted to the expanded training target
+distribution.
+
+**Experiment C - original-task retention.** The selected adapted model is
+evaluated on the untouched M3 test split and compared with the frozen M3 model
+on exactly the same rows and metrics. These results are reported, not used to
+choose or retune the adapted model.
+
+**Data integrity and leakage checks.** Before any model is evaluated the
+benchmark verifies: each source belongs to exactly one split in both datasets;
+M3 and M5A agree on every source's split, font and text length; all variants of
+a source stay together; no test-source row enters training or validation; every
+geometric variant derives from its recorded clean reference; clean-reference
+duplicates are identified and excluded explicitly; no duplicate sample ID or
+unintended duplicate feature/target row enters a fit frame; the 0.5 px rung is
+absent from training, validation and the primary test score; the feature
+schema and target implementation are unchanged; and the frozen M3/M4A/M4B/M5A
+assets are byte-identical to their recorded pins. Evaluation does not proceed
+if any check fails.
+
+**Uncertainty.** Source-grouped bootstrap intervals resample whole source groups,
+preserving all rows within a selected group, with 1000 replicates and paired
+differences computed on identical rows. The test set contains only 12 source
+groups, so every interval is labelled preliminary and descriptive. Overlapping
+or non-overlapping intervals are not treated as significance tests, and no
+universal performance threshold is introduced after observing test results.
+
+**Results.** On the primary 1.0-3.0 px geometric test slice (36 rows / 12
+sources), the frozen M3 model has MAE 0.0777, RMSE 0.0967 and R2 -1.1858 with a
+mean residual of -0.0717, versus the naive M3 training-mean baseline at MAE
+0.2030, RMSE 0.2132 and R2 -9.6363. The adapted model has MAE 0.0544, RMSE
+0.0659 and R2 -0.0165; the expanded-training-mean baseline has MAE 0.1495 and
+RMSE 0.1632. The aggregate paired RMSE difference between adapted and frozen is
+-0.0307 (preliminary interval -0.0472 to -0.0155), a 31.8% reduction, but the
+adapted R2 remains near zero, so the aggregate error falls without the model
+explaining between-source variation at fixed severity. The gain is not uniform
+across severity: adapted MAE is worse at 1.0 px (0.0520 versus 0.0259) and
+better at 2.0 px (0.0363 versus 0.0662) and 3.0 px (0.0749 versus 0.1409). At
+the diagnostic 0.5 px rung the two models are nearly indistinguishable (MAE
+0.0170 versus 0.0171), which carries no primary claim.
+
+**Original-task retention.** On the same 108-row / 12-source M3 test split, the
+frozen M3 model has MAE 0.0157, RMSE 0.0226 and R2 0.9865; the adapted model
+has MAE 0.0179, RMSE 0.0243 and R2 0.9843. The aggregate paired RMSE difference
+is 0.0017 (preliminary interval -0.0022 to 0.0042), which includes zero, but
+the clean-reference slice degrades clearly (MAE 0.0134 versus 0.0004; paired
+difference 0.0130, interval 0.0074 to 0.0186). The adapted model is therefore
+not a drop-in replacement.
+
+**Decision.** Conventional feature-based ML remains the benchmark family. The
+frozen model fails zero-shot geometric calibration and controlled adaptation
+with representative geometric training data substantially reduces aggregate
+geometric error without test leakage, while the original blur/noise task is
+largely retained at the aggregate level. The clean-reference calibration
+regression and the near-zero adapted R2 are unresolved: the natural next
+modelling question is a predeclared retention-aware selection or calibration
+protocol, not a larger model. The evidence does not justify a CNN, and a new
+corruption family does not by itself justify one. These results cover one
+synthetic renderer, one canvas size, three fonts and 12 held-out source groups;
+they are not a claim about real-world CAPTCHA robustness, human readability or
+solvability.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

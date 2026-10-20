@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0006` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0007` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0007` | 2026-10-20 | `robustness-analysis` | `completed` | Frozen M3 fails zero-shot geometric calibration (R² -1.186); adapted HGB cuts primary RMSE 31.8% to 0.0659 but leaves R² near zero and degrades the clean-reference slice, so conventional ML remains the family with a retention caveat and no CNN is justified |
 | `EXP-0006` | 2026-10-20 | `robustness-analysis` | `completed` | Smooth elastic warp is deterministic, replayable and monotonic on 60/60 sources; gate is CONDITIONAL PASS because the 0.5 px rung has between-source SD 0.0025 below the 0.005 margin |
 | `EXP-0005` | 2026-10-20 | `robustness-analysis` | `completed` | Frozen M3 fails zero-shot absolute calibration on M4A test (R² -1.045); validation-selected retraining cuts RMSE from 0.161 to 0.018, so conventional adaptation is sufficient here |
 | `EXP-0004` | 2026-10-20 | `robustness-analysis` | `completed` | Occlusion/interference pilot is deterministic, non-degenerate and feature-distinct from blur/noise (gate PASS); no difficulty or solvability claim |
@@ -79,6 +80,165 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0007 — Grouped geometric-robustness benchmark: adaptation improves the primary score but not clean retention
+
+- **Date:** 2026-10-20
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Does the frozen M3 feature-only model transfer
+  zero-shot to the held-out M5A smooth-elastic test sources, and does a
+  controlled conventional model trained on M3 plus M5A training-source rows
+  improve held-out geometric performance without fitting anything on test?
+  Does adaptation preserve the original M3 blur/noise task? This is a synthetic
+  image-similarity benchmark, not a human-readability, CAPTCHA-solvability or
+  security study.
+- **Code revision:** base `5213eae` plus the M5B implementation, committed as
+  `feat: benchmark geometric distortion robustness`. The reported run was
+  repeated after the commit so generated provenance records a clean revision.- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; scikit-image 0.26.0; joblib 1.6.0; macOS 27.0.1 (arm64). No GPU was
+  used.
+- **Configuration:** `configs/geometric_robustness_benchmark_v0_1_0.toml`; config
+  sha256
+  `fe5c66614cee83c72a80c20b807202deadd8a604e045f7432795a8abe706ddb1`;
+  protocol hash
+  `77e41dd5de84e0bf8751c38a49b510735095f86edc8b00f6c19a6d8fde0d13ce`.
+  Seed `20261024`; 1000 source-grouped bootstrap replicates; selection on
+  expanded validation RMSE among 12 predeclared conventional candidates.
+- **Dataset:** frozen M3 `v0.1.0` (manifest
+  `a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37`)
+  plus M5A `v0.1.0` (manifest
+  `c63be1088db591181f23fa306f955b3ba16fe80ffb2000c4a5e3db7656fa3806`;
+  features
+  `cb82ae60d8749f21d9d5f6dd324cd075e907544aa54bcdb62bbcab988472bb65`;
+  pilot generation hash
+  `e5901ce89fda1854d606aa41b6258222aa77e9bde061c9082971d7660a924c2a`;
+  image-pixel-hash set
+  `33d14063be82a33cd6518b8fd79c4a78838f601b859b2eede56de36b2a33264b`;
+  M5A gate `CONDITIONAL PASS`).
+- **Split:** M3 assignment
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`,
+  grouped by clean source: 36 train / 12 validation / 12 test sources.
+  Expanded training: 432 rows (324 M3 + 108 M5A primary geometric);
+  expanded validation: 144 rows (108 M3 + 36 M5A primary geometric).
+  Primary geometric test: 36 rows / 12 sources at 1.0–3.0 px. Diagnostic
+  0.5 px test: 12 rows / 12 sources. Every M5A variant of a source stays in
+  that source's frozen split.
+- **Seeds:** benchmark seed `20261024`; derived candidate and bootstrap seeds.
+- **Runtime:** 5.99 s in process on the recorded machine (not a benchmark).
+
+**Method.** Experiment A evaluates the frozen M3 primary bundle, loaded through
+its existing card/artifact verifier, on M5A test sources with no fitting,
+scaling, calibration or preprocessing on those rows. The M3 training mean is
+the naive baseline. Experiment B fits the predeclared OLS/ridge/random-forest/
+histogram-gradient-boosting grid on M3 train rows plus M5A 1.0–3.0 px elastic
+rows from training sources, selects on expanded validation sources only, and
+evaluates once on test. M5A clean rows duplicate the M3 clean references; the
+identity and zero-field controls are exact duplicates and the minimal control is
+near-clean. All 240 clean/control rows are excluded from fit and scoring.
+Experiment C evaluates the selected adapted model on the untouched M3 test rows
+and compares it with frozen M3 on exactly the same rows, without retuning.
+
+The primary geometric score uses only the 1.0, 2.0 and 3.0 px rungs. The 0.5 px
+rung is reported separately because the M5A gate found its between-source SD
+(0.0025) below the predeclared 0.005 margin. It never enters training,
+validation selection or the primary score. Inputs remain exactly the eight
+image-only features in their existing order; target remains `ssim_target`.
+
+**Metrics.**
+
+| Metric | Value | 95% grouped interval | Notes |
+| --- | --- | --- | --- |
+| Frozen M3 primary MAE | 0.0777 | 0.0629–0.0941 | 36 rows / 12 sources, 1–3 px |
+| Frozen M3 primary RMSE | 0.0967 | 0.0784–0.1151 | Preliminary; 12 groups |
+| Frozen M3 primary R² | -1.1858 | -1.8663–-0.6351 | Fails absolute calibration |
+| M3 training-mean primary MAE | 0.2030 | — | Naive baseline |
+| Adapted primary MAE | 0.0544 | 0.0449–0.0636 | Selected HGB |
+| Adapted primary RMSE | 0.0659 | 0.0548–0.0753 | 31.8% lower than frozen M3 |
+| Adapted primary R² | -0.0165 | -0.2856–0.2241 | Near zero; between-source variation unresolved |
+| Paired primary RMSE difference | -0.0307 | -0.0472–-0.0155 | Adapted minus frozen; descriptive |
+| Frozen 0.5 px diagnostic MAE | 0.0171 | 0.0091–0.0268 | Not in primary score |
+| Adapted 0.5 px diagnostic MAE | 0.0170 | 0.0107–0.0240 | Not in primary score |
+| Frozen M3 test MAE | 0.0157 | 0.0116–0.0203 | Original-task retention, 108 rows |
+| Adapted M3 test MAE | 0.0179 | 0.0138–0.0231 | Same rows |
+| Frozen M3 test RMSE | 0.0226 | 0.0156–0.0302 | Same rows |
+| Adapted M3 test RMSE | 0.0243 | 0.0164–0.0333 | +7.7% point estimate |
+| Paired M3 RMSE difference | 0.0017 | -0.0022–0.0042 | Includes zero; not a significance test |
+| Frozen clean-slice MAE | 0.00036 | — | M3 test clean rows |
+| Adapted clean-slice MAE | 0.01337 | — | Large retention regression |
+| Clean paired MAE difference | 0.0130 | 0.0074–0.0186 | Adapted minus frozen; descriptive |
+
+Validation selected `hist_gradient_boosting_lr_0.1_leaves_31` (validation RMSE
+`0.0490`; the exact value is in `candidate_validation.csv`). The expanded model
+artifact sha256 is
+`360b7d18ca5e196b5f3fcd0cbe35c3c1f1f8b1ca0cf69672eb55a61be6479f9d`.
+The estimator bytes are revision-independent and were byte-identical across two
+independent runs. The JSON model card embeds the code revision, so its sha256
+is recorded in the generated card and `run_metadata.json` rather than pinned
+here; the final run was repeated after the commit so those generated files
+record a clean revision. The frozen M3 primary model was loaded unmodified:
+card sha256
+`26d89292a59964846acf3e8bab4b84a2bf41b17863608c620c35d75975ecca73`,
+artifact sha256
+`d727bdd48b1511c2e8e59a072bf43868c5dd997d71e6a884aa505c7b275fa085`.
+
+**Observations.** Frozen M3 is dramatically better than the M3 training mean
+(61.7% lower MAE) but still fails absolute calibration: it under-predicts
+geometric SSIM by 0.072 on average, and its R² is -1.186. The adapted model
+lowers aggregate MAE by 30.0% and RMSE by 31.8%, but its R² remains essentially
+zero (-0.017), so it explains almost none of the between-source variation at
+fixed severity. The gain is not uniform: adapted MAE is worse at 1.0 px
+(0.052 versus 0.026), better at 2.0 px (0.036 versus 0.066) and much better at
+3.0 px (0.075 versus 0.141). At the diagnostic 0.5 px rung the two models are
+nearly indistinguishable (MAE 0.0170 versus 0.0171); that rung is
+interpolation-dominated and carries no primary claim. On the original M3 test
+rows the adapted model's MAE rises from 0.0157 to 0.0179 and RMSE from 0.0226
+to 0.0243, while R² remains 0.9843. The aggregate paired retention RMSE
+difference includes zero, but the clean-reference slice is much worse
+(MAE 0.0134 versus 0.00036). No significance claim is made from interval
+overlap or non-overlap.
+
+**Conclusion.** Conventional feature-based ML remains the benchmark family:
+adaptation substantially reduces aggregate geometric error without test
+leakage, and the frozen M3 model remains strong on the original blur/noise
+task. The adapted model is **not** a drop-in replacement, because it loses
+clean-reference calibration and only improves the low-severity rung at the cost
+of the 1.0 px rung. The evidence does not justify moving to a CNN on this split.
+The next modelling question is retention-aware selection or calibration under a
+new predeclared protocol, not a larger model.
+
+**Limitations.** One synthetic renderer, one canvas size, three fonts, one
+smooth elastic-warp family and 60 sources. Only 12 held-out test sources, so all
+grouped intervals are preliminary and should not be read as significance tests.
+The 0.5 px rung is close to the interpolation floor and is diagnostic only.
+Bilinear resampling and edge padding remain part of the corruption; the M5A
+minimal control and border diagnostics quantify but do not remove that confound.
+The adapted model's training target distribution differs from the geometric test
+distribution, and the clean-slice retention result shows the consequence.
+SSIM is a full-reference similarity proxy, not human readability or CAPTCHA
+solvability. No external CAPTCHA data or production system was used.
+
+**Next step.** Stop M5B here. Do not start CNN training, another corruption
+family, a UI, deployment or presentation work. If this line continues, first
+predeclare a protocol that treats clean-reference retention as a reported
+validation objective alongside geometric error, and re-evaluate conventional
+models under that protocol. Do not retune on the M5A/M3 test rows.
+
+**Artifacts.** Git-ignored:
+`models/geometric_robustness_benchmark_v0_1_0/`
+(`expanded_geometric_model.joblib`,
+`expanded_geometric_model_card.json`) and
+`reports/geometric_robustness_benchmark_v0_1_0/` (`benchmark.md`, data
+accounting, split assignment, isolation checks, zero-shot/adaptation metrics,
+predictions, residuals, candidate validation, M3 reference/retention metrics,
+retention comparison, target distribution, uncertainty and
+`run_metadata.json`). Regenerate with `uv run --extra image --extra ml
+captcha-geometric-benchmark run --config
+configs/geometric_robustness_benchmark_v0_1_0.toml`; verify with
+`captcha-geometric-benchmark verify --config
+configs/geometric_robustness_benchmark_v0_1_0.toml`.
 
 ---
 

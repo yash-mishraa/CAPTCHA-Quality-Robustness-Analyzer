@@ -1,11 +1,12 @@
 # Project Overview
 
 **Status:** Milestones 0–3 complete, plus the M4A occlusion/interference
-feasibility pilot, the M4B grouped robustness benchmark and the M5A
-geometric-distortion feasibility pilot. A reproducible dataset and image-feature
-pipeline, a leakage-safe conventional-ML benchmark, source-isolated
-zero-shot/adaptation evaluation and a replayable elastic-warp pilot exist. The
-CNN comparison, full M5 error taxonomy and dashboard are planned.
+feasibility pilot, the M4B grouped robustness benchmark, the M5A
+geometric-distortion feasibility pilot and the M5B grouped geometric-robustness
+benchmark. A reproducible dataset and image-feature pipeline, a leakage-safe
+conventional-ML benchmark, source-isolated zero-shot/adaptation evaluation, a
+replayable elastic-warp pilot and a grouped geometric-robustness benchmark
+exist. The CNN comparison, full M5 error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -85,8 +86,8 @@ predict human solvability or to rank real CAPTCHA products.
   deliberately not part of the frozen `v0.1.0` dataset.
 - **M5A only:** a bounded smooth elastic warp with a 5x13 control grid, 2.0 px
   Gaussian field smoothing, bilinear resampling and edge padding is implemented
-  in `geometric.py`. It is validated only by the isolated M5A pilot; it is not
-  in the frozen dataset and is not used by any trained model.
+  in `geometric.py`. It is validated by the isolated M5A pilot and used unchanged
+  by the M5B grouped benchmark; it is not in the frozen dataset.
 - **Deferred for the frozen dataset:** contrast/brightness shifts, geometric
   warps and compression artefacts.
 - **Rule:** each sample records its family, severity, numeric parameters, and
@@ -204,12 +205,22 @@ the default; a CNN must justify its cost out-of-sample.
   trained. The result is CONDITIONAL PASS because the lowest rung has
   between-source SD below the declared margin.
 
-**Planned (M5B, not started):**
+**Implemented for M5B (grouped geometric-robustness benchmark):**
+
+- Zero-shot evaluation of the frozen M3 model on M5A test sources, controlled
+  conventional adaptation on M3 blur/noise plus M5A 1.0–3.0 px training-source
+  rows with validation-only selection, a naive expanded-training-mean baseline,
+  and original-task retention on the untouched M3 test split. The 0.5 px rung is
+  diagnostic only; clean and control rows are excluded from every fit frame.
+  Predeclared integrity and leakage checks run before evaluation.
+
+**Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
   ordinal MAE / quadratic weighted kappa for severity.
 - Broader error taxonomy and qualitative examples.
 - Cross-family or cross-generator generalisation beyond the current split.
+- A retention-aware selection or calibration protocol, if the line continues.
 
 ### Stage 9 — Dashboard and reporting
 
@@ -244,7 +255,8 @@ src/captcha_quality/
 ├── robustness_benchmark.py # grouped zero-shot/adaptation benchmark, CLI (implemented, M4B)
 ├── geometric.py        # smooth elastic field, resampling, replay       (implemented, M5A)
 ├── geometric_pilot.py  # pilot generation, analysis, gate, report, CLI  (implemented, M5A)
-└── analysis.py         # broader slices, statistics, plots             (planned, M5B)
+├── geometric_benchmark.py # grouped zero-shot/adaptation benchmark, CLI (implemented, M5B)
+└── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
 `render.py` now serves both the frozen Milestone 1 pilot and the Milestone 2
@@ -253,7 +265,9 @@ the pilot keeps the original defaults so `EXP-0001` remains byte-reproducible.
 `benchmark.py` and `modelling.py` implement the conventional M3 stage;
 `robustness_benchmark.py` implements M4B using the same feature/model
 persistence path. `geometric.py` and `geometric_pilot.py` implement the isolated
-M5A elastic-warp pilot. No CNN code exists yet.
+M5A elastic-warp pilot, and `geometric_benchmark.py` implements M5B on top of it
+using the same persistence, verification and reporting conventions. No CNN code
+exists yet.
 
 ## 4. Artifact contracts
 
@@ -278,6 +292,9 @@ M5A elastic-warp pilot. No CNN code exists yet.
 | Geometric pilot config | `configs/geometric_distortion_pilot_v0_1_0.toml` | seed, frozen M3/M4A hashes, amplitude ladder, field grid/smoothing, interpolation/border mode, gate thresholds, output paths |
 | Geometric pilot dataset | `data/processed/geometric_distortion_pilot_v0.1.0/` (Git-ignored) | separate manifest, sources, features, summary, field specifications and 480 images; no raw text |
 | Geometric pilot reports | `reports/geometric_distortion_pilot/` (Git-ignored) | level/uncertainty/trend/control/group tables, feature effect/contrast/correlation tables, gate results, Markdown report, contact sheet |
+| Geometric benchmark config | `configs/geometric_robustness_benchmark_v0_1_0.toml` | seed, frozen M3/M5A/model hashes, feature schema, primary/diagnostic severity protocol, 12-candidate grid, selection metric, bootstrap count, output paths |
+| Geometric benchmark model | `models/geometric_robustness_benchmark_v0_1_0/` (Git-ignored) | expanded `.joblib` estimator + JSON card: feature names/order, target, dataset/split hashes, selected candidate, metrics, package versions, artifact SHA-256 |
+| Geometric benchmark reports | `reports/geometric_robustness_benchmark_v0_1_0/` (Git-ignored) | zero-shot/adaptation/retention metrics, predictions, residuals, isolation checks, data accounting, candidate validation, target distribution, uncertainty, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -293,7 +310,7 @@ byte-for-byte.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
-| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy (M5A complete; M5B not started) |
+| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; broader robustness analysis and error taxonomy (M5A pilot and M5B benchmark complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -325,11 +342,17 @@ byte-for-byte.
   between-source variance claim.
 - **Zero-shot shift:** frozen M3 is near-perfect on clean references but fails
   absolute calibration on M4A interference (test R² -1.045, systematic
-  under-prediction). The benchmark reports this as a transfer failure, not as a
+  under-prediction) and on M5B geometric distortion (test R² -1.186, mean
+  residual -0.072). The benchmarks report this as a transfer failure, not as a
   human-difficulty result.
-- **Small test support:** M4B has only 12 held-out sources. Source-grouped
-  intervals are wide and preliminary; no universal significance threshold was
-  introduced after seeing test results.
+- **Geometric adaptation trade-off:** M5B's adapted model reduces aggregate
+  geometric RMSE by 31.8% but its R² stays near zero (-0.017) and it degrades
+  clean-reference calibration on the original task (clean-slice MAE 0.0134
+  versus 0.0004 for frozen M3). The adapted model is a geometric-robustness
+  candidate, not a drop-in replacement.
+- **Small test support:** M4B and M5B have only 12 held-out sources.
+  Source-grouped intervals are wide and preliminary; no universal significance
+  threshold was introduced after seeing test results.
 - **Font licensing:** only redistributable fonts may be used or bundled.
 
 ## 7. Implemented today
@@ -382,5 +405,18 @@ controls and exact field replay. Identity and zero-field controls reproduced all
 adjacent increases), and at severity 4 the features were strongly separated from
 blur, noise, thin lines and arcs. The predeclared gate returned CONDITIONAL PASS
 because severity 1 (0.5 px) had between-source SD 0.0025 below the 0.005 margin.
-M5A trains no model and makes no human-readability claim. No CNN, M5B analysis or
-dashboard exists yet.
+M5A trains no model and makes no human-readability claim.
+
+Milestone 5B: a grouped geometric-robustness benchmark on the frozen M3
+source split, with the 0.5 px rung held out as a diagnostic only. Frozen M3
+failed zero-shot geometric calibration (primary 1.0–3.0 px MAE 0.0777, RMSE
+0.0967, R² -1.1858 versus 0.2030/0.2132/-9.6363 for the M3 training-mean
+baseline). Controlled adaptation with representative geometric training data and
+validation-only selection among 12 conventional candidates reduced aggregate
+geometric MAE to 0.0544 and RMSE to 0.0659 (31.8% lower), but left R² near
+zero (-0.0165) and was worse at 1.0 px than frozen M3. On the untouched M3
+test rows the adapted model stayed close in aggregate (MAE 0.0179, RMSE 0.0243,
+R² 0.9843 versus 0.0157/0.0226/0.9865) but lost clean-reference calibration
+(clean-slice MAE 0.0134 versus 0.0004). Conventional feature-based ML remains
+the benchmark family; the evidence does **not** justify a CNN on this split.
+No dashboard, deployment or final presentation exists yet.
