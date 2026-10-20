@@ -1,0 +1,164 @@
+# Milestone M6A spatial-aware feature study.
+#
+# This file is separate from the frozen Milestone 2 dataset, the Milestone 3
+# benchmark, the M4A/M4B occlusion-interference work, the M5A geometric pilot,
+# the M5B grouped geometric-robustness benchmark, the M5C retention-aware
+# selection study and the M5D retention-aware training study. It pins the exact
+# inputs and declares the spatial feature definitions, the feature ablations,
+# the model settings and the eligibility constraints and selection score before
+# any test-source prediction is made.
+#
+# Scope: synthetic image similarity (SSIM against the clean reference), not
+# human readability, CAPTCHA solvability, security or real-world generalisation.
+
+[run]
+name = "spatial-feature-study"
+version = "v0.1.0"
+seed = 20261024
+n_bootstrap = 1000
+output_reports = "reports/spatial_feature_study_v0_1_0"
+output_models = "models/spatial_feature_study_v0_1_0"
+
+[schema]
+# The frozen eight-feature schema is unchanged. It is recorded here so the
+# study can prove the global pipeline was not altered.
+global_feature_set_version = "v1"
+global_feature_names = [
+  "intensity_mean",
+  "intensity_std",
+  "contrast_rms",
+  "ink_fraction",
+  "laplacian_variance",
+  "edge_density",
+  "histogram_entropy",
+  "noise_sigma_immerkaer",
+]
+target = "ssim_target"
+split_names = ["train", "val", "test"]
+
+# The upstream M5C study is the frozen input. M6A reuses its pinned M3/M5A
+# hashes, its source-grouped split and its verified frames verbatim by loading
+# the M5C configuration, so both milestones operate on identical data. The M5C
+# champion bundle is the primary baseline and is loaded without refitting.
+[m5c]
+config = "configs/retention_aware_selection_v0_1_0.toml"
+config_sha256 = "48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb"
+protocol_hash = "048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a"
+champion_dir = "models/retention_aware_selection_v0_1_0"
+champion_stem = "selected_policy"
+champion_artifact_sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+
+# The model family is fixed to the M5C champion's random forest so that the
+# spatial and combined ablations differ from the baseline only in their input
+# representation. These settings are verified at run time against the M5B grid
+# specification, so an upstream drift is detected rather than silently changing
+# the comparison.
+[model]
+family = "random_forest"
+n_estimators = 300
+max_depth = 0
+min_samples_leaf = 1
+seed = 798117391
+
+# Severity protocol, carried forward unchanged from M5B through M5D. The 0.5 px
+# rung stays diagnostic only: it never enters fitting, selection or the primary
+# score.
+[protocol]
+primary_amplitudes_px = [1.0, 2.0, 3.0]
+diagnostic_amplitudes_px = [0.5]
+primary_severities = [2, 3, 4]
+diagnostic_severities = [1]
+
+# ---------------------------------------------------------------------------
+# Spatial feature design.
+#
+# The canonical image is 192x64 grayscale. A fixed 4x2 grid divides it into
+# eight cells of 16x96 pixels, in row-major order. Two feature families are
+# implemented:
+#
+#   ink_occupancy - the fraction of pixels at or below the Otsu threshold of
+#       the *whole* image, counted within the cell. The threshold is computed
+#       once per image so the eight cell values share one ink definition and
+#       are directly comparable with the global `ink_fraction` feature.
+#
+#   edge_density - the fraction of Canny-marked pixels within the cell, using
+#       the repository's existing edge convention (sigma=1.0,
+#       low_threshold=0.1, high_threshold=0.2 on the image scaled to [0, 1]).
+#       The edge map is computed once per image so the cell values share one
+#       edge definition and are directly comparable with the global
+#       `edge_density` feature.
+#
+# Regional intensity statistics were considered and rejected: on training rows
+# the per-cell mean intensity is largely redundant with the per-cell ink
+# occupancy (maximum |correlation| 0.873 across cell pairs), so adding it
+# would inflate the feature count without adding information. A 4x2 grid was
+# chosen over 2x4 because it has lower internal redundancy among the spatial
+# features (mean pairwise |r| 0.38 against 0.52) at a comparable correlation
+# with the target. Both decisions were made from training rows only.
+#
+# Both families are computed from the degraded image alone. No target, clean
+# reference, metadata field, filename or source identifier is used.
+# ---------------------------------------------------------------------------
+[features]
+grid_rows = 4
+grid_cols = 2
+families = ["ink_occupancy", "edge_density"]
+edge_sigma = 1.0
+edge_low_threshold = 0.1
+edge_high_threshold = 0.2
+
+# The three predeclared ablations. `global_baseline` is the frozen M5C
+# champion, loaded without refitting. `spatial_only` and `combined` are
+# refitted on the same expanded training rows with the same model family,
+# settings and seed as the champion.
+[ablations]
+names = ["global_baseline", "spatial_only", "combined"]
+feature_sets.global_baseline = "global"
+feature_sets.spatial_only = "spatial"
+feature_sets.combined = "combined"
+refit.global_baseline = false
+refit.spatial_only = true
+refit.combined = true
+
+# ---------------------------------------------------------------------------
+# Validation-only selection.
+#
+# The champion is the reference: rmse_ref is the baseline's validation RMSE on
+# the same slice. A candidate qualifies only if every retention constraint
+# holds on validation:
+#
+#   clean RMSE     <= baseline clean RMSE    * (1 + tolerance_clean)
+#   original RMSE  <= baseline original RMSE * (1 + tolerance_original)
+#   each primary geometric severity s:
+#       RMSE_s      <= baseline RMSE_s       * (1 + tolerance_severity)
+#
+# The per-severity constraint is what stops an aggregate geometric gain from
+# concealing a severe regression on a single rung.
+#
+# Among the qualifying candidates the score is
+#
+#   score = w_geometric * (rmse_geo   - rmse_geo_ref)
+#         + w_clean     * max(0, rmse_clean - rmse_clean_ref)
+#         + w_original  * max(0, rmse_orig  - rmse_orig_ref)
+#         + w_severity   * sum_s max(0, rmse_s - rmse_s_ref)
+#
+# Lower is better and the baseline scores exactly 0. Geometric improvement is
+# rewarded; clean and original-task regressions are charged at twice the rate
+# per SSIM unit, because those slices are the incumbent's defining behaviour,
+# and a per-severity excess is charged again. Ties are broken by lower
+# aggregate geometric RMSE, then by candidate name, so the choice is
+# deterministic. If no candidate qualifies, the frozen M5C champion is kept.
+#
+# The coefficients are round numbers fixed a priori and are identical to the
+# M5D selection rule, so the two studies are directly comparable; none was
+# chosen by inspecting a test result.
+# ---------------------------------------------------------------------------
+[selection]
+rule = "retention_gated_rmse_delta"
+w_geometric = 1.0
+w_clean = 2.0
+w_original = 2.0
+w_severity = 1.0
+tolerance_clean = 0.50
+tolerance_original = 0.10
+tolerance_severity = 0.25

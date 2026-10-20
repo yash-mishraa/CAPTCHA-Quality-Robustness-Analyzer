@@ -1311,6 +1311,104 @@ another search over objectives or model families. These results cover one
 synthetic renderer, one canvas size, three fonts and 12 held-out source groups;
 nothing here measures human readability or CAPTCHA solvability.
 
+### 5.15 M6A spatial-aware feature study
+
+M5D concluded that the feature *representation*, not the training objective,
+was the likely binding constraint: the eight image-only features are global
+whole-image statistics that do not describe *where* on the canvas a distortion
+occurs, and a geometric warp moves ink locally while leaving many of those
+statistics nearly unchanged. M6A tests that directly, by asking whether adding
+spatially localized features improves geometric-distortion prediction while
+preserving clean-reference and original-task performance. The implementation
+is `spatial_features.py` and `spatial_study.py`, configured by
+`configs/spatial_feature_study_v0_1_0.toml`. It writes only to
+`reports/spatial_feature_study_v0_1_0/` and
+`models/spatial_feature_study_v0_1_0/` (both Git-ignored).
+
+**Isolation from the frozen pipeline.** The eight global features and their
+extraction code are unchanged, and `FEATURE_SET_VERSION` remains `v1`. The
+spatial features live in a separate module with their own version
+(`spatial-v1`) and their own names, so prior model inputs and artefacts cannot
+be silently altered. The study reuses the M5C verified path, so the frames,
+the source-grouped split and the M5B/M5C merge and isolation checks are
+identical to the preceding milestones.
+
+**Feature design.** The canonical 192x64 image is divided into a fixed 4x2
+grid of eight 16x96-pixel cells, visited in row-major order. Two families are
+implemented, both computed from the degraded image alone:
+
+- `ink_occupancy` - the fraction of pixels at or below the Otsu threshold of
+  the *whole* image, counted within the cell. The threshold is computed once
+  per image, so the cell values share one ink definition and are directly
+  comparable with the global `ink_fraction` feature.
+- `edge_density` - the fraction of Canny-marked pixels within the cell, using
+  the repository's existing edge convention (sigma=1.0, low_threshold=0.1,
+  high_threshold=0.2 on the image scaled to [0, 1]). The edge map is computed
+  once per image, so the cell values share one edge definition.
+
+Regional intensity statistics were considered and rejected: on training rows
+the per-cell mean intensity is largely redundant with the per-cell ink
+occupancy (maximum |correlation| 0.873 across cell pairs), so adding it would
+inflate the feature count without adding information. A 4x2 grid was chosen
+over 2x4 because it has lower internal redundancy among the spatial features
+(mean pairwise |r| 0.38 against 0.52) at a comparable correlation with the
+target. Both decisions were made from training rows only, before any test
+evaluation.
+
+The extractor never sees the clean reference, the SSIM/PSNR targets, the source
+identifier, the corruption family, the severity, the file name or the split
+label. An exactly uniform image has no distinguishable ink class and no edges,
+so all its spatial features are zero; an empty cell also yields zero rather
+than a division by zero.
+
+**Ablations and selection.** Three ablations are predeclared. The model
+family, the hyperparameters, the seed and the training partition are held
+fixed across all of them, so the only thing that varies is the input
+representation: `global_baseline` (the eight global features, using the frozen
+M5C champion without refitting), `spatial_only` (the 16 spatial features,
+refitted) and `combined` (8 + 16 = 24 features, refitted). Selection uses the
+M5D retention-aware rule with identical coefficients and tolerances, so the
+two studies are directly comparable, and the frozen M5C champion is the
+fallback. No coefficient or tolerance was chosen by inspecting a test result.
+
+**Results.** The champion is retained. The `combined` ablation improves
+aggregate geometric validation RMSE by 0.00056 but regresses the original-task
+slice by 15.2%, beyond the 10% tolerance, so it is ineligible. The
+`spatial_only` ablation is ineligible on four slices and far worse everywhere:
+it discards the global summary that actually tracks blur and noise. On the
+test set the `combined` geometric RMSE is 0.0584 against the champion's
+0.0590, an improvement whose paired interval includes zero, while its
+original-task and M3-retention regressions have intervals that exclude zero.
+
+**Why: a grid-resolution diagnostic.** The headline metrics cannot say whether
+the declared grid is even capable of resolving the distortion, so the study
+also measures, per source and on training rows only, the per-cell
+ink-occupancy change between a clean reference and its distorted image. The
+grid resolves blur about 25 times more strongly than the elastic family (mean
+absolute occupancy change 0.136 against 0.005), and the correlation between
+that change and the SSIM drop is weaker for the elastic family (+0.57) than
+for blur (+0.89). A 1-3 px warp moves ink by a fraction of a 16x96-pixel
+cell, so a coarse partition averages most of the effect away: the spatial
+features largely re-encode how much ink the image has, which the global
+features already state. This is the mechanism behind both the ineligibility of
+`combined` and the failure of `spatial_only`, and it is a statement about the
+*declared resolution*, not about localization in general.
+
+**Decision.** Spatial features did not improve geometric-distortion prediction
+under the predeclared retention-aware rule, and the frozen M5C champion is
+retained. Conventional feature-based ML remains the benchmark champion. The
+negative result is informative rather than discouraging: it rules out coarse
+regional summaries as the missing information and identifies the resolution at
+which a spatial feature would have to operate to see a 1-3 px warp at all. The
+evidence does not justify a CNN, and a new corruption family does not by itself
+justify one. If the line continues, the defensible next experiment is a
+predeclared *resolution* study that holds the feature families and the model
+fixed and varies only the grid resolution, so the point at which a spatial
+feature begins to see the warp is measured on the same frozen split rather than
+assumed. These results cover one synthetic renderer, one canvas size, three
+fonts and 12 held-out source groups; nothing here measures human readability
+or CAPTCHA solvability.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

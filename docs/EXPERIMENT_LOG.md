@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0009` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0010` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0010` | 2026-10-20 | `robustness-analysis` | `completed` | Spatial features do not improve geometric prediction: the combined ablation gains only 0.0006 geometric RMSE and regresses the original task, the spatial-only ablation is far worse everywhere, and a grid diagnostic shows why — a 4x2 partition resolves blur 25x better than a 1-3 px warp, so the champion is retained and localization at this resolution is ruled out |
 | `EXP-0009` | 2026-10-20 | `robustness-analysis` | `completed` | Retention-aware training objectives do not beat the M5C champion: the severity-aware scheme is ineligible on a per-severity regression the aggregate score would hide, and the retention-aware scheme is eligible but scores worse, so the champion is retained and the eight global whole-image features are implicated as the binding constraint |
 | `EXP-0008` | 2026-10-20 | `robustness-analysis` | `completed` | A retention-aware rule on validation picks an expanded random forest that cuts primary geometric RMSE 39.0% (0.0967 to 0.0590, 11/12 sources) while keeping the original M3 test RMSE at 0.0220 versus the frozen 0.0226, at a small clean-reference cost (RMSE 0.0023 versus 0.0012); conventional ML remains the champion and no CNN is justified |
 | `EXP-0007` | 2026-10-20 | `robustness-analysis` | `completed` | Frozen M3 fails zero-shot geometric calibration (R² -1.186); adapted HGB cuts primary RMSE 31.8% to 0.0659 but leaves R² near zero and degrades the clean-reference slice, so conventional ML remains the family with a retention caveat and no CNN is justified |
@@ -82,6 +83,225 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0010 — Spatial-aware feature study: a coarse grid cannot resolve a 1-3 px warp, so the champion is retained
+
+- **Date:** 2026-10-20
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Does adding spatially localized image features
+  improve geometric-distortion SSIM prediction compared with the existing eight
+  global image features, while preserving clean-reference and original-task
+  performance? M5D concluded that the feature *representation*, not the
+  training objective, was the likely binding constraint; M6A tests that
+  directly. This is a controlled feature-ablation experiment, not a new model
+  family. This is a synthetic image-similarity benchmark, not a
+  human-readability, CAPTCHA-solvability or security study.
+- **Code revision:** base `4f00965` plus the M6A implementation, committed as
+  `feat: evaluate spatial-aware image features`. The reported run was repeated
+  after the commit so generated provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; scikit-image 0.26.0; joblib 1.6.0; macOS 27.0.1 (arm64). No GPU was
+  used.
+- **Configuration:** `configs/spatial_feature_study_v0_1_0.toml`; config sha256
+  `0b54c42eec9b9a09bedd776c5345c7b02f96736308bd83e7d2706ff708f4dc1c`;
+  protocol hash
+  `d744248e0ebde54f83a005e05dd1a37bfdaa297a34e8d9f1299514e613e89bc9`.
+  Seed `20261024`; 1000 source-grouped bootstrap replicates.
+- **Upstream frozen inputs:** M5C config sha256
+  `48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb`, M5C
+  protocol hash
+  `048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a`, M5C
+  champion artifact sha256
+  `c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`. The M3
+  dataset, split and model, the M4A pilot, the M4B benchmark, the M5A pilot,
+  the M5B benchmark, the M5C study and the M5D study are unchanged and
+  re-verified from disk.
+- **Split:** the frozen M3 source-grouped assignment, reused verbatim through
+  the M5C verified path (assignment sha256
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`):
+  36 train / 12 validation / 12 test sources. Expanded training 432 rows /
+  36 sources; expanded validation 144 rows / 12 sources; primary geometric test
+  36 rows / 12 sources; diagnostic 0.5 px test 12 rows / 12 sources; M3 test
+  108 rows / 12 sources.
+- **Runtime:** 7.04 s in process on the recorded machine (not a benchmark).
+
+**Method.** The eight frozen global features and their extraction code are
+unchanged. The spatial features live in a separate, versioned module
+(`spatial_features.py`, feature-set version `spatial-v1`) with their own names,
+so prior model inputs and artefacts cannot be silently altered. The canonical
+192x64 image is divided into a fixed 4x2 grid of eight 16x96-pixel cells,
+visited in row-major order, and two families are implemented:
+
+- `ink_occupancy` - the fraction of pixels at or below the Otsu threshold of
+  the *whole* image, counted within the cell. The threshold is computed once
+  per image, so the cell values share one ink definition and are directly
+  comparable with the global `ink_fraction` feature.
+- `edge_density` - the fraction of Canny-marked pixels within the cell, using
+  the repository's existing edge convention (sigma=1.0, low_threshold=0.1,
+  high_threshold=0.2 on the image scaled to [0, 1]).
+
+That is 16 spatial features. Regional intensity statistics were considered and
+rejected: on training rows the per-cell mean intensity is largely redundant
+with the per-cell ink occupancy (maximum |correlation| 0.873 across cell pairs),
+so adding it would inflate the feature count without adding information. A 4x2
+grid was chosen over 2x4 because it has lower internal redundancy among the
+spatial features (mean pairwise |r| 0.38 against 0.52) at a comparable
+correlation with the target. Both decisions were made from training rows only.
+
+Three ablations were predeclared. The model family, the hyperparameters, the
+seed and the training partition are held fixed across all of them, so the only
+thing that varies is the input representation:
+
+| ablation | feature set | features | fitted |
+| --- | --- | ---: | --- |
+| `global_baseline` | the eight frozen global features | 8 | no — the frozen M5C champion, loaded without refitting |
+| `spatial_only` | the spatial family alone | 16 | yes |
+| `combined` | global plus spatial | 24 | yes |
+
+Selection uses the M5D retention-aware rule with identical coefficients and
+tolerances, so the two studies are directly comparable: the baseline is the
+reference, a candidate qualifies only if it regresses neither the clean slice,
+nor the original-task slice, nor any single primary geometric severity beyond
+the declared tolerances, and among the qualifying candidates the score rewards
+aggregate geometric RMSE and charges clean, original-task and per-severity
+regressions. The frozen M5C champion is the fallback. No coefficient or
+tolerance was chosen by inspecting a test result.
+
+**Validation results by slice (selection evidence).**
+
+| ablation | geometric RMSE | clean RMSE | original RMSE | severity 2 | severity 3 | severity 4 | score | eligible | selected |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `global_baseline` | 0.04925 | 0.00223 | 0.02007 | 0.05254 | 0.02494 | 0.06240 | 0.00000 | yes | yes |
+| `combined` | 0.04869 | 0.00282 | 0.02312 | 0.04786 | 0.02163 | 0.06598 | 0.01030 | **no** | no |
+| `spatial_only` | 0.10069 | 0.15846 | 0.08907 | 0.13465 | 0.08801 | 0.06737 | 0.65204 | **no** | no |
+
+`combined` is rejected because its original-task RMSE regresses by 15.2%,
+beyond the 10% tolerance, even though its aggregate geometric RMSE improves by
+0.00056. `spatial_only` is rejected on four counts: clean, original-task,
+severity 2 and severity 3.
+
+**Final test results by slice (frozen evaluation, 12 held-out sources).**
+
+| ablation | geometric MAE / RMSE / R² | clean RMSE | original RMSE | M3 test MAE / RMSE / R² |
+| --- | --- | ---: | ---: | --- |
+| `global_baseline` | 0.0493 / 0.0590 / 0.1855 | 0.0023 | 0.0233 | 0.0156 / 0.0220 / 0.9872 |
+| `combined` | 0.0485 / 0.0584 / 0.2015 | 0.0025 | 0.0250 | 0.0171 / 0.0236 / 0.9852 |
+| `spatial_only` | 0.0762 / 0.0930 / -1.0233 | 0.1689 | 0.0795 | 0.0679 / 0.0937 / 0.7671 |
+
+**Paired source-grouped differences against the frozen baseline.** Whole source
+groups are resampled; differences are on identical rows. There are 12 held-out
+test source groups, so these intervals are preliminary and descriptive, and no
+significance claim is made from interval overlap or non-overlap.
+
+| ablation | scope | metric | estimate | 95% low | 95% high |
+| --- | --- | --- | ---: | ---: | ---: |
+| `combined` | geometric primary | RMSE | -0.0006 | -0.0043 | +0.0029 |
+| `combined` | severity 2 | RMSE | -0.0043 | -0.0116 | +0.0040 |
+| `combined` | severity 3 | RMSE | -0.0020 | -0.0083 | +0.0052 |
+| `combined` | severity 4 | RMSE | +0.0025 | -0.0055 | +0.0104 |
+| `combined` | clean reference | RMSE | +0.0003 | -0.0001 | +0.0012 |
+| `combined` | original blur/noise | RMSE | +0.0017 | +0.0007 | +0.0029 |
+| `combined` | M3 test overall | RMSE | +0.0016 | +0.0006 | +0.0028 |
+| `spatial_only` | geometric primary | RMSE | +0.0340 | +0.0136 | +0.0539 |
+| `spatial_only` | clean reference | RMSE | +0.1666 | +0.1378 | +0.1942 |
+| `spatial_only` | original blur/noise | RMSE | +0.0562 | +0.0463 | +0.0670 |
+
+The `combined` geometric improvement is small and its interval includes zero;
+its original-task and M3-retention regressions have intervals that exclude
+zero, so the trade-off is a real one rather than noise.
+
+**Grid-resolution diagnostic (training rows only, descriptive).** The headline
+metrics cannot say whether the declared grid is even capable of resolving the
+distortion, so the study also measures, per source, the per-cell ink-occupancy
+change between a clean reference and its distorted image:
+
+| family | pairs | mean abs occupancy change | max abs occupancy change | correlation with SSIM drop |
+| --- | ---: | ---: | ---: | ---: |
+| `gaussian_blur` | 144 | 0.13565 | 0.33813 | +0.893 |
+| `elastic` | 108 | 0.00536 | 0.01066 | +0.573 |
+| `gaussian_noise` | 144 | 0.00165 | 0.00456 | +0.611 |
+
+A 1-3 px warp moves ink by a fraction of a 16x96-pixel cell, so the coarse
+partition averages most of the effect away: the grid resolves blur about 25
+times more strongly than the elastic family. The spatial features therefore
+largely re-encode how much ink the image has, which the global features
+already state, and the residual spatial signal is too weak to separate the
+geometric family from the others. This is the mechanism behind both the
+ineligibility of `combined` and the failure of `spatial_only`.
+
+Feature diagnostics on the training rows: no duplicated and no constant
+spatial features; mean absolute pairwise correlation among the 16 spatial
+features 0.43, maximum 0.96. In the `combined` model the global features
+dominate the fitted importance (histogram_entropy 0.63, laplacian_variance
+0.11, ink_fraction 0.10), and the highest-ranked spatial feature reaches only
+0.0035; in the `spatial_only` model the spatial features are used, but they
+cannot stand in for the global summary. Importance is descriptive, not causal.
+
+**Observations.**
+
+1. *A coarse spatial partition cannot resolve this distortion.* The grid
+   diagnostic, computed without reference to any model, shows the elastic
+   signal is 25x weaker than the blur signal at the same partition. This is the
+   concrete explanation for the negative result, and it is a statement about
+   the *declared resolution*, not about localization in general.
+2. *The combined ablation traded rather than won.* It improved aggregate
+   geometric RMSE by 0.00056 on validation while regressing the original task
+   by 15.2%, so the retention-aware rule rejected it. The improvement's paired
+   interval includes zero; the retention regression's does not.
+3. *Discarding the global summary is costly.* The spatial-only ablation is far
+   worse on every slice, including the geometric one, because the global
+   features carry the information that tracks blur and noise.
+4. *M5D's reading is confirmed but narrowed.* M5D concluded that the
+   representation was the likely constraint. M6A confirms that a *coarse*
+   spatial summary does not relieve it, and localises the reason to the
+   resolution mismatch between a 1-3 px warp and a 16x96-pixel cell.
+
+**Conclusion.** Spatial features did not improve geometric-distortion
+prediction under the predeclared retention-aware rule, and the frozen M5C
+champion is retained. The negative result is informative rather than
+discouraging: it rules out coarse regional summaries as the missing
+information, and it identifies the resolution at which a spatial feature
+would have to operate to see a 1-3 px warp at all. Conventional feature-based
+ML remains the benchmark champion. The evidence does not justify a CNN, and a
+new corruption family does not by itself justify one.
+
+**Limitations.** One synthetic renderer, one 192x64 canvas, three fonts, one
+smooth elastic-warp family and 60 sources. Only 12 held-out test source
+groups, so all grouped intervals are preliminary. The 0.5 px rung is
+interpolation-dominated and diagnostic only. A 4x2 grid is a coarse partition:
+it can show that a distortion is spatially uneven, but it cannot localise a
+warp to a glyph. The spatial features are additive to the global ones, not a
+replacement, so a gain in the combined model cannot be attributed to the
+spatial family alone. Only one grid resolution and one alternative family were
+tested, both predeclared; a different resolution would change what the spatial
+family can see, and was deliberately not searched within this milestone.
+Feature importance is descriptive, not causal. SSIM is a full-reference
+similarity proxy, not human readability or CAPTCHA solvability.
+
+**Next step.** Stop M6A here. Do not start CNN training, another corruption
+family, a UI, deployment or presentation work. If this line continues, the
+defensible next experiment is a predeclared *resolution* study: hold the
+feature families and the model fixed and vary only the grid resolution, so
+that the point at which a spatial feature begins to see a 1-3 px warp is
+measured on the same frozen split rather than assumed. Do not retune on the
+M5A/M3 test rows.
+
+**Artifacts.** Git-ignored:
+`models/spatial_feature_study_v0_1_0/` (`spatial_only.joblib` and
+`combined.joblib`, each with a JSON card) and
+`reports/spatial_feature_study_v0_1_0/` (`report.md`, validation slice metrics,
+selection table, test slice metrics, predictions, uncertainty, paired
+uncertainty, isolation checks, the spatial feature manifest and
+`run_metadata.json`). Spatial-only artifact sha256
+`26c8074a5d376e17...`; combined artifact sha256 `596e497afcf6f703...` (full
+values in `run_metadata.json`). Regenerate with `uv run --extra image --extra ml
+captcha-spatial-study run --config
+configs/spatial_feature_study_v0_1_0.toml`; verify with
+`captcha-spatial-study verify --config
+configs/spatial_feature_study_v0_1_0.toml`.
 
 ---
 

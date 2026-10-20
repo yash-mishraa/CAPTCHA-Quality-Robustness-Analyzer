@@ -75,6 +75,7 @@ captcha-geometric-pilot = "captcha_quality.geometric_pilot:main"
 captcha-geometric-benchmark = "captcha_quality.geometric_benchmark:main"
 captcha-retention-aware = "captcha_quality.retention_aware:main"
 captcha-retention-training = "captcha_quality.retention_aware_training:main"
+captcha-spatial-study = "captcha_quality.spatial_study:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

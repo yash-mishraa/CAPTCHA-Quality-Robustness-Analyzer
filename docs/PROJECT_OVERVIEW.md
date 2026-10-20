@@ -3,13 +3,14 @@
 **Status:** Milestones 0–3 complete, plus the M4A occlusion/interference
 feasibility pilot, the M4B grouped robustness benchmark, the M5A
 geometric-distortion feasibility pilot, the M5B grouped geometric-robustness
-benchmark, the M5C retention-aware selection and calibration study and the M5D
-retention-aware training-objective study. A reproducible dataset and
-image-feature pipeline, a leakage-safe conventional-ML benchmark, source-isolated
-zero-shot/adaptation evaluation, a replayable elastic-warp pilot, a grouped
-geometric-robustness benchmark, a retention-aware selection study and a
-retention-aware training-objective study exist. The CNN comparison, full M5
-error taxonomy and dashboard are planned.
+benchmark, the M5C retention-aware selection and calibration study, the M5D
+retention-aware training-objective study and the M6A spatial-aware feature
+study. A reproducible dataset and image-feature pipeline, a leakage-safe
+conventional-ML benchmark, source-isolated zero-shot/adaptation evaluation, a
+replayable elastic-warp pilot, a grouped geometric-robustness benchmark, a
+retention-aware selection study, a retention-aware training-objective study and
+a spatial-aware feature study exist. The CNN comparison, full M5 error
+taxonomy and dashboard are planned.
 **Last updated:** 2026-10-20
 
 ## 1. Purpose
@@ -238,6 +239,15 @@ the default; a CNN must justify its cost out-of-sample.
   feature matrix. A predeclared eligibility-and-score rule with a per-severity
   constraint selects on validation only.
 
+**Implemented for M6A (spatial-aware feature study):**
+
+- Sixteen spatially localized features on a fixed 4x2 grid of the canonical
+  192x64 image, in a separate versioned module so the frozen eight-feature
+  pipeline cannot be altered, plus three predeclared ablations (global
+  baseline, spatial-only, combined) that hold the model family, seed and
+  training partition fixed. A grid-resolution diagnostic on training rows
+  measures whether the declared partition can resolve the distortion at all.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -282,6 +292,8 @@ src/captcha_quality/
 ├── geometric_benchmark.py # grouped zero-shot/adaptation benchmark, CLI (implemented, M5B)
 ├── retention_aware.py  # retention-aware selection and calibration, CLI (implemented, M5C)
 ├── retention_aware_training.py # retention-aware training objectives, CLI (implemented, M5D)
+├── spatial_features.py # localized grid features, versioned separately (implemented, M6A)
+├── spatial_study.py    # spatial-aware feature ablation study, CLI (implemented, M6A)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -293,8 +305,10 @@ the pilot keeps the original defaults so `EXP-0001` remains byte-reproducible.
 persistence path. `geometric.py` and `geometric_pilot.py` implement the isolated
 M5A elastic-warp pilot, `geometric_benchmark.py` implements M5B on top of it,
 `retention_aware.py` implements M5C and `retention_aware_training.py` implements
-M5D, all using the same persistence, verification and reporting conventions. No
-CNN code exists yet.
+M5D, all using the same persistence, verification and reporting conventions.
+`spatial_features.py` and `spatial_study.py` implement M6A, keeping the
+localized features in a separate versioned module so the frozen eight-feature
+pipeline cannot be altered. No CNN code exists yet.
 
 ## 4. Artifact contracts
 
@@ -328,6 +342,9 @@ CNN code exists yet.
 | Retention-aware training config | `configs/retention_aware_training_v0_1_0.toml` | seed, frozen M5C hashes, model family and hyperparameters, candidate policies, weighting formulas and normalisation, eligibility tolerances, selection score and weights, bootstrap count, output paths |
 | Retention-aware training models | `models/retention_aware_training_v0_1_0/` (Git-ignored) | one bundle per refitted candidate, each with a JSON card: feature names/order, target, weighting scheme and parameters, weight diagnostics, validation and test metrics, package versions, artifact SHA-256 |
 | Retention-aware training reports | `reports/retention_aware_training_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, `run_metadata.json`, Markdown report |
+| Spatial feature config | `configs/spatial_feature_study_v0_1_0.toml` | seed, frozen M5C hashes, model family and hyperparameters, grid and feature families, ablation definitions, eligibility tolerances, selection score and weights, bootstrap count, output paths |
+| Spatial feature models | `models/spatial_feature_study_v0_1_0/` (Git-ignored) | one bundle per refitted ablation, each with a JSON card: feature names/order and count, target, seed, validation and test metrics, package versions, artifact SHA-256 |
+| Spatial feature reports | `reports/spatial_feature_study_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, the spatial feature manifest, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -343,7 +360,7 @@ byte-for-byte.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
-| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study and M5D training study complete) |
+| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study and M6A feature study complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -396,11 +413,14 @@ byte-for-byte.
   *where* on the canvas a distortion occurs. M5D's negative result is
   consistent with this: within one model family, one representation and one
   training sample, sample weighting moves error between slices rather than
-  removing it. This is a hypothesis consistent with the evidence, not an
-  isolated cause.
-- **Small test support:** M4B, M5B, M5C and M5D have only 12 held-out sources.
-  Source-grouped intervals are wide and preliminary; no universal significance
-  threshold was introduced after seeing test results.
+  removing it. M6A narrows it further: a *coarse* spatial summary does not
+  help either, because a 4x2 partition resolves blur about 25 times more
+  strongly than a 1-3 px warp. The remaining headroom is a resolution
+  question, not an objective question. These are hypotheses consistent with the
+  evidence, not isolated causes.
+- **Small test support:** M4B, M5B, M5C, M5D and M6A have only 12 held-out
+  sources. Source-grouped intervals are wide and preliminary; no universal
+  significance threshold was introduced after seeing test results.
 - **Font licensing:** only redistributable fonts may be used or bundled.
 
 ## 7. Implemented today
@@ -496,3 +516,17 @@ result points at the *representation* rather than the objective: the eight
 image-only features are global whole-image statistics that do not describe
 *where* a distortion occurs. No dashboard, deployment or final presentation
 exists yet.
+
+Milestone M6A: a spatial-aware feature study in which the frozen eight-feature
+pipeline is untouched and sixteen localized features on a fixed 4x2 grid are
+added in a separate versioned module. **No spatial ablation was selected.** The
+combined ablation gains only 0.0006 geometric RMSE while regressing the
+original task by 15.2%, so it is ineligible; the spatial-only ablation is far
+worse everywhere, because it discards the global summary that tracks blur and
+noise. A grid-resolution diagnostic on training rows explains why: a 4x2
+partition resolves blur about 25 times more strongly than a 1-3 px warp (mean
+absolute per-cell occupancy change 0.136 against 0.005), because the warp moves
+ink by a fraction of a 16x96-pixel cell. The negative result therefore rules
+out *coarse* regional summaries and localises the missing information to a
+resolution mismatch. The M5C champion is retained. No dashboard, deployment
+or final presentation exists yet.
