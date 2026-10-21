@@ -2441,7 +2441,9 @@ is unchanged: synthetic SSIM against an exact source-specific clean reference,
 not human readability, CAPTCHA solvability, security or production robustness.
 
 **Protocol and inputs.** `configs/font_roster_audit_v0_1_0.toml` is the
-versioned protocol. It pins three upstream files by SHA-256 — the M7D planning
+versioned protocol; `configs/font_roster_audit_v0_2_0.toml` is its
+superseding version and is described in the *Protocol version 0.2.0* paragraph
+below. It pins three upstream files by SHA-256 — the M7D planning
 configuration, the M7D machine-readable plan manifest and the M7D font
 inventory — and it keeps *evidence facts* and *eligibility decisions* in two
 separate tables. The evidence table records, for every face, the planned
@@ -2494,8 +2496,8 @@ at run time that no font binary exists anywhere in the working tree. The
 audit therefore distinguishes the one redistribution the workflow performs —
 the rendered images — from the one it never performs.
 
-**Result.** Nine of the ten faces are `eligible` for the intended workflow and
-one, Luminari, is `review_required`. The Microsoft designs (Georgia, Verdana,
+**Result of protocol version 0.1.0.** Nine of the ten faces were `eligible`
+for the intended workflow and one, Luminari, was `review_required`. The Microsoft designs (Georgia, Verdana,
 Trebuchet MS) and the Monotype designs (Arial, Courier New, Times New Roman,
 Impact) are supported by a foundry source that expressly permits distributing
 materials made with the font, subject to two conditions the benchmark
@@ -2542,32 +2544,146 @@ project evaluation, and the roster coverage table keeps that distinction
 visible so that a future result on them is never described as an independent
 replication of the M7B three-font finding.
 
-**Gates.** The audit gate is *partially passed*: nine faces are eligible, one is
-review_required, none is ineligible or unavailable. The **benchmark generation
-gate is closed**: every proposed face must carry a defensible eligibility
-decision before the benchmark is generated, and clearing Luminari — by a
-written determination or by a purchased foundry licence — or a deliberately
-separately versioned roster decision is a prerequisite. M7D's
-`no_planned_outputs_created` check is preserved and still passes; the audit
-creates nothing at the planned benchmark output paths.
+**Gates under protocol version 0.1.0.** The audit gate was *partially
+passed*: nine faces were eligible, one was review_required, none was ineligible
+or unavailable. The **benchmark generation gate was closed**: every proposed
+face had to carry a defensible eligibility decision before the benchmark could
+be generated, and clearing Luminari — by a written determination or by a
+purchased foundry licence — or a deliberately separately versioned roster
+decision was a prerequisite. M7D's `no_planned_outputs_created` check is
+preserved and still passes; the audit creates nothing at the planned benchmark
+output paths. Protocol version 0.2.0 clears Luminari and opens the gate; see
+below.
+
+**Protocol version 0.2.0 — Luminari licence resolution (2026-10-21).** The
+M7E protocol has two versions. Version 0.1.0 is preserved unchanged as the
+historical record and remains independently verifiable; version 0.2.0
+(`configs/font_roster_audit_v0_2_0.toml`) supersedes it for **one face only,
+Luminari**, and for the benchmark generation gate. The roster, the ten
+typefaces, the 30 matched text cases, the 300 sources, the 6,300 rows, the
+5,700 primary rows, the 600 diagnostic rows, the corruption ladder, the
+renderer, the evidence standard and the four statuses are unchanged, and the
+M7D plan is untouched. The version 0.2.0 output directory is
+`reports/font_roster_audit_v0_2_0/`; the version 0.1.0 report carries a
+supersession banner so a reader of the older record is told which audit is
+current.
+
+**What was wrong with the version 0.1.0 reasoning.** Version 0.1.0 applied
+the Canada Type end-user licence to the macOS-bundled copy of Luminari and
+therefore read that licence's section 2 payment trigger as if it governed the
+installed font. It also quoted sections 3 and 8 of that licence but not
+section 11, which is the provision that settles the question. The contractual
+connection runs the other way round:
+
+- The copy on the audit machine is part of the *Apple Software*. Section 1.A of
+  the macOS 27 Software License Agreement (EA2005, 07/11/2026) defines the
+  Apple Software to include "fonts ... accompanying this License", including
+  third-party fonts.
+- The licence that governs the *user's* use of that copy is the macOS
+  Software License Agreement. Section 2E grants the use of the bundled fonts
+  "to display and print content while running the Apple Software", with
+  embedding governed by the font's own embedding restrictions, which this
+  workflow does not exercise. Section 1's important note extends the licence to
+  the "publication and distribution" of "materials you are authorized or legally
+  permitted to reproduce, modify, publish or distribute".
+- The Canada Type end-user licence v4.193 governs a **direct download from
+  Canada Type**, not the macOS-bundled copy. Its section 2 payment trigger
+  therefore does not attach to the installed font. It is recorded as evidence of
+  the rights holder's position on the design, and that position is consistent
+  with the product licence.
+
+**The decisive provisions.** With the full text of the Canada Type EULA
+v4.193 in hand, the intended use is established rather than inferred:
+
+- *Section 3 (Desktop & Print)* defines an output device to include "any other
+  machine that uses Canada Type font data to output forms rasterized and
+  generated from the computer where the font data is installed", and lists as
+  permitted usage "to create and print documents or make static images in
+  raster digital formats, such as png, jpeg, gif". The benchmark's rendering
+  step is a software rasteriser on the machine where the font data is
+  installed, producing PNG images, so it falls inside the rights holder's own
+  definition of a licensed use and output format.
+- *Section 7* confirms the intended use is not one of the separately priced
+  extensions (broadcast, HTML5 banner ads, desktop application embedding).
+- *Section 11* restricts the distribution of the **font software**; *section 8*
+  and *section 12* restrict copies, back-ups and modification of the
+  software. None of them restricts the rendered output. *Section 14* imposes a
+  duty to inform persons "having access to the Canada Type Software and copies
+  thereof", which is not engaged by distributing rasterised images that contain
+  no font software.
+- *Section 1* of the macOS SLA together with Apple's published position that
+  content made with bundled fonts "may be used for either personal or
+  commercial purposes", with only the font files restricted, corroborate the
+  same conclusion.
+
+**Scope of the permission and binding conditions.** The permission is: render
+synthetic text with the pinned face on the pinned Apple environment, retain the
+rendered images, and distribute those images and the derived tables. The font
+binary may not be redistributed, embedded, modified or converted. Four
+conditions are recorded on the decision and are binding: (1) generate only on
+the pinned Apple environment with the face identified by the M7D SHA-256 and
+re-verify that hash before every run; (2) never redistribute, embed, modify or
+convert the font file and keep the working tree free of font binaries, which
+the audit checks on every run; (3) use the face for **evaluation only** and do
+not train or fine-tune any model on font-rendered data that includes this face
+without a fresh licence review, because the authorised distributor's summary of
+the same desktop licence lists an artificial-intelligence training restriction
+that the rights holder's own published end-user licence does not contain; and
+(4) if the benchmark is ever moved off the macOS product licence — to a
+directly licensed or a Linux-distributed build of Luminari — a fresh licence
+review is required first.
+
+**Residual uncertainties.** Three are recorded rather than resolved: the
+licence Apple holds from Canada Type is not published, so the chain from the
+rights holder to the grant Apple makes cannot be inspected; the permission to
+redistribute the rendered output follows from the product licence's important
+note and Apple's published position rather than from an express clause, and
+Apple's published position is a 2017 community-thread quotation of an Apple
+email rather than a published Apple policy document; and the rights holder's
+published text permits making static png, jpeg and gif images without using
+the word "distribute" in relation to that output, although the authorised
+distributor's summary of the same desktop licence states that it allows the
+licensee to create, print and share flat, non-editable designs. The decision
+is an interpretation of documentary terms and not a legal opinion.
+
+**Result.** Luminari is **eligible** for the intended evaluation-only
+workflow, with the four conditions above. All ten faces are eligible, none is
+review_required, ineligible or unavailable, the audit gate is **passed** and
+the **benchmark generation gate is open**. No roster change is proposed: the
+ten-font design, the matched text cases, the row counts, the split structure
+and the generalization claims are exactly as the M7D plan records them, and no
+manifest, hash or verification contract outside the M7E protocol needs a
+versioned update. The M7D `no_planned_outputs_created` check is preserved and
+still passes, and this milestone creates nothing at the planned benchmark
+output paths.
 
 **Verification and reproducibility.** `captcha-font-roster-audit run` writes
-only to `reports/font_roster_audit_v0_1_0/`; `verify` reloads the pinned
-inputs, recomputes every deterministic table, the audit manifest and the report,
-compares them byte-for-byte, and rechecks the declared dependencies, the font
-hashes and the exact output file set. The dependency fingerprint is
-file-exact over the three declared inputs, so an unrelated configuration,
-dataset, model or report added to a shared directory later does not invalidate
-the audit, while a modified or deleted declared input still fails. Two runs
-from the same clean commit are byte-identical except for the runtime-only
-metadata field. The regression tests in `tests/test_font_roster_audit.py`
-cover a valid evidence record and decision, missing licence evidence, an
-unsupported or malformed licence status, an `eligible` decision without
-adequate evidence, a missing or duplicated roster member, modified and deleted
-declared evidence, modified and unexpected protected outputs, a missing,
-malformed or tampered dependency manifest, unrelated additions to shared
-directories, deterministic output and verification, and the continued
-tamper detection of the M7C and M7D verifiers.
+only to the protocol's own `reports/font_roster_audit_v0_2_0/` directory
+(`reports/font_roster_audit_v0_1_0/` for the superseded version); `verify`
+reloads the pinned inputs, recomputes every deterministic table, the audit
+manifest and the report, compares them byte-for-byte, and rechecks the declared
+dependencies, the font hashes and the exact output file set. The dependency
+fingerprint is file-exact over the three declared inputs, so an unrelated
+configuration, dataset, model or report added to a shared directory later does
+not invalidate the audit, while a modified or deleted declared input still
+fails. Two runs from the same clean commit are byte-identical except for the
+runtime-only metadata field. The regression tests in
+`tests/test_font_roster_audit.py` cover a valid evidence record and decision,
+missing licence evidence, an unsupported or malformed licence status, an
+`eligible` decision without adequate evidence, a missing or duplicated roster
+member, modified and deleted declared evidence, modified and unexpected
+protected outputs, a missing, malformed or tampered dependency manifest,
+unrelated additions to shared directories, deterministic output and
+verification, and the continued tamper detection of the M7C and M7D verifiers.
+The follow-up tests in `tests/test_font_roster_audit_v2.py` cover the resolved
+decision and its recorded evidence and scope, the rejection of an ambiguous
+`eligible` decision, the unchanged roster membership and provenance between
+protocol versions, the fact that only the Luminari record changed, the
+preservation of the superseded version's own conclusion and its continued
+verifiability, the historical immutability of the M7D artifacts and the
+superseded protocol, the unchanged absence of the planned benchmark output
+paths, the continued pass and tamper detection of the M7C and M7D verifiers,
+and deterministic verification of the current protocol.
 
 ## 6. Data leakage risks and controls
 

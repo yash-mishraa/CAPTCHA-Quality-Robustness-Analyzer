@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0018` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0019` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0019` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only licence resolution for the one face M7E left unresolved (no images, dataset rows, predictions or model artifacts): Luminari is cleared as **eligible** for the intended evaluation-only workflow, because the installed copy is governed by the macOS 27 product licence and the rights holder's own terms treat a software rasteriser producing static png, jpeg and gif images from the installed font data as a licensed use while restricting only the font software; four binding conditions are recorded (pinned environment and hash, no font binary in the tree, evaluation only with no training on font-rendered data, and a fresh review before leaving the macOS product licence); all ten faces are eligible, the audit gate is passed and the benchmark generation gate is **open**, with no roster change proposed and three residual uncertainties recorded rather than resolved |
 | `EXP-0018` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only font-roster licensing and availability audit of the ten typefaces the M7D plan proposes (no images, text cases, dataset rows, predictions or model artifacts): all ten are available with the M7D-pinned SHA-256 and are proprietary, none is open-licensed; nine are eligible for the intended evaluation-only workflow because the licence permits distributing the rendered images and the workflow never redistributes a font binary; Luminari is `review_required` because the macOS product licence is silent on redistributing the rendered output while the Canada Type terms that cover it require a paid licence, so the audit gate is partially passed and the benchmark generation gate is closed |
 | `EXP-0017` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only evaluation-design plan (no dataset, image, model or prediction produced): 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated and Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic) with the frozen M5C champion evaluated zero-shot; font-level inference stays descriptive because ten purposive fonts are not a font population |
 | `EXP-0016` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only cross-font analysis: all-primary MAE/RMSE/R² 0.0634/0.0930/0.7435; per-font RMSE 0.0852/0.0761/0.1134 with the Georgia–Monaco interval including zero; blur/noise RMSE 0.0279/0.0346/0.1601 versus familiar 0.0233 but a 5.74× font range; geometric aggregate 0.0588 versus 0.0590 while severity RMSE spans 0.0259–0.0829 (3.20×); top-3 source share 0.099 and 48.4 effective sources; 13-claim audit yields 3 supported / 0 suggestive / 10 unsupported |
@@ -102,6 +103,172 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0019 — Font-roster licence resolution: Luminari cleared for the evaluation-only workflow
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Does the evidence actually support the planned use
+  of Luminari in the planned cross-font benchmark, and can the outstanding
+  `review_required` status be resolved? This is a **licensing-evidence and
+  decision milestone**. It generates no images, no text cases, no dataset
+  rows, no predictions and no model artifacts; it changes no model; it
+  regenerates no M7A–M7D output; and it does not weaken the M7C or M7D
+  verifiers or M7D's `no_planned_outputs_created` check. The target remains
+  synthetic SSIM against an exact source-specific clean reference; this is not
+  human readability, CAPTCHA solvability, security or production robustness.
+- **Code revision:** base `567f815` (M7E) plus the licence-resolution
+  implementation, committed as `feat: resolve Luminari font-roster
+  eligibility`. The reported run was repeated from the clean commit so
+  provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; macOS 27.0.1
+  (arm64). No GPU was used.
+- **Configuration:** `configs/font_roster_audit_v0_2_0.toml`; config sha256
+  `bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa`.
+  Seed `20261021`. The protocol pins three
+  upstream files by SHA-256: the M7D planning configuration
+  (`e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3`), the
+  M7D plan manifest
+  (`7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8`) and
+  the M7D font inventory
+  (`3162b40a1e08f6217b8ae68a3b32c1e8bda79048eca1e675bddf859b561bc57e`).
+  It supersedes `configs/font_roster_audit_v0_1_0.toml`
+  (`5c8140e4bebb4ede473fdbf6499b476afc73157a595a4a16a16be61805038755`) for
+  the Luminari decision and for the benchmark generation gate only.
+- **Upstream frozen inputs:** the frozen M7D plan and its recorded per-font
+  availability, hashes and glyph coverage. The M5C champion artifact
+  (`c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`) and
+  card (`9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`)
+  were not touched and were not used.
+- **Dataset:** none created. The audited roster is unchanged: ten typefaces in
+  the M7D planning configuration, three M3 development fonts and seven
+  held-out fonts of which three (Georgia, Monaco, Impact) were already
+  evaluated in M7B. The *planned* dataset would be `matched-font-v0.1.0` at
+  `data/processed/matched_font_benchmark_v0.1.0/` with the benchmark report
+  at `reports/matched_font_benchmark_v0_1_0/`; the resolution created nothing
+  at either path, and M7D's `no_planned_outputs_created` check still passes.
+- **Split:** none created.
+- **Seeds:** audit seed `20261021`; no stochastic step exists in the audit.
+- **Runtime:** recorded in `run_metadata.json`; two clean-commit runs differ
+  only in `runtime_seconds`.
+
+**Method.** The investigation re-read the primary sources rather than the
+M7E summary. The macOS 27 Software License Agreement (EA2005, 07/11/2026) was
+retrieved from `https://www.apple.com/legal/sla/docs/macOS27.pdf` and read in
+full: section 1.A defines the Apple Software to include fonts, section 2E
+grants the use of the bundled fonts to display and print content while running
+the Apple Software with embedding governed by each font's own embedding
+restrictions, and section 1's important note extends the licence to the
+publication and distribution of materials the licensee is authorised to
+distribute. The complete *CANADA TYPE EULA* v4.193 was retrieved from
+`https://canadatype.com/eula/` and read in full, including the sections that
+the earlier record had not quoted: section 3's definition of an output device
+as "any other machine that uses Canada Type font data to output forms
+rasterized and generated from the computer where the font data is installed",
+its permitted usage of making "static images in raster digital formats, such as
+png, jpeg, gif", section 7's separately priced extensions, section 8's
+back-up-only copy condition, and sections 10 to 14, which restrict the font
+software, its copies and its modification rather than the rendered output, and
+limit section 14's duty to inform to persons having access to the software.
+Apple's published system-font listing was re-checked, and the authorised
+distributor's own listing of the same desktop licence was read to establish the
+commercial terms and the price of a direct licence.
+
+The analysis distinguishes installing or using the font, generating and
+retaining the rendered PNG images, distributing those images, distributing the
+font binary, and training on font-rendered data, and it establishes the
+contractual connection before relying on any term: the installed copy is part of
+the Apple Software and is governed by the product licence, while the Canada
+Type end-user licence governs a direct download from Canada Type. No
+permission is inferred from silence, and no term is applied to a copy it does
+not govern.
+
+**Metrics.**
+
+| Metric | Value | Notes |
+| --- | --- | --- |
+| Faces audited | 10 | the unchanged M7D roster |
+| Eligible | 10 | was 9 under protocol version 0.1.0 |
+| review_required | 0 | was 1 (Luminari) |
+| ineligible / unavailable | 0 / 0 | unchanged |
+| Audit gate | passed | was partially_passed |
+| Benchmark generation gate | open | was closed |
+| Roster, cases, rows changed | 0 | 10 fonts, 30 cases, 300 sources, 6,300 rows, 5,700 primary, 600 diagnostic |
+| Protocol records changed | 1 | the Luminari evidence record and decision only |
+| Font binaries in the working tree | 0 | the font-file boundary holds |
+| Planned benchmark output paths created | 0 | M7D's `no_planned_outputs_created` check still passes |
+
+**Observations.** The earlier M7E record reached the right answer for the
+wrong reason in one respect and for the wrong reason in another. It applied
+the Canada Type licence's section 2 payment trigger to the macOS-bundled copy,
+even though that licence governs a direct download from Canada Type; and it
+quoted sections 3 and 8 but not section 11, which is the provision that
+actually settles the question by restricting distribution of the font software
+rather than of the rendered output. With the full text of both primary
+documents, the intended use is established: the rights holder's own definition
+of an output device expressly covers a software rasteriser that outputs forms
+rasterized from the installed font data, and the permitted-usage list names
+exactly the benchmark's output format, while every distribution, copy and
+modification restriction in that licence attaches to the font software, and the
+product licence extends to publishing and distributing the licensee's own
+authorised materials, which the rendered synthetic images are. Two findings
+qualify the conclusion. The permission to redistribute the rendered output
+follows from the product licence's important note and from Apple's published
+position that content made with bundled fonts may be used for personal or
+commercial purposes, and no retrieved primary document states it in express
+terms; the product licence has no clause naming redistribution of rendered
+output, and Apple's published position is a 2017 community-thread quotation of
+an Apple email rather than a published Apple policy document. The authorised
+distributor's summary of the same desktop licence also states that it allows
+the licensee to create, print and share flat, non-editable designs, and it
+lists an artificial-intelligence training restriction that the rights holder's
+own published end-user licence does not contain, which is why the decision
+keeps an evaluation-only condition.
+
+**Conclusion.** Luminari is **eligible** for the intended evaluation-only
+workflow: render synthetic text with the pinned face on the pinned Apple
+environment, retain the rendered images, and distribute those images and the
+derived tables, with the font binary never redistributed, embedded, modified
+or converted. Four conditions are recorded and binding: the pinned environment
+and hash must be re-verified before every run; no font binary may enter the
+working tree; the face may be used for evaluation only, with no training on
+font-rendered data that include it without a fresh licence review; and moving
+the benchmark off the macOS product licence requires a fresh review first.
+All ten faces are eligible, the audit gate is passed and the benchmark
+generation gate is open. **No roster change is proposed.** The decision rests
+on an interpretation of documentary terms and is not a legal opinion, and three
+residual uncertainties are recorded rather than resolved: Apple's own licence
+from Canada Type is unpublished, the redistribution permission follows from the
+product licence's important note and Apple's published position rather than
+from an express clause, and the rights holder's published text permits making
+static images without using the word "distribute" for that output.
+
+**Limitations.** This is a documentary audit, not a legal opinion, and the
+conclusions depend on the terms retrievable on the recorded retrieval dates.
+The permission is a *product-licence* permission: it does not clear the face
+for use in a product, a model, a deployment, or on a non-Apple platform, and
+it does not extend to any use of the font software itself. The availability
+finding remains environment-scoped, because the pinned faces are the macOS
+builds. The audit says nothing about human readability, CAPTCHA solvability,
+security or production robustness.
+
+**Next step.** Stop for review. With the benchmark generation gate open, the
+next milestone may be the separately versioned dataset generator and zero-shot
+benchmark that consumes the M7D plan's roster, counts, corruption ladder,
+manifest fields and fail-closed gates, together with the separate, explicitly
+versioned lifecycle change that moves the planned benchmark output paths into
+existence. Neither is started here.
+
+**Artifacts.** Git-ignored report directory
+`reports/font_roster_audit_v0_2_0/` (input manifest, font evidence,
+eligibility table, roster coverage, isolation checks, audit manifest, Markdown
+report and run metadata). The superseded
+`reports/font_roster_audit_v0_1_0/` directory and its protocol remain
+verifiable and unchanged in substance. The committed configs, code, tests and
+documentation are the reproducible protocol.
 
 ---
 
@@ -243,6 +410,12 @@ the M7D plan's roster, counts, corruption ladder, manifest fields and
 fail-closed gates. Moving the planned benchmark output paths into existence is
 a separate, explicitly versioned lifecycle change with its own tests and
 provenance; it is not implemented here.
+
+- **Later cross-reference (2026-10-21):** the Luminari question was resolved
+  by a licence-evidence investigation recorded as `EXP-0019`, which supersedes
+  this entry for the Luminari decision and for the benchmark generation gate
+  only. The decision recorded here remains the record for protocol version
+  0.1.0.
 
 **Artifacts.** Git-ignored report directory
 `reports/font_roster_audit_v0_1_0/` (input manifest, font evidence,

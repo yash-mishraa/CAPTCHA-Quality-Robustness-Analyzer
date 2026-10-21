@@ -42,6 +42,13 @@ from captcha_quality.provenance import (
     sha256_file,
 )
 
+#: Protocol versions that a later protocol version supersedes. The mapping is
+#: keyed by the superseded configuration path and gives the superseding one, so
+#: that a reader of a superseded audit is told which audit is current.
+SUPERSEDED_PROTOCOLS: Final[dict[str, str]] = {
+    "configs/font_roster_audit_v0_1_0.toml": "configs/font_roster_audit_v0_2_0.toml",
+}
+
 #: The four eligibility statuses and their exact meanings.
 ELIGIBILITY_STATUSES: Final[tuple[str, ...]] = (
     "eligible",
@@ -189,6 +196,9 @@ class AuditSettings:
     font_file_redistribution_required: bool
     font_file_redistribution_rationale: str
     out_of_scope: str
+    supersedes: str = ""
+    residual_questions: str = ""
+    experiment: str = "EXP-0018"
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,6 +282,9 @@ class AuditConfig:
                     self.audit.font_file_redistribution_rationale
                 ),
                 "out_of_scope": self.audit.out_of_scope,
+                "supersedes": self.audit.supersedes,
+                "residual_questions": self.audit.residual_questions,
+                "experiment": self.audit.experiment,
             },
             "roster": {
                 "source": self.roster.source,
@@ -332,6 +345,15 @@ def _as_str(value: object, label: str) -> str:
     return value.strip()
 
 
+def _as_optional_str(value: object, label: str) -> str:
+    """Accept an absent or empty optional string, rejecting other non-strings."""
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise AuditConfigError(f"{label} must be a string")
+    return value.strip()
+
+
 def _as_int(value: object, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise AuditConfigError(f"{label} must be an integer")
@@ -371,8 +393,12 @@ def _parse_run(raw: Mapping[str, object]) -> RunSettings:
 
 
 def _parse_audit(raw: Mapping[str, object]) -> AuditSettings:
+    values = dict(raw)
+    optional = {"supersedes", "residual_questions", "experiment"}
+    for key in optional:
+        values.pop(key, None)
     _check_keys(
-        raw,
+        values,
         {
             "milestone",
             "status",
@@ -400,6 +426,11 @@ def _parse_audit(raw: Mapping[str, object]) -> AuditSettings:
             "audit.font_file_redistribution_rationale",
         ),
         out_of_scope=_as_str(raw["out_of_scope"], "audit.out_of_scope"),
+        supersedes=_as_optional_str(raw.get("supersedes"), "audit.supersedes"),
+        residual_questions=_as_optional_str(
+            raw.get("residual_questions"), "audit.residual_questions"
+        ),
+        experiment=_as_optional_str(raw.get("experiment"), "audit.experiment") or "EXP-0018",
     )
     if settings.milestone != "M7E":
         raise AuditConfigError("audit.milestone must be 'M7E'")
@@ -1113,6 +1144,9 @@ def _protocol_payload(
         "intended_use": config.audit.intended_use,
         "target": config.audit.target,
         "out_of_scope": config.audit.out_of_scope,
+        "supersedes": config.audit.supersedes,
+        "residual_questions": config.audit.residual_questions,
+        "experiment": config.audit.experiment,
         "font_file_redistribution_required": config.audit.font_file_redistribution_required,
         "font_file_redistribution_rationale": (config.audit.font_file_redistribution_rationale),
         "roster": {
@@ -1143,6 +1177,19 @@ def _protocol_payload(
         ],
         "gate": _gate_summary(result_tables["eligibility"]),
     }
+
+
+def _superseded_by(config_path: Path) -> str | None:
+    """Return the superseding protocol path when this one has been superseded.
+
+    The lookup matches on the path suffix so that it works whether the
+    protocol was loaded through a relative or an absolute path.
+    """
+    text = config_path.as_posix()
+    for superseded, superseding in SUPERSEDED_PROTOCOLS.items():
+        if text.endswith(superseded):
+            return superseding
+    return None
 
 
 def _build_report(inputs: AuditInputs, tables: dict[str, pd.DataFrame]) -> str:
@@ -1211,24 +1258,86 @@ def _build_report(inputs: AuditInputs, tables: dict[str, pd.DataFrame]) -> str:
         eligibility["declared_status"] == "review_required", "font_key"
     ].tolist()
     project_status_counts = eligibility["project_status"].value_counts().to_dict()
+    if unresolved:
+        clearance_sentence = (
+            f"{gate['eligible']} of {gate['total_faces']} faces are **eligible** for the "
+            f"intended workflow; {', '.join(unresolved)} is **review_required**; no face "
+            "is ineligible or unavailable."
+        )
+        if len(unresolved) == 1:
+            second_finding = (
+                f"Second, **one face remains unresolved**: {', '.join(unresolved)}. The "
+                "recorded evidence does not establish the licence position for the "
+                "intended use, so the question is kept as an open licensing question "
+                "rather than inferred, and it keeps the benchmark generation gate "
+                "closed."
+            )
+        else:
+            second_finding = (
+                f"Second, **{len(unresolved)} faces remain unresolved**: "
+                f"{', '.join(unresolved)}. The recorded evidence does not establish the "
+                "licence position for the intended use, so the questions are kept open "
+                "rather than inferred, and they keep the benchmark generation gate "
+                "closed."
+            )
+    else:
+        clearance_sentence = (
+            f"All {gate['total_faces']} faces are **eligible** for the intended "
+            "workflow: no face is review_required, ineligible or unavailable."
+        )
+        second_finding = (
+            "Second, **no face remains unresolved**: every face carries a defensible "
+            "eligibility decision on the recorded evidence, so the benchmark "
+            "generation gate is open."
+        )
+    superseding = _superseded_by(config.config_path)
+    if superseding:
+        supersession_banner = (
+            f"**This protocol version is superseded by `{superseding}`.** The current "
+            "audit is the superseding version; the decision and the evidence recorded "
+            "below are preserved exactly as they were recorded for this version."
+        )
+    else:
+        supersession_banner = ""
+    unresolved_table = _md_table(
+        eligibility, ("font_key", "declared_status", "unresolved_questions")
+    )
+    conditions_table = _md_table(
+        eligibility, ("font_key", "declared_status", "declared_conditions")
+    )
+    if unresolved:
+        gate_conditions = (
+            "The face concern is not removed from the roster and no similarly named "
+            "family is substituted for it. Clearing it, or a deliberate and separately "
+            "versioned roster decision, is a prerequisite for generation."
+        )
+    else:
+        gate_conditions = (
+            "Every proposed face carries a defensible eligibility decision, so the "
+            "roster may proceed to the separately versioned dataset generator and "
+            "zero-shot benchmark that the M7D plan describes."
+        )
+    residual_block = (
+        ("\n" + config.audit.residual_questions + "\n") if config.audit.residual_questions else ""
+    )
     text = (
         f"""# M7E - Font roster licensing and availability audit
 
-- **Experiment:** EXP-0018
+- **Experiment:** {config.audit.experiment}
+- **Protocol version:** {config.run.version} (`{config.config_path}`)
 - **Status:** Completed (read-only audit)
 - **Roster audited:** {gate["total_faces"]} typefaces proposed by the M7D plan
 - **Audit gate:** {gate["audit_gate"]} ({gate["eligible"]} eligible, {gate["review_required"]} review_required, {gate["ineligible"]} ineligible, {gate["unavailable"]} unavailable)
 - **Benchmark generation gate:** {gate["benchmark_generation_gate"]}
+
+{supersession_banner}
 
 ## Executive summary
 
 M7E audits the ten typefaces the M7D plan proposes for the planned matched
 cross-font benchmark. It re-verifies each face against its pinned path and
 SHA-256, records the licence evidence for that specific face, and re-derives an
-eligibility decision from that evidence. {gate["eligible"]} of
-{gate["total_faces"]} faces are **eligible** for the intended workflow;
-{", ".join(unresolved) if unresolved else "none"} is **review_required**; no face
-is ineligible or unavailable.
+eligibility decision from that evidence. {clearance_sentence}
 
 The audit changes nothing. It generated no images, no text cases, no dataset
 rows, no predictions and no model artifacts, and it did not modify the M7D plan,
@@ -1238,12 +1347,7 @@ Two findings matter for the next milestone. First, **every proposed face is a
 proprietary typeface**: none is released under an open licence. The intended
 workflow can comply because it renders text locally and distributes only the
 rendered images, never a font binary, and because the licences that govern
-these designs permit distributing materials made with them. Second, **one face
-is unresolved**: the foundry terms that cover Luminari's rendered output are a
-paid licence, and the macOS product licence that covers the bundled copy does
-not state whether the rendered output may be redistributed. That question is
-recorded as an open licensing question rather than inferred, and it keeps the
-benchmark generation gate closed.
+these designs permit distributing materials made with them. {second_finding}
 
 ## 1. Scope and research-integrity boundary
 
@@ -1399,19 +1503,12 @@ files are newer than Apple's currently published listing.
 
 ## 8. Unresolved licensing questions
 
-{("The following faces are not cleared: " + ", ".join(unresolved) + ". " + " ".join(eligibility.loc[eligibility["declared_status"] == "review_required", "unresolved_questions"].tolist())) if unresolved else "None. Every face carries a defensible eligibility decision."}
+Every recorded decision carries its own open questions. The table below is the
+union of those questions across the roster; a face is cleared only where its
+question is recorded as none.
 
-For Luminari the specific open question is whether redistribution of rendered
-synthetic benchmark images made with the macOS-bundled copy requires a
-purchased Canada Type licence, and whether the EULA's obligation to inform
-anyone with access of the licence terms applies to the distributed images. The
-audit records the conflict between two documents rather than resolving it: the
-macOS product licence grants the use that creates the output but is silent on
-redistributing it, while the foundry terms that do cover the rendered output
-permit static images in png, jpeg and gif formats but only take effect once
-payment has been received. Resolving this requires either a written
-determination that the product licence covers the rendered output, or a
-purchased foundry licence covering the intended use.
+{unresolved_table}
+{residual_block}
 
 ## 9. Project-level findings
 
@@ -1438,6 +1535,11 @@ evaluated in M7B. The audit's roster coverage table keeps that distinction
 visible so that a future result on them is never described as independent
 confirmation of the M7B three-font pattern.
 
+**Recorded conditions.** The conditions attached to each decision are part of
+the audit's contract and must be honoured by any later milestone.
+
+{conditions_table}
+
 ## 10. Benchmark generation gate
 
 | Gate | Result |
@@ -1453,13 +1555,12 @@ confirmation of the M7B three-font pattern.
 {gate["benchmark_generation_reason"]}
 
 The gate is therefore **{gate["audit_gate"]}** at the audit level and
-**{gate["benchmark_generation_gate"]}** for benchmark generation. The face
-concern is not removed from the roster and no similarly named family is
-substituted for it. Clearing it, or a deliberate and separately versioned
-roster decision, is a prerequisite for generation. This milestone does not
-implement that transition and does not create anything at the planned
-benchmark output paths; M7D's `no_planned_outputs_created` check is preserved
-and still passes.
+**{gate["benchmark_generation_gate"]}** for benchmark generation.
+{gate_conditions}
+
+This milestone does not implement the transition into actual benchmark outputs
+and does not create anything at the planned benchmark output paths; M7D's
+`no_planned_outputs_created` check is preserved and still passes.
 
 ## 11. Limitations
 
