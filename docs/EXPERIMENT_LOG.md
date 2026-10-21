@@ -144,7 +144,7 @@ class imbalance, and so on).
   36 sources; expanded validation 144 rows / 12 sources; primary geometric test
   36 rows / 12 sources; diagnostic 0.5 px test 12 rows / 12 sources; M3 test
   108 rows / 12 sources.
-- **Runtime:** 6.98 s in process on the recorded machine (not a benchmark); it
+- **Runtime:** 9.93 s in process on the recorded machine (not a benchmark); it
   varies slightly between runs.
 
 **Method.** Nine structure-tensor features are computed from the corrupted
@@ -345,7 +345,10 @@ predeclared milestone and requires review before any test-driven iteration.
 
 **Artifacts.** Git-ignored: `reports/structure_tensor_study_v0_1_0/` (tables,
 diagnostics, report, metadata) and
-`models/structure_tensor_study_v0_1_0/` (refitted bundles and cards).
+`models/structure_tensor_study_v0_1_0/` (refitted bundles and cards). Two runs
+from the clean committed revision produced byte-identical reports, metric
+tables, manifests, model bundles and model cards; only the in-process runtime
+value and the recorded artifact paths differed.
 
 ---
 
