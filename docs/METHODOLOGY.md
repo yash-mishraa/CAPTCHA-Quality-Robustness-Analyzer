@@ -1979,10 +1979,13 @@ M5C protocol, familiar-font predictions, metrics, uncertainty, paired interval
 convention, provenance, report and champion card/artifact; the M5A protocol and
 severity manifest; and the M7A protocol, uncertainty and concentration tables.
 Every path is read-only. The analysis refuses to write outside the Git-ignored
-`reports/` tree or into any protected prior report directory. It fingerprints
-360 protected non-image files under `configs/`, `data/processed/`, `models/` and
-the prior report directories before and after the run and fails if any byte
-changes.
+`reports/` tree or into any protected prior report directory. The M7C run
+fingerprinted 360 protected non-image files under `configs/`, `data/processed/`,
+`models/` and the prior report directories before and after the run and failed
+if any byte changed. That run-time guard has since been scoped to the declared
+protected-dependency membership described in the *Protected-dependency
+contract* paragraph of this section; the recorded 360-file snapshot is
+unchanged.
 
 **Independent unit and scopes.** The independent unit is `source_id`, not an
 image variant. Every bootstrap replicate resamples whole source groups with
@@ -2072,14 +2075,71 @@ aggregate RMSE, stable 0.5 px R² or ranking, and font-population generalisation
 The claim table records the evidence, limitations, rule and rule outcome for
 every row.
 
+**Protected-dependency contract (maintenance, 2026-10-21).** M7C originally
+fingerprinted three *shared, growing* trees — `configs/`, `data/processed/` and
+`models/` — together with the historical milestone report roots. That
+directory-level fingerprint was too broad: it made M7C's verification depend on
+the complete future contents of directories M7C never declared as inputs, so
+adding an unrelated milestone configuration (the M7D planning config) failed
+M7C verification even though all 31 of M7C's hash-pinned inputs, every
+prediction, table, metric, protocol and report artifact were byte-identical.
+The same over-broad rule also covered transient, Git-ignored scratch copies
+(`data/processed/_m7b_probe*`, `data/processed/repro_*`) that are generated
+outputs rather than frozen dependencies.
+
+The contract is now scoped to an explicitly declared membership
+(`PROTECTED_DEPENDENCY_MEMBERSHIP_VERSION = "m7c-scoped-dependencies-v1"`)
+held in `cross_font_analysis.py`:
+
+| Membership member | Scope | Semantics |
+| --- | --- | --- |
+| `config_files` | 5 files: M7C's own protocol plus the M7A, M5A, M7B and M5C protocols it depends on | Each file is hashed by path |
+| `dataset_roots` | the M3, M3-pilot, M4A-pilot, M5A-pilot and M7B datasets | The set of non-image files under each root must match the recorded set exactly |
+| `model_roots` | the nine frozen upstream model directories | Exact non-image file set per root |
+| `report_roots` | the eighteen historical milestone report directories | Exact non-image file set per root |
+| `ignored_roots` | the eight transient scratch directories listed explicitly | Excluded as generated outputs, so the exclusion is auditable rather than implicit |
+| `output_files` | the fifteen artifacts M7C itself writes | Exact file set, per-file hashes and full recomputation from the pinned inputs |
+
+The expected hashes are **never re-derived from the current tree**. They are the
+hashes M7C recorded when it ran, restricted to the declared membership, so a
+modified, deleted, missing or substituted declared dependency is still
+detected. A file added later anywhere else in the repository — another
+milestone's configuration, a new dataset root, a new model directory — is not
+an M7C dependency and no longer invalidates M7C.
+
+The integrity guarantees that matter are unchanged. The result-affecting
+dependencies are M7C's 31 hash-pinned inputs, which live in the Git-tracked
+protocol file and are re-verified byte-for-byte on every run; every table, the
+protocol and the report are recomputed from those pins and compared with the
+recorded artifacts; the recorded per-file output hashes, the config SHA-256 and
+the config identity hash are still checked; and the recorded asset snapshot is
+still checked for internal consistency, so editing the manifest fails closed.
+The verifier now additionally checks the exact set of M7C output files, which
+previously left `run_metadata.json` outside the per-file hash check.
+
+This is a maintenance change to verifier logic only. It does not alter M7C's
+metrics, predictions, datasets, protocol, report, tables, claim audit or any
+scientific conclusion, and it does not rewrite or regenerate any historical
+artifact. `EXP-0016` and `EXP-0017` remain valid as recorded. The regression
+tests that protect the new behaviour are in
+`tests/test_cross_font_analysis_dependencies.py`: verification passes with the
+declared dependencies intact; an unrelated configuration file does not
+invalidate M7C; a modified pinned input, a modified pinned report input, a
+deleted pinned input, a deleted declared-but-not-pinned dependency, an altered
+M7C output artifact and an unexpected output artifact all fail verification; a
+missing, malformed or tampered dependency manifest fails closed; verification is
+deterministic across repeated runs; and M7D's configuration, hashes and
+verifier are unaffected. The tests use isolated temporary shadow trees and
+never mutate the real frozen repository artifacts.
+
 **Verification and reproducibility.** `captcha-cross-font-analysis run` writes
 only to `reports/cross_font_analysis_v0_1_0/`. `verify` reloads the pinned
 inputs, recomputes every deterministic table and the report, compares the
-protocol and claim table, checks recorded output hashes, rechecks input and
-frozen-asset fingerprints, and fails on any mismatch. Two runs from the same
-clean commit are byte-identical except for the runtime-only `elapsed_seconds`
-metadata field. The committed inputs are the TOML configuration, code, tests and
-documentation.
+protocol and claim table, checks recorded output hashes, rechecks the input
+hashes and the scoped protected-dependency membership, and fails on any
+mismatch. Two runs from the same clean commit are byte-identical except for the
+runtime-only `elapsed_seconds` metadata field. The committed inputs are the
+TOML configuration, code, tests and documentation.
 
 ### 5.22 M7D evaluation design and dataset-expansion plan
 
@@ -2258,18 +2318,23 @@ frozen-asset hashes. Two runs from the same clean commit are byte-identical
 except for the runtime-only metadata field. The committed inputs are the TOML
 configuration, code, tests and documentation.
 
-**Frozen-verifier note.** The M7C `verify` command fingerprints the *entire*
-`configs/` tree, so adding the M7D configuration — a new, separately versioned
-planning file, not a modification of any frozen artifact — necessarily changes
+**Frozen-verifier note.** The M7C `verify` command originally fingerprinted the
+*entire* `configs/` tree, so adding the M7D configuration — a new, separately
+versioned planning file, not a modification of any frozen artifact — changed
 that tree-level fingerprint. After M7D, `captcha-cross-font-analysis verify`
-reports exactly one difference: the added file
+reported exactly one difference: the added file
 `configs/evaluation_design_plan_v0_1_0.toml`. Every one of the 360 files
-recorded in the M7C run is byte-identical, all 31 M7C pinned inputs still match
-their recorded SHA-256 values, and all M7C output artifacts are unchanged. M7C
-code and artifacts are deliberately **not** modified to silence the check.
-Instead, M7D pins and re-verifies the M7C configuration, tables, metadata and
-report directly, so the M7C evidence is validated by content rather than by a
-directory listing.
+recorded in the M7C run was byte-identical, all 31 M7C pinned inputs still
+matched their recorded SHA-256 values, and all M7C output artifacts were
+unchanged. M7C code and artifacts were deliberately **not** modified to silence
+the check, and M7D re-verifies the M7C configuration, tables, metadata and
+report directly by content. The underlying verifier contract has since been
+repaired by a maintenance change that scopes M7C's protected-dependency
+fingerprint to the dependencies M7C actually declares; see
+[METHODOLOGY.md](METHODOLOGY.md) §5.21. That change alters verifier logic
+only: it does not alter M7C's metrics, predictions, datasets, protocol, report,
+claim audit or any scientific conclusion, and it does not rewrite or regenerate
+any historical artifact.
 
 ## 6. Data leakage risks and controls
 

@@ -287,7 +287,10 @@ the default; a CNN must justify its cost out-of-sample.
   benchmark-comparison and claim-audit tables. The independent unit is
   `source_id`; font and familiar-versus-held-out comparisons are unpaired and
   descriptive. It refuses protected output paths and fingerprints 360 protected
-  non-image files before and after the run.
+  non-image files before and after the run. A later maintenance change scoped
+  that fingerprint to the dependencies M7C actually declares, so an unrelated
+  configuration added to a shared directory no longer invalidates M7C while a
+  modified, deleted or substituted declared dependency is still detected.
 
 **Implemented for M7D (evaluation-design and dataset-expansion plan):**
 
@@ -826,8 +829,11 @@ generation must fail closed rather than substitute a font. The M5C champion
 (`expanded_random_forest`, calibration `none`) is frozen for zero-shot
 evaluation; M7D defines no universal SSIM improvement threshold, and any
 future model change needs a separate authorized protocol with untouched test
-groups. Because the M7C verifier fingerprints the whole `configs/` tree, adding
-the new M7D configuration changes that tree-level fingerprint; the difference is
-exactly one added file, and all 360 files recorded in the M7C run plus all 31
-M7C pinned inputs remain byte-identical. No dashboard, deployment or final
+groups. The M7C verifier originally fingerprinted the whole `configs/` tree,
+so adding the new M7D configuration changed that tree-level fingerprint; a
+maintenance change has since scoped the M7C protected-dependency fingerprint to
+the dependencies M7C actually declares, so the difference is exactly one added
+file, and all 360 files recorded in the M7C run plus all 31
+M7C pinned inputs remain byte-identical. That maintenance change alters
+verifier logic only. No dashboard, deployment or final
 presentation exists yet.

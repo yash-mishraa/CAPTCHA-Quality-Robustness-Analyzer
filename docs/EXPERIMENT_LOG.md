@@ -51,6 +51,16 @@ split, and code revision.
 | `EXP-0002` | 2026-10-20 | `dataset-generation` | `completed` | Two deterministic datasets generated; grouped splits verified; no single-feature triviality, but an eight-feature linear baseline reaches test R² 0.962 |
 | `EXP-0001` | 2026-10-20 | `target-validation` | `completed` | SSIM passes in both families; PSNR passes for noise but fails for blur on an ink-coverage confound; MS-SSIM deferred |
 
+## Maintenance notes
+
+Maintenance changes are not experiments and are deliberately kept out of the
+`EXP-` sequence. They never alter a recorded metric, prediction, dataset,
+model, report or scientific conclusion, and they never rewrite a closed entry.
+
+| Date | Scope | Change | Effect on recorded results |
+| --- | --- | --- | --- |
+| 2026-10-21 | M7C verifier (`cross_font_analysis.py`) | The protected-asset fingerprint was scoped from whole-directory trees (`configs/`, `data/processed/`, `models/`) to an explicitly declared membership of the dependencies M7C actually depends on: its own protocol plus the M7A/M5A/M7B/M5C protocols, the five frozen dataset roots, the nine frozen model roots, the eighteen historical report roots, the exact set of M7C output files, and an explicit list of transient scratch roots that are excluded as generated outputs. Expected hashes continue to come from the snapshot M7C recorded when it ran, so a modified, deleted, missing or substituted declared dependency is still detected. | None. M7C's metrics, predictions, datasets, protocol, report, tables and 13-claim audit are unchanged and were not recomputed, regenerated or re-hashed. The change was required because the M7D planning configuration (an unrelated file added to the shared `configs/` tree) had invalidated the M7C tree fingerprint even though all 31 M7C pinned inputs and every M7C output artifact were byte-identical. `EXP-0016` and `EXP-0017` remain valid as recorded; see [`docs/METHODOLOGY.md`](METHODOLOGY.md) §5.21. |
+
 ## Entries
 
 <!-- Copy the template below. Newest entries first. -->

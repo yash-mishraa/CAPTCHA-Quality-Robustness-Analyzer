@@ -216,6 +216,98 @@ PROTECTED_REPORT_ROOTS: Final[tuple[str, ...]] = (
     "reports/spatial_resolution_study_v0_1_0",
     "reports/structure_tensor_study_v0_1_0",
 )
+
+# ---------------------------------------------------------------------------
+# Scoped protected-dependency membership
+# ---------------------------------------------------------------------------
+# The original M7C contract fingerprinted three *shared, growing* trees
+# (``configs/``, ``data/processed/`` and ``models/``) plus the historical
+# report roots. That made M7C verification depend on the complete future
+# contents of directories M7C never declared as inputs: adding an unrelated
+# milestone configuration (for example the M7D planning config) changed the
+# tree fingerprint and failed M7C verification even though every M7C input,
+# table, prediction, metric and report artifact was byte-identical.
+#
+# The contract below replaces those directory-level fingerprints with an
+# explicitly declared membership of the files M7C actually depends on. The
+# expected hashes are never re-derived from the current tree: they are the
+# hashes M7C recorded at run time, restricted to this membership, so a
+# modified, deleted or substituted dependency is still detected.
+#
+# Membership semantics:
+#   * ``config_files``  - individual configuration files M7C's protocol
+#     depends on. Each is hashed by path.
+#   * ``dataset_roots`` - frozen source datasets (M3, M3 pilot, M4A pilot,
+#     M5A pilot, M7B). The set of non-image files under each root must match
+#     the recorded set exactly, so additions, deletions and modifications are
+#     all detected.
+#   * ``model_roots``   - frozen model artifacts of the upstream milestones.
+#   * ``report_roots``  - historical milestone report outputs.
+#   * ``ignored_roots`` - transient, Git-ignored scratch copies that are
+#     generated outputs rather than frozen dependencies. They are listed
+#     explicitly so the exclusion is auditable instead of implicit.
+#   * ``output_files``  - the artifacts M7C itself writes, verified by exact
+#     file set plus the recorded per-file hashes and by full recomputation
+#     from the pinned inputs.
+#
+# M7C's own output directory is deliberately *not* part of the tree
+# fingerprint: it is the directory being written, and its integrity is
+# covered by ``output_hashes`` and by recomputing every table and the report
+# from the pinned inputs on each verification.
+PROTECTED_DEPENDENCY_MEMBERSHIP_VERSION: Final[str] = "m7c-scoped-dependencies-v1"
+PROTECTED_DEPENDENCY_CONFIG_FILES: Final[tuple[str, ...]] = (
+    "configs/cross_font_analysis_v0_1_0.toml",
+    "configs/dataset_adequacy_audit_v0_1_0.toml",
+    "configs/geometric_distortion_pilot_v0_1_0.toml",
+    "configs/heldout_font_benchmark_v0_1_0.toml",
+    "configs/retention_aware_selection_v0_1_0.toml",
+)
+PROTECTED_DEPENDENCY_DATASET_ROOTS: Final[tuple[str, ...]] = (
+    "data/processed/captcha_quality_v0.1.0",
+    "data/processed/captcha_quality_v0.1.0-pilot",
+    "data/processed/geometric_distortion_pilot_v0.1.0",
+    "data/processed/heldout_font_benchmark_v0.1.0",
+    "data/processed/occlusion_interference_pilot_v0.1.0",
+)
+PROTECTED_DEPENDENCY_MODEL_ROOTS: Final[tuple[str, ...]] = (
+    "models/benchmark_v0_1_0",
+    "models/geometric_robustness_benchmark_v0_1_0",
+    "models/local_structure_study_v0_1_0",
+    "models/retention_aware_selection_v0_1_0",
+    "models/retention_aware_training_v0_1_0",
+    "models/robustness_benchmark_v0_1_0",
+    "models/spatial_feature_study_v0_1_0",
+    "models/spatial_resolution_study_v0_1_0",
+    "models/structure_tensor_study_v0_1_0",
+)
+PROTECTED_DEPENDENCY_REPORT_ROOTS: Final[tuple[str, ...]] = PROTECTED_REPORT_ROOTS
+PROTECTED_DEPENDENCY_IGNORED_ROOTS: Final[tuple[str, ...]] = (
+    "data/processed/_m7b_clean_run_1_snapshot",
+    "data/processed/_m7b_clean_run_2",
+    "data/processed/_m7b_probe",
+    "data/processed/_m7b_probe2",
+    "data/processed/_m7b_probe3",
+    "data/processed/_m7b_probe4",
+    "data/processed/repro_a",
+    "data/processed/repro_b",
+)
+M7C_OUTPUT_FILES: Final[tuple[str, ...]] = (
+    "benchmark_comparison.csv",
+    "claim_evidence.csv",
+    "error_concentration.csv",
+    "family_metrics.csv",
+    "font_differences.csv",
+    "font_metrics.csv",
+    "input_manifest.csv",
+    "isolation_checks.csv",
+    "paired_differences.csv",
+    "protocol.json",
+    "report.md",
+    "run_metadata.json",
+    "severity_metrics.csv",
+    "source_metrics.csv",
+    "uncertainty.csv",
+)
 ALLOWED_FONT_DIFFERENCE_RULES: Final[frozenset[str]] = frozenset(
     {"any_pairwise_primary_rmse_ci_excludes_zero"}
 )
@@ -3178,6 +3270,108 @@ def _fingerprint_hash(fingerprint: Mapping[str, str]) -> str:
     return sha256_bytes(canonical_json(fingerprint).encode("utf-8"))
 
 
+@dataclass(frozen=True, slots=True)
+class ProtectedDependencyMembership:
+    """Explicit membership of the frozen dependencies M7C verification protects.
+
+    The membership replaces M7C's original whole-directory fingerprints over
+    the shared ``configs/``, ``data/processed/`` and ``models/`` trees. Files
+    that M7C never declared as inputs and that live outside the declared
+    membership are not M7C dependencies, so adding them no longer invalidates
+    M7C verification.
+    """
+
+    version: str
+    config_files: tuple[str, ...]
+    dataset_roots: tuple[str, ...]
+    model_roots: tuple[str, ...]
+    report_roots: tuple[str, ...]
+    ignored_roots: tuple[str, ...]
+    output_files: tuple[str, ...]
+
+    @property
+    def roots(self) -> tuple[str, ...]:
+        """Every declared directory whose file set must match exactly."""
+        return self.dataset_roots + self.model_roots + self.report_roots
+
+
+def protected_dependency_membership() -> ProtectedDependencyMembership:
+    """Return the declared M7C protected-dependency membership."""
+    return ProtectedDependencyMembership(
+        version=PROTECTED_DEPENDENCY_MEMBERSHIP_VERSION,
+        config_files=PROTECTED_DEPENDENCY_CONFIG_FILES,
+        dataset_roots=PROTECTED_DEPENDENCY_DATASET_ROOTS,
+        model_roots=PROTECTED_DEPENDENCY_MODEL_ROOTS,
+        report_roots=PROTECTED_DEPENDENCY_REPORT_ROOTS,
+        ignored_roots=PROTECTED_DEPENDENCY_IGNORED_ROOTS,
+        output_files=M7C_OUTPUT_FILES,
+    )
+
+
+def _is_ignored_member(path: str, membership: ProtectedDependencyMembership) -> bool:
+    return any(path == root or path.startswith(f"{root}/") for root in membership.ignored_roots)
+
+
+def _scoped_fingerprint(
+    membership: ProtectedDependencyMembership,
+) -> dict[str, str]:
+    """Hash exactly the declared members of the protected-dependency membership.
+
+    Only the declared configuration files and the non-image files under the
+    declared roots are hashed. Unrelated files elsewhere in the repository, and
+    files in the explicitly ignored scratch roots, are excluded.
+    """
+    fingerprint: dict[str, str] = {}
+    for relative in membership.config_files:
+        path = Path(relative)
+        if not path.is_file():
+            continue
+        fingerprint[relative] = sha256_file(path)
+    for root in membership.roots:
+        for relative, digest in _fingerprint_tree(Path(root), skip_images=True).items():
+            if _is_ignored_member(relative, membership):
+                continue
+            fingerprint[relative] = digest
+    return fingerprint
+
+
+def _expected_scoped_fingerprint(
+    recorded: Mapping[str, str],
+    membership: ProtectedDependencyMembership,
+) -> dict[str, str]:
+    """Restrict a recorded M7C asset snapshot to the declared membership.
+
+    The expected hashes are the ones M7C recorded when it ran, never
+    re-derived from the current tree, so a modified, deleted or substituted
+    dependency is still detected.
+    """
+    expected: dict[str, str] = {}
+    for relative, digest in recorded.items():
+        if relative in membership.config_files:
+            expected[relative] = digest
+            continue
+        for root in membership.roots:
+            if relative == root or relative.startswith(f"{root}/"):
+                if not _is_ignored_member(relative, membership):
+                    expected[relative] = digest
+                break
+    return expected
+
+
+def _scoped_fingerprint_mismatches(
+    expected: Mapping[str, str],
+    current: Mapping[str, str],
+) -> dict[str, list[str]]:
+    """Classify the differences between the expected and current membership."""
+    return {
+        "missing": sorted(set(expected) - set(current)),
+        "unexpected": sorted(set(current) - set(expected)),
+        "modified": sorted(
+            path for path in set(expected) & set(current) if expected[path] != current[path]
+        ),
+    }
+
+
 def _output_hashes(output_dir: Path) -> dict[str, str]:
     hashes: dict[str, str] = {}
     for path in sorted(output_dir.iterdir()):
@@ -3222,6 +3416,8 @@ def _build_metadata(
     output_hashes: Mapping[str, str],
     frozen_assets: Mapping[str, str],
     frozen_assets_hash: str,
+    frozen_dependencies: Mapping[str, str] | None = None,
+    frozen_dependencies_hash: str | None = None,
     elapsed_seconds: float,
 ) -> dict[str, Any]:
     config = inputs.config
@@ -3273,6 +3469,9 @@ def _build_metadata(
         },
         "frozen_assets": dict(frozen_assets),
         "frozen_assets_hash": frozen_assets_hash,
+        "frozen_dependencies": dict(frozen_dependencies or {}),
+        "frozen_dependencies_hash": frozen_dependencies_hash,
+        "frozen_dependency_membership": protected_dependency_membership().version,
         "output_hashes": dict(output_hashes),
         "elapsed_seconds": round(float(elapsed_seconds), 3),
     }
@@ -3292,7 +3491,8 @@ def run_analysis(
         raise CrossFontError(
             f"output directory already exists: {output_dir}; pass --overwrite to replace it"
         )
-    frozen_before = _protected_fingerprint()
+    membership = protected_dependency_membership()
+    dependencies_before = _scoped_fingerprint(membership)
     inputs = load_inputs(config)
     result = analyze(inputs)
     report = build_report(inputs, result)
@@ -3324,15 +3524,18 @@ def run_analysis(
     _write_json(result.protocol, output_dir / "protocol.json")
     (output_dir / "report.md").write_text(report, encoding="utf-8")
     output_hashes = _output_hashes(output_dir)
-    frozen_after = _protected_fingerprint()
-    if frozen_before != frozen_after:
-        raise CrossFontError("protected frozen assets changed during the M7C run")
+    dependencies_after = _scoped_fingerprint(membership)
+    if dependencies_before != dependencies_after:
+        raise CrossFontError("declared protected dependencies changed during the M7C run")
+    frozen_assets = _protected_fingerprint()
     metadata = _build_metadata(
         inputs,
         result,
         output_hashes=output_hashes,
-        frozen_assets=frozen_after,
-        frozen_assets_hash=_fingerprint_hash(frozen_after),
+        frozen_assets=frozen_assets,
+        frozen_assets_hash=_fingerprint_hash(frozen_assets),
+        frozen_dependencies=dependencies_after,
+        frozen_dependencies_hash=_fingerprint_hash(dependencies_after),
         elapsed_seconds=time.perf_counter() - started,
     )
     _write_json(metadata, output_dir / "run_metadata.json")
@@ -3367,6 +3570,106 @@ def _compare_table(
         checks.append(CheckResult(f"table:{name}", False, f"{type(error).__name__}: {error}"))
     else:
         checks.append(CheckResult(f"table:{name}", True, "replayed table matches"))
+
+
+def _verify_protected_dependencies(
+    metadata: Mapping[str, Any],
+    output_dir: Path,
+) -> list[CheckResult]:
+    """Verify M7C's declared protected dependencies.
+
+    The contract is scoped to the dependencies M7C actually declares, so an
+    unrelated configuration or dataset added to a shared directory later does
+    not invalidate M7C, while a modified, deleted, missing or substituted
+    declared dependency is still detected. The expected hashes come from the
+    snapshot M7C recorded when it ran; they are never re-derived from the
+    current tree.
+    """
+    checks: list[CheckResult] = []
+    membership = protected_dependency_membership()
+    recorded = metadata.get("frozen_assets")
+    if not isinstance(recorded, dict) or not recorded:
+        checks.append(
+            CheckResult(
+                "frozen_dependency_manifest",
+                False,
+                "recorded frozen-asset snapshot is missing or malformed",
+            )
+        )
+        return checks
+    manifest_intact = metadata.get("frozen_assets_hash") == _fingerprint_hash(recorded)
+    checks.append(
+        CheckResult(
+            "frozen_dependency_manifest",
+            manifest_intact,
+            (
+                "recorded frozen-asset snapshot is internally consistent"
+                if manifest_intact
+                else "recorded frozen-asset snapshot does not match its recorded hash"
+            ),
+        )
+    )
+    if not manifest_intact:
+        return checks
+    expected = _expected_scoped_fingerprint(recorded, membership)
+    recorded_dependencies = metadata.get("frozen_dependencies")
+    if isinstance(recorded_dependencies, dict) and recorded_dependencies:
+        if recorded_dependencies != expected:
+            checks.append(
+                CheckResult(
+                    "frozen_dependencies",
+                    False,
+                    "recorded dependency snapshot disagrees with the recorded asset snapshot",
+                )
+            )
+            return checks
+        expected = recorded_dependencies
+    if not expected:
+        checks.append(
+            CheckResult(
+                "frozen_dependencies",
+                False,
+                "declared protected dependencies are absent from the recorded snapshot",
+            )
+        )
+        return checks
+    current = _scoped_fingerprint(membership)
+    mismatches = _scoped_fingerprint_mismatches(expected, current)
+    failed = {key: value for key, value in mismatches.items() if value}
+    if failed:
+        detail = "; ".join(f"{key}: {value[:5]}" for key, value in sorted(failed.items()))
+        checks.append(
+            CheckResult(
+                "frozen_dependencies",
+                False,
+                f"{len(expected)} declared dependencies checked; {detail}",
+            )
+        )
+    else:
+        checks.append(
+            CheckResult(
+                "frozen_dependencies",
+                True,
+                f"{len(expected)} declared protected dependencies are unchanged",
+            )
+        )
+    actual_output_files = sorted(path.name for path in output_dir.iterdir() if path.is_file())
+    expected_output_files = sorted(membership.output_files)
+    checks.append(
+        CheckResult(
+            "output_file_set",
+            actual_output_files == expected_output_files,
+            (
+                "the M7C output file set is exactly as declared"
+                if actual_output_files == expected_output_files
+                else (
+                    f"unexpected output file set: missing {sorted(set(expected_output_files) - set(actual_output_files))}, "
+                    f"unexpected {sorted(set(actual_output_files) - set(expected_output_files))}"
+                )
+            ),
+        )
+    )
+    return checks
 
 
 def verify_analysis(
@@ -3462,15 +3765,7 @@ def verify_analysis(
             "recorded output hashes match",
         )
     )
-    current_frozen = _protected_fingerprint()
-    checks.append(
-        CheckResult(
-            "frozen_assets",
-            metadata.get("frozen_assets") == current_frozen
-            and metadata.get("frozen_assets_hash") == _fingerprint_hash(current_frozen),
-            "protected frozen assets are unchanged",
-        )
-    )
+    checks.extend(_verify_protected_dependencies(metadata, output_dir))
     return VerificationReport(dataset=str(output_dir), checks=tuple(checks))
 
 

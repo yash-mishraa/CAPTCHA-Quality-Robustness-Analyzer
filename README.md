@@ -871,7 +871,7 @@ Implemented:
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 594 tests in total, all passing, including byte-identical dataset
+- 621 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -921,7 +921,13 @@ Implemented:
   and leakage-control checks, endpoint/sample-size/success-criteria/stopping-rule
   coverage, report-section and non-execution checks, output-path protection,
   deterministic two-run output equality, tamper detection, JSON-safe metadata
-  and CLI run/verify tests.
+  and CLI run/verify tests, and the M7C scoped protected-dependency contract:
+  verification with the declared dependencies intact, an unrelated
+  configuration not invalidating M7C, modified and deleted pinned inputs,
+  a deleted declared-but-not-pinned dependency, altered and unexpected M7C
+  output artifacts, missing, malformed and tampered dependency manifests
+  failing closed, deterministic repeated verification, and M7D remaining
+  unaffected.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -1313,14 +1319,20 @@ readability or solvability):
   `license_status = review_required_before_generation`. A missing font, a
   changed hash, lost glyph coverage or an unresolved license stops the run —
   no substitute font may be chosen after outcomes are seen.
-- **One frozen-verifier interaction is recorded rather than hidden.** The M7C
-  `verify` command fingerprints the whole `configs/` tree, so adding the new
-  M7D configuration changes that tree-level fingerprint. The difference is
-  exactly one added file: all 360 files recorded in the M7C run remain
-  byte-identical, all 31 M7C pinned inputs still match their recorded SHA-256
-  values, and all M7C output artifacts are unchanged. No M7C code or artifact
-  was modified to silence the check, and M7D re-verifies the M7C configuration,
-  tables, metadata and report directly by content instead.
+- **One frozen-verifier interaction was recorded, then repaired.** The M7C
+  `verify` command originally fingerprinted the whole `configs/` tree, so
+  adding the new M7D configuration changed that tree-level fingerprint. The
+  difference was exactly one added file: all 360 files recorded in the M7C run
+  remained byte-identical, all 31 M7C pinned inputs still matched their recorded
+  SHA-256 values, and all M7C output artifacts were unchanged. M7C code and
+  artifacts were not modified to silence the check, and M7D re-verifies the
+  M7C configuration, tables, metadata and report directly by content instead.
+  A later maintenance change scoped the M7C protected-dependency fingerprint
+  to the dependencies M7C actually declares, so an unrelated configuration
+  added to a shared directory no longer invalidates M7C while a modified,
+  deleted or substituted declared dependency is still detected. That change
+  alters verifier logic only — no metric, prediction, dataset, report or
+  scientific conclusion was altered or regenerated.
 - **Null, mixed and negative results have defined meanings.** A null contrast
   means no detected matched difference on this roster and these corruptions;
   it is not equivalence, universal robustness or font-population homogeneity,
