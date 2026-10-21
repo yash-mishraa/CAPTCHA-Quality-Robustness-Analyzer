@@ -1,0 +1,272 @@
+# Milestone M8A benchmark output-lifecycle protocol, version 0.1.0.
+#
+# This protocol versions the transition between the historical M7D planning
+# state and the authorised execution state of the planned cross-font
+# generalization benchmark. It creates nothing. It declares exactly which
+# paths a future execution milestone may create, what the pre-execution and
+# post-execution verification rules are, and which frozen inputs must stay
+# byte-identical across the transition.
+#
+# The M7D planning artifacts are immutable. M7D's own
+# 'no_planned_outputs_created' check is retained and is not excluded from
+# protection; the lifecycle verifier re-verifies the M7D artifacts and
+# classifies the planning-state check in each state explicitly, so a later
+# execution run cannot retroactively rewrite the original plan.
+
+[run]
+name = "benchmark-output-lifecycle"
+version = "v0.1.0"
+milestone = "M8A"
+status = "authorized_not_executed"
+seed = 20260821
+
+[states]
+historical = "The M7D planning state. The M7D plan configuration, plan manifest, report, run metadata, recorded snapshot and expected hashes are immutable. They are re-verified by the M7D verifier and, independently, by this lifecycle verifier."
+authorized = "The current state. A future execution milestone is authorised to create exactly the paths listed under [authorized_execution], under the protocol listed there, and nothing else. The planned paths do not exist yet."
+executed = "The state after the authorised execution milestone has run and produced the benchmark dataset and report. The planned paths exist with exactly the declared membership, and every frozen input is unchanged."
+
+[historical_state]
+m7d_config = "configs/evaluation_design_plan_v0_1_0.toml"
+m7d_config_sha256 = "e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3"
+m7d_plan_manifest = "reports/evaluation_design_plan_v0_1_0/plan_manifest.json"
+m7d_plan_manifest_sha256 = "7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8"
+m7d_report = "reports/evaluation_design_plan_v0_1_0/report.md"
+m7d_report_sha256 = "bb6755f800874903cf19c7e1ad83cb856462033b801e9e2a158267d3004195c2"
+m7e_v0_1_0_config = "configs/font_roster_audit_v0_1_0.toml"
+m7e_v0_1_0_config_sha256 = "5c8140e4bebb4ede473fdbf6499b476afc73157a595a4a16a16be61805038755"
+m7e_v0_2_0_config = "configs/font_roster_audit_v0_2_0.toml"
+m7e_v0_2_0_config_sha256 = "bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa"
+planning_state_check = "no_planned_outputs_created"
+note = "The M7D verifier continues to validate the M7D artifacts unchanged. Its planning-state check records the planning state; after the authorised execution it is expected to report the transition, and the lifecycle verifier classifies it rather than bypassing it."
+
+[authorized_execution]
+milestone = "M8B"
+protocol = "configs/cross_font_benchmark_protocol_v0_1_0.toml"
+protocol_sha256 = "192902a17d23a73a0698a16bfe26131104a72fa02eb5b0b8631ea05b873ad316"
+dataset_output = "data/processed/matched_font_benchmark_v0.1.0"
+report_output = "reports/matched_font_benchmark_v0_1_0"
+n_sources = 300
+n_rows = 6300
+n_primary_rows = 5700
+n_diagnostic_rows = 600
+n_images = 6300
+prohibition = "Only the dataset_output and report_output directories may be created, and only with the declared membership below. No font binary may be written anywhere. No other path in the repository, in the frozen milestone directories or in the shared configuration, dataset, model and report trees may be created or modified by the execution milestone."
+immutability = "The execution milestone may not modify the M7D plan configuration, plan manifest, report, run metadata, recorded snapshot or expected hashes, nor the M7E audit protocols, nor any M3-M7C artifact. The lifecycle verifier re-hashes all of them in both states."
+
+[[authorized_dataset_files]]
+name = "manifest.csv"
+role = "one row per benchmark row: sample, source, font, case, variant, image and reference hashes, target"
+
+[[authorized_dataset_files]]
+name = "sources.csv"
+role = "one row per source: source, case, font, text length, text hash, render seed, split"
+
+[[authorized_dataset_files]]
+name = "source_cases.csv"
+role = "one row per source and case: the matched-case manifest, with the per-case text hash"
+
+[[authorized_dataset_files]]
+name = "ground_truth.csv"
+role = "the literal text strings; Git-ignored, never committed"
+
+[[authorized_dataset_files]]
+name = "features.csv"
+role = "the eight frozen features per row"
+
+[[authorized_dataset_files]]
+name = "dataset_summary.json"
+role = "counts, hashes, config identity and the generation parameters"
+
+[[authorized_dataset_directories]]
+name = "images"
+role = "the rendered PNG images, one per benchmark row"
+required_image_count = 6300
+subdirectories = ["clean", "gaussian_blur", "gaussian_noise", "thin_lines", "arc_strokes", "elastic"]
+
+[[authorized_report_files]]
+name = "predictions.csv"
+role = "the frozen champion's prediction per row"
+
+[[authorized_report_files]]
+name = "overall_metrics.csv"
+role = "primary overall MAE, RMSE and R2"
+
+[[authorized_report_files]]
+name = "font_metrics.csv"
+role = "primary metrics per font"
+
+[[authorized_report_files]]
+name = "family_metrics.csv"
+role = "primary metrics per corruption family"
+
+[[authorized_report_files]]
+name = "severity_metrics.csv"
+role = "primary metrics per corruption severity"
+
+[[authorized_report_files]]
+name = "group_metrics.csv"
+role = "primary metrics per font group: familiar, M7B held-out, new held-out"
+
+[[authorized_report_files]]
+name = "source_metrics.csv"
+role = "per-source aggregates"
+
+[[authorized_report_files]]
+name = "target_distributions.csv"
+role = "per-scope target distributions and near-degeneracy flags"
+
+[[authorized_report_files]]
+name = "uncertainty.csv"
+role = "source-grouped and matched-case bootstrap intervals"
+
+[[authorized_report_files]]
+name = "comparison.csv"
+role = "the recorded familiar-font baseline beside the new results"
+
+[[authorized_report_files]]
+name = "dataset_composition.csv"
+role = "the realised composition, checked against the protocol"
+
+[[authorized_report_files]]
+name = "isolation_checks.csv"
+role = "the execution milestone's own integrity checks"
+
+[[authorized_report_files]]
+name = "input_manifest.csv"
+role = "the pinned inputs the execution milestone used"
+
+[[authorized_report_files]]
+name = "report.md"
+role = "the human-readable benchmark report"
+
+[[authorized_report_files]]
+name = "run_metadata.json"
+role = "the execution metadata, including the runtime-only field"
+
+[verification_rules]
+pre_execution = "The authorised dataset and report paths do not exist. Every pinned input matches its recorded SHA-256, including the M7D plan artifacts, the M7E audit protocols, the M5C champion artifact and card, and the pinned source files of the rendering, corruption, feature and inference code. The M7D and M7E verifiers pass, including the M7D planning-state check. The roster in the execution protocol matches the M7D planned fonts and the M7E version 0.2.0 evidence, font key by font key and hash by hash. No font binary exists anywhere in the working tree. The M7D plan, report, manifest, run metadata, recorded snapshot and expected hashes are byte-identical to their recorded values."
+post_execution = "The authorised dataset and report paths exist. The dataset directory contains exactly the declared top-level files and an images directory with exactly the declared image count. The report directory contains exactly the declared files. Every pinned input is still byte-identical, so the execution run did not rewrite the M7D plan or any frozen artifact. The realised dataset matches the protocol: the ten fonts and their hashes, the thirty matched cases, the 300 sources, the 6,300 rows, the 5,700 primary and 600 diagnostic rows, and the source-grouped split membership. No font binary exists anywhere in the working tree. The M7D planning-state check is expected to report the transition; the lifecycle verifier classifies it and requires that no other M7D check fails."
+fail_closed = "Any missing or unexpected member, any altered frozen input, any unapproved roster change, any tamper with the recorded snapshot, any model artifact or feature-schema change, and any unresolved protocol item fails the verification. No expected hash is ever regenerated from the current tree."
+
+[membership]
+membership_note = "The dependency membership is file-exact: only the files listed above are hashed. An unrelated configuration, dataset, model or report added to a shared directory later does not invalidate this verification, while a modified or deleted declared input does. No whole growing directory is fingerprinted, and no expected hash is generated from a current output."
+
+[[inputs]]
+key = "m7d_config"
+path = "configs/evaluation_design_plan_v0_1_0.toml"
+sha256 = "e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3"
+role = "M7D planning configuration: the immutable design"
+
+[[inputs]]
+key = "m7d_plan_manifest"
+path = "reports/evaluation_design_plan_v0_1_0/plan_manifest.json"
+sha256 = "7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8"
+role = "M7D machine-readable plan"
+
+[[inputs]]
+key = "m7d_report"
+path = "reports/evaluation_design_plan_v0_1_0/report.md"
+sha256 = "bb6755f800874903cf19c7e1ad83cb856462033b801e9e2a158267d3004195c2"
+role = "M7D human-readable plan"
+
+[[inputs]]
+key = "m7e_v0_1_0_config"
+path = "configs/font_roster_audit_v0_1_0.toml"
+sha256 = "5c8140e4bebb4ede473fdbf6499b476afc73157a595a4a16a16be61805038755"
+role = "M7E superseded audit protocol"
+
+[[inputs]]
+key = "m7e_v0_2_0_config"
+path = "configs/font_roster_audit_v0_2_0.toml"
+sha256 = "bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa"
+role = "M7E current audit protocol"
+
+[[inputs]]
+key = "m7e_eligibility"
+path = "reports/font_roster_audit_v0_2_0/eligibility.csv"
+sha256 = "d7ba41702991d20e6ca32dfb091ddea0acdff891726a25425edbcb564175ba2b"
+role = "M7E current eligibility decisions"
+
+[[inputs]]
+key = "m7e_font_evidence"
+path = "reports/font_roster_audit_v0_2_0/font_evidence.csv"
+sha256 = "a8b146ee4c93980b4c9770cb98dac919e1469c60fd5b35d2b565483862e7acf4"
+role = "M7E current licence evidence"
+
+[[inputs]]
+key = "execution_protocol"
+path = "configs/cross_font_benchmark_protocol_v0_1_0.toml"
+sha256 = "192902a17d23a73a0698a16bfe26131104a72fa02eb5b0b8631ea05b873ad316"
+role = "the frozen execution protocol"
+
+[[inputs]]
+key = "m5c_artifact"
+path = "models/retention_aware_selection_v0_1_0/selected_policy.joblib"
+sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+role = "the frozen M5C champion artifact"
+
+[[inputs]]
+key = "m5c_card"
+path = "models/retention_aware_selection_v0_1_0/selected_policy_card.json"
+sha256 = "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+role = "the frozen M5C champion model card"
+
+[[inputs]]
+key = "features_code"
+path = "src/captcha_quality/features.py"
+sha256 = "ee345d09f3f0898d2b13daec85fa695a7c8f59693e318853cf3bdb20a88a1b30"
+role = "the frozen feature extractor"
+
+[[inputs]]
+key = "render_code"
+path = "src/captcha_quality/render.py"
+sha256 = "729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e"
+role = "the frozen renderer"
+
+[[inputs]]
+key = "corruptions_code"
+path = "src/captcha_quality/corruptions.py"
+sha256 = "303136fcf65f92c6d17545d3b56233d827b2ffb98acbb2f2c4aa363789f316a3"
+role = "the frozen corruption operators and seed derivation"
+
+[[inputs]]
+key = "dataset_code"
+path = "src/captcha_quality/dataset.py"
+sha256 = "5af5903a38652b68522a09d0f70a7c010e8d787e6630ae758cf23b39bb2587f0"
+role = "the frozen dataset and source-planning code"
+
+[[inputs]]
+key = "splits_code"
+path = "src/captcha_quality/splits.py"
+sha256 = "82b61f6048e09055fa65118313cb5b586ca769cd746df3f492b4eb2ea230ee3f"
+role = "the frozen grouped-split code"
+
+[[inputs]]
+key = "modelling_code"
+path = "src/captcha_quality/modelling.py"
+sha256 = "c8c08596f1b60169e6e97c13ec1575911caa96372f6e192e6b33785dfafde682"
+role = "the frozen metric definitions"
+
+[[inputs]]
+key = "inference_code"
+path = "src/captcha_quality/heldout_font_benchmark.py"
+sha256 = "0c32c1a754016154675aac2a274d1f679ce62a9a4e722780149fa30f5cc159eb"
+role = "the frozen zero-shot inference implementation"
+
+[[inputs]]
+key = "m7d_module"
+path = "src/captcha_quality/evaluation_plan.py"
+sha256 = "19900188e5d660cb9d7731dc731e518691058fdd59e25949e726697bd232a1ee"
+role = "the M7D plan verifier"
+
+[[inputs]]
+key = "m7c_module"
+path = "src/captcha_quality/cross_font_analysis.py"
+sha256 = "e26db288c4d9ce696b1ba8412aa98e961027b3d295de068a07a61a84ac2a40b2"
+role = "the M7C analysis verifier"
+
+[[inputs]]
+key = "m7e_module"
+path = "src/captcha_quality/font_roster_audit.py"
+sha256 = "1adfaaf7d264f3207a3e9c39adc0e1998ec99461be0bfe19487e4355ed11b3c4"
+role = "the M7E roster audit verifier"

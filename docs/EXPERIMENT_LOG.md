@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0019` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0020` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0020` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only protocol and lifecycle milestone (no image, text case, dataset row, prediction or model artifact): a frozen execution protocol fixes the M7D design verbatim (10 typefaces, 30 matched cases, 300 sources, 6,300 rows, the M7B ladder, the frozen renderer, the zero-shot frozen M5C champion) and a versioned lifecycle protocol enumerates the only two paths a future milestone may create plus their exact membership, with a file-exact 20-member dependency set, the M7D planning-state check classified rather than deleted, and two unresolved details recorded as fail-closed; the lifecycle is left in the **authorized-but-not-executed** state and every transition was exercised only in isolated temporary shadow trees |
 | `EXP-0019` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only licence resolution for the one face M7E left unresolved (no images, dataset rows, predictions or model artifacts): Luminari is cleared as **eligible** for the intended evaluation-only workflow, because the installed copy is governed by the macOS 27 product licence and the rights holder's own terms treat a software rasteriser producing static png, jpeg and gif images from the installed font data as a licensed use while restricting only the font software; four binding conditions are recorded (pinned environment and hash, no font binary in the tree, evaluation only with no training on font-rendered data, and a fresh review before leaving the macOS product licence); all ten faces are eligible, the audit gate is passed and the benchmark generation gate is **open**, with no roster change proposed and three residual uncertainties recorded rather than resolved |
 | `EXP-0018` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only font-roster licensing and availability audit of the ten typefaces the M7D plan proposes (no images, text cases, dataset rows, predictions or model artifacts): all ten are available with the M7D-pinned SHA-256 and are proprietary, none is open-licensed; nine are eligible for the intended evaluation-only workflow because the licence permits distributing the rendered images and the workflow never redistributes a font binary; Luminari is `review_required` because the macOS product licence is silent on redistributing the rendered output while the Canada Type terms that cover it require a paid licence, so the audit gate is partially passed and the benchmark generation gate is closed |
 | `EXP-0017` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only evaluation-design plan (no dataset, image, model or prediction produced): 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated and Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic) with the frozen M5C champion evaluated zero-shot; font-level inference stays descriptive because ten purposive fonts are not a font population |
@@ -103,6 +104,159 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0020 — Benchmark protocol and output-lifecycle versioning for the planned cross-font benchmark
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Can the repository be prepared for the planned
+  cross-font generalization benchmark with a frozen, reproducible execution
+  protocol and an explicitly versioned output-lifecycle transition, without
+  generating any benchmark data and without making the historical M7D plan
+  mutable? This is a **planning and verification** milestone. It generates no
+  image, no text case, no dataset row, no prediction and no model artifact, it
+  executes no inference, it trains and selects no model, and it modifies no
+  historical artifact. The target remains synthetic-reference SSIM; this is
+  not human readability, CAPTCHA solvability, security or production
+  robustness.
+- **Code revision:** base `882c0cd` (M7E licence resolution) plus the M8A
+  implementation, committed as `feat: version cross-font benchmark execution
+  protocol`. The reported run was repeated from the clean commit so provenance
+  records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; macOS 27.0.1
+  (arm64). No GPU was used.
+- **Configuration:** `configs/benchmark_lifecycle_v0_1_0.toml` (lifecycle
+  protocol, SHA-256 recorded in the run metadata) and
+  `configs/cross_font_benchmark_protocol_v0_1_0.toml` (execution protocol,
+  SHA-256 `192902a17d23a73a0698a16bfe26131104a72fa02eb5b0b8631ea05b873ad316`).
+  Seed `20260821`.
+- **Upstream frozen inputs:** twenty file-exact declared dependencies, each
+  pinned by SHA-256 in the lifecycle protocol: the M7D planning configuration
+  (`e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3`), the
+  M7D plan manifest
+  (`7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8`), the
+  M7D report
+  (`bb6755f800874903cf19c7e1ad83cb856462033b801e9e2a158267d3004195c2`), the
+  M7E audit protocols v0.1.0 and v0.2.0, the M7E v0.2.0 eligibility and
+  licence-evidence tables, the execution protocol, the M5C champion artifact
+  (`c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`) and
+  card (`9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`),
+  and the pinned source files of the feature extractor, renderer, corruption
+  operators, dataset and split code, modelling code and the frozen M7B
+  zero-shot inference implementation.
+- **Dataset:** none created. The *planned* dataset would be
+  `matched-font-v0.1.0` at `data/processed/matched_font_benchmark_v0.1.0/`
+  with the benchmark report at `reports/matched_font_benchmark_v0_1_0/`; M8A
+  created nothing at either path, and M7D's `no_planned_outputs_created`
+  check still passes.
+- **Split:** none created. The protocol fixes one `eval` split containing all
+  300 sources, with every variant of a source and every font render of a case
+  kept groupable.
+- **Seeds:** protocol seed `20260821`; the benchmark dataset seed is pinned at
+  `20260821` with the case namespace `matched_case` and the render namespace
+  `render`.
+- **Runtime:** recorded in the verification output; two clean-commit runs give
+  identical substantive results.
+
+**Method.** The milestone produces two versioned protocols and one verifier.
+The execution protocol freezes the scientific design as the M7D plan records
+it: the ten typefaces with their pinned SHA-256 values, the thirty matched
+text cases by deterministic versioned derivation, the renderer parameters and
+the 192×64 8-bit grayscale PNG encoding assumptions, the M7B corruption
+ladder and diagnostic exclusions with their seed rule, the exact row counts and
+output membership, the source, case and sample identifier schemes and the
+pairing rule, the M5C artifact and card hashes with the frozen eight-feature
+schema and the zero-shot inference interface, the metric definitions and
+aggregation levels, the execution order and failure behaviour, the environment
+and reproducibility checks, the licensing conditions and the expected handling
+of unavailable fonts, hash mismatches, rendering failures, duplicates and
+malformed outputs. The lifecycle protocol declares the historical M7D planning
+state, the authorised execution state and the executed state, enumerates the
+only two paths a future milestone may create together with their exact
+membership, states the pre-execution and post-execution verification rules, and
+pins a file-exact twenty-member dependency set. The verifier resolves the
+state, re-hashes every declared input, re-verifies the historical M7D state,
+the execution protocol and the roster against the M7E evidence, checks that no
+font binary exists anywhere, applies the state-specific rules, and *classifies*
+the M7D planning-state check rather than bypassing it. Every lifecycle
+simulation was performed in isolated temporary shadow trees; no planned output
+path was created in the repository.
+
+**Metrics.**
+
+| Metric | Value | Notes |
+| --- | --- | --- |
+| Lifecycle state | authorized_not_executed | the planned paths do not exist |
+| Authorised paths | 2 | `data/processed/matched_font_benchmark_v0.1.0`, `reports/matched_font_benchmark_v0_1_0` |
+| Authorised dataset files / directories | 6 / 1 | plus `images` with exactly 6,300 PNGs in six subdirectories |
+| Authorised report files | 15 | exact membership required |
+| Declared dependencies | 20 | file-exact, each with a recorded SHA-256 |
+| Roster members matching M7D and M7E v0.2.0 | 10 / 10 | font key and hash both equal |
+| Primary / diagnostic rows specified | 5,700 / 600 | the M7D plan counts, unchanged |
+| Unresolved protocol items | 2 | the lifecycle verifier fails closed on them post-execution |
+| Font binaries in the working tree | 0 | verified on every run |
+| M7D planning-state check | passes | retained, not deleted, not excluded from protection |
+| Images, dataset rows, predictions, model artifacts created | 0 | nothing was generated |
+
+**Observations.** The broad fingerprint problem is inherited rather than
+specific to M7D: the whole-`configs/`, whole-`data/processed/` and
+whole-`models/` trees are shared and growing, so any future milestone
+configuration would have invalidated M7D's check, exactly as the M7D
+configuration invalidated M7C's. The scoped contract removes that coupling
+without weakening the guarantee that matters, because the result-affecting
+dependencies are the 31 hash-pinned M7D inputs and the M5C champion, both
+verified on every run, and because the scoped membership additionally pins the
+source files of the rendering, corruption, feature and inference code, so a
+change to the renderer or to the feature schema is a protocol change that the
+verifier catches. A structural property of the frozen verifiers is worth
+recording: the M7D verifier compares a recomputed isolation-check table with
+the stored one byte for byte, so its planning-state check necessarily reports
+the transition once the benchmark exists. The lifecycle verifier therefore
+*classifies* that check instead of weakening or deleting it, and requires that
+no other M7D check may fail in either state. Two details could not be
+established from committed artifacts — the literal text strings, which depend
+on a generator that does not exist yet, and the matched-design source
+identifier scheme — and they are recorded as unresolved with a fail-closed rule
+rather than invented.
+
+**Conclusion.** The repository now carries a frozen, reproducible execution
+protocol for the planned cross-font benchmark and an explicitly versioned
+output-lifecycle transition that keeps the M7D plan immutable, scopes its
+dependency membership to the files it actually depends on, enumerates the exact
+paths a future milestone may create, and states the pre- and post-execution
+verification rules. The lifecycle is left in the **authorized-but-not-executed**
+state, the benchmark generation gate stays closed on the M7D plan's own terms
+because the plan is still a plan, and the scientific design is unchanged: ten
+typefaces, thirty matched cases, 300 sources, 6,300 rows, the M7B corruption
+ladder, the frozen renderer and the zero-shot frozen M5C champion.
+
+**Limitations.** This milestone specifies and verifies a protocol; it
+exercises no code path of the future generator and produces no evidence about
+the benchmark's outcome. The M7D planning-state check will necessarily report
+the transition once the benchmark exists, which the lifecycle verifier
+classifies rather than suppresses. The two unresolved protocol items must be
+resolved by the execution milestone before any result may be reported. The
+licensing conditions recorded in the protocol remain those established by the
+M7E audit: all ten faces are proprietary, the rendered images may be
+distributed but no font binary may be, and the faces are used for evaluation
+only. Nothing in this milestone supports a claim about human readability,
+CAPTCHA security or production robustness.
+
+**Next step.** Stop for review. The next milestone may execute the reviewed
+protocol as a separate, explicitly authorized run, together with the separate,
+versioned lifecycle change that moves the planned benchmark output paths into
+existence. Neither is started here.
+
+**Artifacts.** The committed configuration files
+`configs/cross_font_benchmark_protocol_v0_1_0.toml` and
+`configs/benchmark_lifecycle_v0_1_0.toml`, the module
+`src/captcha_quality/benchmark_lifecycle.py` with the
+`captcha-benchmark-lifecycle` CLI, and the regression tests
+`tests/test_benchmark_lifecycle.py` are the reproducible protocol. No
+benchmark output was created.
 
 ---
 

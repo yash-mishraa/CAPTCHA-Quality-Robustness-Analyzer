@@ -2685,6 +2685,123 @@ superseded protocol, the unchanged absence of the planned benchmark output
 paths, the continued pass and tamper detection of the M7C and M7D verifiers,
 and deterministic verification of the current protocol.
 
+### 5.24 M8A benchmark protocol and output-lifecycle versioning
+
+M8A prepares the repository for the planned cross-font generalization
+benchmark. It is a **planning and verification** milestone: it generates no
+image, no text case, no dataset row, no prediction and no model artifact, it
+executes no inference, and it changes no historical artifact. It establishes
+exactly what a future execution milestone is allowed to create, how those
+outputs will be verified, and how the historical M7D plan stays immutable.
+
+**Two versioned protocols.** `configs/cross_font_benchmark_protocol_v0_1_0.toml`
+is the frozen *execution* protocol: the complete specification the execution
+milestone will implement and run. `configs/benchmark_lifecycle_v0_1_0.toml` is
+the *output-lifecycle* protocol: it declares the authorised paths, the
+pre-execution and post-execution verification rules, and the scoped dependency
+membership. The lifecycle protocol pins the execution protocol by SHA-256, and
+the execution protocol pins the M7D plan and the M7E audit protocol. The
+dependency graph is acyclic and no protocol pins itself.
+
+**The scientific design is frozen.** The execution protocol is the M7D plan
+verbatim: ten typefaces (three familiar, seven held-out), thirty matched text
+cases per typeface, 300 source cases, 6,300 rows (5,700 primary, 600
+diagnostic), the M7B corruption ladder with the clean and 0.5 px elastic rows
+diagnostic-only, the frozen renderer at 192×64 8-bit grayscale PNG, the frozen
+M5C champion evaluated zero-shot, and synthetic-reference SSIM as the target
+with PSNR diagnostic. No model is trained, fine-tuned, recalibrated, selected
+or re-fitted, and no feature is added, removed or reordered. The roster roles
+and the project history are preserved: Georgia, Monaco and Impact were already
+evaluated in M7B and are recorded as *previously evaluated held-out fonts*, not
+as fonts that are new to the project; Verdana, Trebuchet MS, Chalkduster and
+Luminari are the genuinely new held-out identities. The protocol states
+explicitly that the seven held-out font identities, not the 300 source cases,
+are the key limitation for any font-population generalisation claim.
+
+**The text cases.** The thirty matched cases are specified by a deterministic,
+versioned derivation rule rather than as committed strings: for case index
+*i* the generator draws the text length from the configured distribution and
+then the text from the project charset, both from a single generator seeded
+with `derive_noise_seed(dataset_seed, "matched_case", str(i))`, and the
+per-font render seed is derived separately so that a change to the render
+jitter can never change a text case. The literal strings are not committed,
+matching the repository convention that raw text lives only in the Git-ignored
+ground-truth file; the produced `source_cases.csv` records the per-case text
+SHA-256, and the execution milestone must re-derive every case and fail closed
+if any derived case differs.
+
+**The output-lifecycle transition.** The lifecycle protocol distinguishes three
+states: the *historical* M7D planning state, the *authorized* execution state
+and the *executed* state. It enumerates the only two paths a future milestone
+may create — `data/processed/matched_font_benchmark_v0.1.0` and
+`reports/matched_font_benchmark_v0_1_0` — together with the exact membership
+of each: the dataset's six top-level files, its `images` directory with
+exactly 6,300 PNGs in the six declared corruption subdirectories, and the
+report's fifteen files. Everything else is prohibited, and no font binary may
+be written anywhere.
+
+M7D's `no_planned_outputs_created` check is **retained, not deleted and not
+excluded from protection**. The lifecycle verifier recomputes the M7D isolation
+rows and *classifies* them: in the pre-execution state the M7D verifier must
+pass in full, and in the post-execution state the planning-state row is
+expected to report the transition while every other M7D artifact check must
+still pass. M7D's own plan, report, manifest, run metadata, recorded snapshot
+and expected hashes are never rewritten; the lifecycle protocol pins their
+hashes and re-verifies them in both states, so a later execution run cannot
+retroactively rewrite the original plan.
+
+**Scoped, anchored dependencies.** The lifecycle dependency membership is
+file-exact: twenty declared files, each with a recorded SHA-256 — the M7D plan
+artifacts, the M7E audit protocols and tables, the execution protocol, the M5C
+champion artifact and card, and the pinned source files of the rendering,
+corruption, dataset, split, modelling and frozen inference implementations. No
+whole growing directory is fingerprinted, so an unrelated configuration,
+dataset, model or report added to a shared directory later does not invalidate
+the verification, while a modified or deleted declared input does. No expected
+hash is ever regenerated from a current output, and the manifest is not
+self-referential: a manifest edited to change its own recorded values still
+fails the cross-check against the pinned execution protocol, and a manifest
+edited together with a tampered frozen artifact still fails the M7D verifier.
+
+**Evaluation and reporting contract.** The protocol specifies, without
+executing anything: primary overall MAE, RMSE and R²; results by font, by
+corruption family and by severity; separate results for the clean rows, the
+three familiar fonts, the three previously evaluated held-out fonts and the
+four genuinely new held-out fonts; the diagnostic rows reported separately and
+excluded from every primary metric and from the bootstrap; source-grouped and
+matched-case bootstrap intervals with their limitations stated; font-level
+descriptive results over seven held-out identities; and the already recorded
+familiar-font M5C baseline shown as a reference without refitting or selecting
+on the new evaluation results. It prescribes no model change and no
+performance threshold, because no new result exists, and it forbids
+describing any SSIM result as human readability, CAPTCHA security or production
+robustness.
+
+**Unresolved items fail closed.** Two details could not be established from
+committed artifacts — the literal text strings, which depend on a generator
+that does not exist yet, and the source identifier scheme for the matched
+design. Both are recorded under `[unresolved]` with the rule that the
+lifecycle verifier fails closed in the post-execution state while any
+unresolved item remains open, rather than inventing a value.
+
+**Verification and reproducibility.** `captcha-benchmark-lifecycle verify`
+resolves the state, re-hashes every declared input, re-verifies the historical
+M7D state, the execution protocol and the roster against the M7E evidence,
+checks that no font binary exists, applies the pre-execution or post-execution
+rules, and classifies the M7D planning-state check. The milestone leaves the
+lifecycle in the **authorized-but-not-executed** state: the planned paths do
+not exist, and no planned output path was created to test the transition. The
+regression tests in `tests/test_benchmark_lifecycle.py` exercise the
+transition in isolated temporary shadow trees only: the pre-execution state
+passes without the planned outputs; a simulated execution with exactly the
+authorised membership passes; an unexpected dataset file, a missing report
+file and a missing image fail; a modified, deleted or self-consistently
+tampered frozen input fails; a modified model artifact or feature-schema file
+fails; an execution that changes the M7D historical plan fails; a tampered
+lifecycle manifest fails; the roster must match the M7E version 0.2.0 evidence;
+a font binary in the tree fails; unrelated additions to shared directories are
+accepted; and the M7C, M7D and M7E verifiers retain their behaviour.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

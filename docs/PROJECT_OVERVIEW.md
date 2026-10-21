@@ -8,8 +8,9 @@ retention-aware training-objective study, the M6A spatial-aware feature study,
 the M6B spatial resolution study, the M6C local structural feature study, the
 M6D multi-scale structure-tensor study, the M7A dataset-adequacy audit, the
 M7B held-out-font generalisation benchmark, the M7C cross-font evaluation
-analysis, the M7D next-benchmark evaluation-design plan and the M7E font-roster
-licensing and availability audit. A reproducible
+analysis, the M7D next-benchmark evaluation-design plan, the M7E font-roster
+licensing and availability audit and the M8A benchmark protocol and
+output-lifecycle versioning. A reproducible
 dataset and image-feature pipeline, a leakage-safe
 conventional-ML benchmark, source-isolated zero-shot/adaptation evaluation, a
 replayable elastic-warp pilot, a grouped geometric-robustness benchmark, a
@@ -17,12 +18,15 @@ retention-aware selection study, a retention-aware training-objective study, a
 spatial-aware feature study, a spatial resolution study, a no-reference local
 structural feature study, a no-reference multi-scale structure-tensor study, a
 read-only evaluation audit, a separately versioned unseen-font benchmark, a
-read-only cross-font analysis, a read-only evaluation-design plan and a
-read-only font-roster licensing and availability audit exist.
+read-only cross-font analysis, a read-only evaluation-design plan, a read-only
+font-roster licensing and availability audit and a read-only benchmark protocol
+and output-lifecycle versioning exist.
 M7D is a **planning** milestone: the dataset, benchmark, endpoints and success
 criteria it specifies are *planned, not executed*. M7E is an **audit**
 milestone: it clears all ten proposed typefaces, so the benchmark generation
-gate is **open**, while the M7D plan itself remains a plan. The CNN
+gate is **open**, while the M7D plan itself remains a plan. M8A freezes the
+execution protocol and versions the output-lifecycle transition, leaving the
+lifecycle in the **authorized-but-not-executed** state. The CNN
 comparison, full M5 error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-21
 
@@ -328,6 +332,24 @@ the default; a CNN must justify its cost out-of-sample.
   prediction or model artifact, and it creates nothing at the planned benchmark
   output paths.
 
+**Implemented for M8A (benchmark protocol and output-lifecycle versioning):**
+
+- A frozen execution protocol that fixes the M7D design verbatim: the ten
+  typefaces with their pinned hashes, the thirty matched text cases by a
+  deterministic versioned derivation rule, the renderer parameters and the
+  192x64 8-bit grayscale PNG specification, the M7B corruption ladder and
+  diagnostic exclusions with their seed rule, the exact row counts and output
+  membership, the identifier and pairing rules, the M5C champion artifact and
+  card with the frozen eight-feature schema and inference interface, the metric
+  definitions and aggregation levels, the execution order and failure
+  behaviour, the environment, the licensing conditions, and the two details
+  that could not be established from committed artifacts, which are recorded as
+  unresolved with a fail-closed rule. A versioned lifecycle protocol declares
+  the authorised output paths and their exact membership, a file-exact
+  twenty-member dependency set, and the pre- and post-execution verification
+  rules. The M7D planning-state check is classified rather than deleted, and
+  the M7D plan artifacts stay immutable. Nothing is generated.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -387,6 +409,7 @@ src/captcha_quality/
 ├── cross_font_analysis.py # read-only cross-font analysis, CLI (implemented, M7C)
 ├── evaluation_plan.py    # read-only evaluation-design plan, CLI  (implemented, M7D)
 ├── font_roster_audit.py # read-only font-roster licensing audit, CLI (implemented, M7E)
+├── benchmark_lifecycle.py # benchmark protocol and lifecycle verifier, CLI (implemented, M8A)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -481,6 +504,7 @@ byte-for-byte.
 | M7C | Read-only cross-font evaluation analysis of the frozen M7B and M5C predictions (complete) |
 | M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark (complete as a plan; the benchmark itself is not implemented) |
 | M7E | Font-roster licensing and availability audit for the planned cross-font benchmark (complete as an audit; the benchmark generation gate is open) |
+| M8A | Benchmark protocol and output-lifecycle versioning for the planned cross-font benchmark (complete as a protocol; the lifecycle is authorized but not executed) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -891,5 +915,22 @@ audit also records a project-level licence risk: Monotype's direct licence
 restricts using rendered glyphs in connection with training artificial-
 intelligence models, which does not apply to the macOS-bundled copies audited
 here but would matter for any future directly licensed copy or for training on
-font-rendered data. No dashboard, deployment or final
+font-rendered data.
+
+Milestone M8A: a read-only protocol and output-lifecycle milestone. It freezes
+the execution protocol for the planned cross-font benchmark — the M7D design
+verbatim, the ten typefaces with their pinned hashes, the thirty matched text
+cases by deterministic versioned derivation, the renderer and PNG
+specification, the M7B corruption ladder and diagnostic exclusions, the exact
+row counts and output membership, the identifier and pairing rules, the frozen
+M5C champion and feature schema, the metrics and uncertainty, the execution
+order and failure behaviour, the environment, the licensing conditions, and the
+two details that could not be established from committed artifacts, which are
+recorded as unresolved with a fail-closed rule — and it versions the
+output-lifecycle transition so that only two enumerated paths may ever be
+created, with their exact membership. The M7D planning-state check is
+classified rather than deleted, the M7D plan artifacts stay immutable, the
+dependency membership is file-exact, and the lifecycle is left in the
+authorized-but-not-executed state. Nothing was generated. No dashboard,
+deployment or final
 presentation exists yet.

@@ -84,6 +84,7 @@ captcha-heldout-font-benchmark = "captcha_quality.heldout_font_benchmark:main"
 captcha-cross-font-analysis = "captcha_quality.cross_font_analysis:main"
 captcha-evaluation-plan = "captcha_quality.evaluation_plan:main"
 captcha-font-roster-audit = "captcha_quality.font_roster_audit:main"
+captcha-benchmark-lifecycle = "captcha_quality.benchmark_lifecycle:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

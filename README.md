@@ -5,7 +5,7 @@ CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
 > **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C,
-> M6D, M7A, M7B, M7C, M7D and M7E complete — the metric-validation pilot, a reproducible
+> M6D, M7A, M7B, M7C, M7D, M7E and M8A complete — the metric-validation pilot, a reproducible
 > dataset/feature pipeline, a leakage-safe conventional-ML benchmark, an
 > occlusion/interference feasibility pilot, a grouped occlusion/interference
 > robustness benchmark, a geometric-distortion feasibility pilot, a grouped
@@ -14,12 +14,15 @@ image quality, and modelling how those distortions affect image degradation.
 > study, a spatial resolution study, a local structural feature study, a
 > multi-scale structure-tensor study, a dataset-adequacy audit, a held-out-font
 > generalisation benchmark, a cross-font evaluation analysis and a next-benchmark
-> evaluation-design plan and a font-roster licensing and availability audit have
-> been run and logged. M7D is a **planning** milestone: the proposed dataset,
-> benchmark, endpoints and success criteria are *planned, not executed*, and
-> M7E is an **audit** milestone: every proposed typeface now carries a
-> defensible eligibility decision, so the benchmark generation gate is **open**
-> (the M7D plan itself is still only a plan). The CNN
+> evaluation-design plan, a font-roster licensing and availability audit and a
+> benchmark protocol and output-lifecycle versioning milestone have been run and
+> logged. M7D is a **planning** milestone: the proposed dataset, benchmark,
+> endpoints and success criteria are *planned, not executed*. M7E is an **audit**
+> milestone: every proposed typeface now carries a defensible eligibility
+> decision, so the benchmark generation gate is **open** (the M7D plan itself is
+> still only a plan). M8A freezes the execution protocol and versions the
+> output-lifecycle transition, and leaves the lifecycle in the
+> **authorized-but-not-executed** state. The CNN
 > comparison, full M5 error taxonomy and dashboard are
 > **not implemented**, and the project does **not** predict human CAPTCHA
 > solvability. See [Current status](#current-status).
@@ -319,6 +322,7 @@ environment files are required at this stage.
 | M7C | Cross-font evaluation analysis of the frozen M7B and M5C predictions | **Complete** — read-only, 31 pinned inputs and 13 audited claims (3 supported / 0 suggestive / 10 unsupported); all-primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; per-font all-primary RMSE 0.0852 / 0.0761 / 0.1134; blur/noise RMSE 0.0279 / 0.0346 / 0.1601 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; uncertainty and font differences are descriptive only |
 | M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark | **Complete as a plan** — read-only, 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated, Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic), frozen M5C champion evaluated zero-shot; no dataset, image, model or prediction was produced |
 | M7E | Font-roster licensing and availability audit of the planned cross-font benchmark | **Complete as an audit** — read-only, 3 pinned inputs; all 10 faces available with the M7D-pinned SHA-256 and all proprietary (none open-licensed); protocol v0.2.0 (superseding v0.1.0 for Luminari only) records **10 eligible, 0 `review_required`, 0 ineligible, 0 unavailable**; audit gate **passed**, **benchmark generation gate open**; the roster is unchanged and no image, text case, dataset row, prediction or model artifact was produced |
+| M8A | Benchmark protocol and output-lifecycle versioning for the planned cross-font benchmark | **Complete as a protocol** — read-only, nothing generated; frozen execution protocol fixes the M7D design verbatim (10 typefaces, 30 matched cases, 300 sources, 6,300 rows) and a versioned lifecycle protocol enumerates the only two authorisable output paths with their exact membership, a file-exact 20-member dependency set, the M7D planning-state check classified rather than deleted, and two unresolved details recorded as fail-closed; lifecycle left **authorized-but-not-executed** |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -795,6 +799,35 @@ verifiable; it reported Luminari as `review_required` before the licence
 investigation in `EXP-0019`.
 
 
+## Quick start: benchmark protocol and output-lifecycle verification
+
+M8A is a **planning and verification** milestone. It freezes the execution
+protocol for the planned cross-font benchmark and versions the transition from
+the historical M7D planning state to the authorised execution state. It
+generates no image, no text case, no dataset row, no prediction and no model
+artifact, and it creates nothing at the planned benchmark output paths.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+# Verify the lifecycle in its current (authorized-but-not-executed) state
+uv run --extra image --extra ml captcha-benchmark-lifecycle verify \
+    --config configs/benchmark_lifecycle_v0_1_0.toml
+
+# The state can also be asserted explicitly
+uv run --extra image --extra ml captcha-benchmark-lifecycle verify \
+    --config configs/benchmark_lifecycle_v0_1_0.toml --state pre-execution
+```
+
+The verifier re-hashes every declared dependency, re-verifies the historical
+M7D state, the execution protocol and the roster against the M7E v0.2.0
+evidence, checks that no font binary exists anywhere, and applies the
+pre-execution or post-execution rules. The M7D planning-state check is
+*classified*, not deleted: it must pass before execution and is expected to
+report the transition afterwards, while every other M7D artifact check must
+still pass. See `EXP-0020` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.24.
+
 ## Current status
 
 Implemented:
@@ -908,6 +941,17 @@ Implemented:
   scenarios, fourteen success criteria, eight stopping rules, a twelve-row
   claim-limit table, a machine-readable plan manifest, output protection and a
   run/verify CLI. It produces no dataset, image, model or prediction.
+- A benchmark protocol and output-lifecycle verifier (`benchmark_lifecycle.py`,
+  `configs/benchmark_lifecycle_v0_1_0.toml`,
+  `configs/cross_font_benchmark_protocol_v0_1_0.toml`): a frozen execution
+  protocol that fixes the M7D design verbatim (roster and font hashes, matched
+  text-case derivation, renderer and PNG specification, corruption ladder and
+  diagnostic exclusions, row counts, identifier and pairing rules, the frozen
+  M5C champion and feature schema, metrics and uncertainty, execution order and
+  failure behaviour, environment, licensing conditions and unresolved items),
+  plus a versioned lifecycle protocol that declares the authorised output
+  paths and their exact membership, a file-exact dependency membership, and
+  the pre- and post-execution verification rules. It creates nothing.
 - A font-roster licensing and availability audit (`font_roster_audit.py`,
   `configs/font_roster_audit_v0_2_0.toml`): a versioned protocol with the
   recorded licence evidence and the eligibility decisions in separate tables,
@@ -920,7 +964,7 @@ Implemented:
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 682 tests in total, all passing, including byte-identical dataset
+- 722 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -1377,6 +1421,34 @@ readability or solvability):
   product licence. M7D's `no_planned_outputs_created` check is preserved and
   still passes; the audit created nothing at the planned benchmark output
   paths.
+
+Milestone M8A findings (protocol and lifecycle only — **not** results):
+
+- **M8A generates nothing.** It produced no image, no text case, no dataset
+  row, no prediction and no model artifact, executed no inference, and created
+  nothing at the planned benchmark output paths. It leaves the lifecycle in the
+  **authorized-but-not-executed** state.
+- **The scientific design is frozen, not revised.** The execution protocol
+  fixes the M7D plan verbatim: 10 typefaces, 30 matched text cases, 300
+  sources, 6,300 rows (5,700 primary, 600 diagnostic), the M7B corruption
+  ladder and diagnostic exclusions, the frozen renderer at 192×64 8-bit
+  grayscale PNG, and the frozen M5C champion evaluated zero-shot. The target
+  stays synthetic-reference SSIM and PSNR stays diagnostic.
+- **The seven held-out font identities, not the 300 source cases, are the
+  limitation.** Georgia, Monaco and Impact were already evaluated in M7B and
+  are recorded as previously evaluated held-out fonts, not as fonts that are
+  new to the project; Verdana, Trebuchet MS, Chalkduster and Luminari are the
+  genuinely new identities. No font-population claim follows.
+- **The lifecycle is explicit and M7D stays immutable.** Only two enumerated
+  paths may ever be created, with an exact file membership; the M7D
+  planning-state check is classified rather than deleted, and every M7D artifact
+  check must still pass in both states; the dependency membership is
+  file-exact, so unrelated shared-directory additions do not invalidate the
+  verification while a modified or deleted declared input does.
+- **Two details are recorded as unresolved, not invented.** The literal text
+  strings depend on a generator that does not exist yet, and the matched
+  source identifier scheme must be defined by the execution milestone. Both
+  make the post-execution verification fail closed.
 
 Milestone M7D findings (synthetic image similarity only — **not** human
 readability or solvability):
