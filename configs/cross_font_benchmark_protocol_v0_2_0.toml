@@ -1,0 +1,354 @@
+# Milestone M8A frozen execution protocol for the planned cross-font
+# generalization benchmark.
+#
+# This protocol is a frozen, reviewed specification of what the execution
+# milestone (M8B) is allowed to create and how it must behave. M8A itself
+# generates nothing: no images, no text cases, no dataset rows, no
+# predictions, no model artifacts. The protocol is deliberately
+# implementation-free where an exact detail could not be established from
+# committed artifacts; those items are listed under [unresolved] and the
+# lifecycle verifier fails closed while any of them remains open.
+#
+# The scientific design is the M7D plan verbatim: ten typefaces (three
+# familiar, seven held-out), thirty matched text cases per typeface, 300
+# source cases, 6,300 rows (5,700 primary, 600 diagnostic), the M7B
+# corruption ladder and diagnostic exclusions, the frozen renderer at
+# 192x64 8-bit grayscale PNG, and zero-shot evaluation of the frozen M5C
+# champion. The target stays synthetic-reference SSIM; PSNR stays
+# diagnostic only.
+
+[run]
+name = "cross-font-benchmark"
+version = "v0.2.0"
+milestone = "M8B"
+status = "frozen_not_executed"
+seed = 20260821
+supersedes = "v0.1.0"
+
+[scope]
+question = "How does the frozen M5C champion predict synthetic-reference SSIM across a pre-specified roster of ten typefaces when the text case and the corruption realisation are matched across fonts?"
+design_source = "M7D plan (configs/evaluation_design_plan_v0_1_0.toml, SHA-256 e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3)"
+design_contract = "The design below is the M7D plan verbatim. This protocol freezes the execution details the M7D plan left open; it may not change the roster, the case count, the row counts, the corruption ladder, the renderer specification, the diagnostic exclusions, the model or the target."
+evaluation_mode = "zero-shot: the frozen M5C champion predicts the new benchmark; no model is trained, fine-tuned, recalibrated, selected or re-fitted, and no feature is added, removed or reordered."
+comparison_baseline = "The familiar-font M5C test-slice metrics already recorded in reports/retention_aware_selection_v0_1_0/test_slice_metrics.csv are the only baseline. They are read, never recomputed, and no selection or refitting is performed on the new evaluation results."
+
+[roster]
+source = "M7D planned_fonts, cross-checked against M7E protocol v0.2.0"
+n_fonts = 10
+n_familiar = 3
+n_held_out = 7
+note = "Georgia, Monaco and Impact were already evaluated in M7B. They remain valid held-out identities because the champion was never fitted, calibrated or selected on them, but they are not fonts that are new to the project evaluation, and a result on them is not an independent replication of the M7B three-font finding."
+limitation = "Seven held-out font identities are the key limitation for any font-population generalisation claim. The 300 source cases are not 300 independent font identities: they are ten font identities observed over thirty matched text cases."
+
+[font_groups.familiar]
+label = "m3_development_fonts"
+members = ["arial", "courier_new", "times_new_roman"]
+n_fonts = 3
+
+[font_groups.m7b_held_out]
+label = "m7b_previously_evaluated_held_out_fonts"
+members = ["georgia", "monaco", "impact"]
+n_fonts = 3
+
+[font_groups.new_held_out]
+label = "new_to_the_project_held_out_fonts"
+members = ["verdana", "trebuchet_ms", "chalkduster", "luminari"]
+n_fonts = 4
+
+[[fonts]]
+key = "arial"
+role = "familiar"
+family = "Arial"
+stratum = "grotesque_sans"
+path = "/System/Library/Fonts/Supplemental/Arial.ttf"
+sha256 = "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9"
+project_status = "m3_development_font"
+eligibility = "eligible"
+
+[[fonts]]
+key = "courier_new"
+role = "familiar"
+family = "Courier New"
+stratum = "monospace"
+path = "/System/Library/Fonts/Supplemental/Courier New.ttf"
+sha256 = "c886ca3172d8ce9189976992d145ec090500a4ff516ecb9d4df56b1a78336247"
+project_status = "m3_development_font"
+eligibility = "eligible"
+
+[[fonts]]
+key = "times_new_roman"
+role = "familiar"
+family = "Times New Roman"
+stratum = "serif"
+path = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
+sha256 = "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+project_status = "m3_development_font"
+eligibility = "eligible"
+
+[[fonts]]
+key = "georgia"
+role = "held-out"
+family = "Georgia"
+stratum = "serif"
+path = "/System/Library/Fonts/Supplemental/Georgia.ttf"
+sha256 = "4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218"
+project_status = "m7b_held_out_evaluation_font"
+eligibility = "eligible"
+
+[[fonts]]
+key = "monaco"
+role = "held-out"
+family = "Monaco"
+stratum = "monospace"
+path = "/System/Library/Fonts/Monaco.ttf"
+sha256 = "c6e990f6429fae28eb85321375dd335252f1122aa64c19fec553619a140724ef"
+project_status = "m7b_held_out_evaluation_font"
+eligibility = "eligible"
+
+[[fonts]]
+key = "impact"
+role = "held-out"
+family = "Impact"
+stratum = "display_sans"
+path = "/System/Library/Fonts/Supplemental/Impact.ttf"
+sha256 = "57e95627fd36fe2740e5ee8a91ff1ae74fb216df9580bd23e30d6772814727be"
+project_status = "m7b_held_out_evaluation_font"
+eligibility = "eligible"
+
+[[fonts]]
+key = "verdana"
+role = "held-out"
+family = "Verdana"
+stratum = "humanist_sans"
+path = "/System/Library/Fonts/Supplemental/Verdana.ttf"
+sha256 = "0da8c12f3e15d95585434d2cf294b3113a3e3fc84bf9ba9d64f2ef834ef4bd98"
+project_status = "new_to_project_evaluation"
+eligibility = "eligible"
+
+[[fonts]]
+key = "trebuchet_ms"
+role = "held-out"
+family = "Trebuchet MS"
+stratum = "humanist_sans"
+path = "/System/Library/Fonts/Supplemental/Trebuchet MS.ttf"
+sha256 = "ff1d49fde63aabd7f4fc7cd0a80ac7cdb1b9540058988fcbb64d7c23639a7386"
+project_status = "new_to_project_evaluation"
+eligibility = "eligible"
+
+[[fonts]]
+key = "chalkduster"
+role = "held-out"
+family = "Chalkduster"
+stratum = "display_script"
+path = "/System/Library/Fonts/Supplemental/Chalkduster.ttf"
+sha256 = "0e9ed740bfbfcfef1a7f4333cd041771a9a5b67fbe85515e4d241b7213cf6a8d"
+project_status = "new_to_project_evaluation"
+eligibility = "eligible"
+
+[[fonts]]
+key = "luminari"
+role = "held-out"
+family = "Luminari"
+stratum = "display_script"
+path = "/System/Library/Fonts/Supplemental/Luminari.ttf"
+sha256 = "4054fff7b5f8bc63343754c046a89f96006bb5b581ec0c529780c6afb4245095"
+project_status = "new_to_project_evaluation"
+eligibility = "eligible"
+
+[text_cases]
+charset = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+text_lengths = [4, 5, 6]
+text_length_weights = [0.3, 0.4, 0.3]
+n_cases = 30
+derivation = "The thirty matched text cases are derived once, independent of the font, and reused for all ten typefaces. For case index i in 0..29 the generator draws, in this order: (1) the text length from the configured length distribution, then (2) the text itself from the configured charset, both from a single numpy generator seeded with derive_noise_seed(dataset_seed, 'matched_case', str(i)); the per-font render seed is derived separately with derive_noise_seed(dataset_seed, 'render', font_key, str(i)) so that a change to the render jitter can never change a text case."
+dataset_seed = 20260821
+case_namespace = "matched_case"
+render_namespace = "render"
+variant_namespace = "variant"
+pairing_rule = "Case i uses the same text string in all ten typefaces. A source is the pair (font_key, case_index); the 300 sources are the 10 x 30 grid. Font renders of one case are matched by construction and are never re-drawn with a different text."
+case_manifest = "source_cases.csv"
+case_manifest_columns = ["source_id", "case_id", "case_index", "font_id", "text_length", "text_sha256", "render_seed", "split", "split_group_id"]
+text_materialisation = "The literal text strings are not committed, matching the repository convention that raw text lives only in the Git-ignored ground_truth file. The manifest records the per-case text SHA-256, and the execution milestone must re-derive every case from the rule above and fail closed if any derived case differs from the manifest."
+length_distribution_note = "The length distribution is drawn from the same generator as the text, in the same order as the Milestone 2 and Milestone 7B dataset pipeline, so the case set is a pure function of the pinned rule."
+
+[renderer]
+engine = "Pillow ImageDraw + FreeType"
+canvas_width = 192
+canvas_height = 64
+fit_fraction = 0.86
+vertical_padding = 0.1
+jitter_fraction = 0.05
+spacing_jitter_fraction = 0.03
+placement_jitter_fraction = 0.02
+background_mode = "flat_random"
+background_min = 240
+background_max = 255
+center_ink = true
+strict_bounds = true
+image_mode = "L"
+image_format = "PNG"
+png_encoding = "8-bit grayscale PNG written through the repository PNG writer; the image dimensions are exactly canvas_width x canvas_height and the mode is L (8-bit greyscale). No palette, no alpha channel and no re-encoding of the clean reference are permitted."
+reference_rule = "The clean reference is rendered once per source from the same render seed and is retained read-only. The SSIM target is computed from that exact byte sequence."
+renderer_identity = "The rendering implementation is pinned by source hash in the lifecycle protocol (src/captcha_quality/render.py, 729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e), so a change to the renderer must be reviewed as a protocol change."
+
+[corruptions]
+blur_radii_px = [1.0, 2.0, 3.5, 5.0]
+noise_sigmas = [6.0, 12.0, 20.0, 32.0]
+thin_line_stroke_counts = [1, 2, 4, 7]
+arc_stroke_counts = [1, 2, 4, 7]
+stroke_width_px = 1
+stroke_intensity = 0
+line_angle_deg = [-60.0, 60.0]
+arc_sweep_deg = [120.0, 240.0]
+arc_radius_fraction = [0.2, 0.55]
+arc_aspect_ratio = [0.5, 1.5]
+elastic_primary_amplitudes_px = [1.0, 2.0, 3.0]
+elastic_diagnostic_amplitudes_px = [0.5]
+elastic_severity_amplitudes_px = [0.5, 1.0, 2.0, 3.0]
+grid_rows = 5
+grid_cols = 13
+smoothing_sigma_px = 2.0
+interpolation = "bilinear"
+border_mode = "edge"
+primary_scopes = ["all_primary", "original_blur_noise", "gaussian_blur", "gaussian_noise", "interference", "thin_lines", "arc_strokes", "geometric_primary"]
+diagnostic_scopes = ["clean_reference", "diagnostic_0_5px"]
+diagnostic_exclusion = "The clean reference row and the 0.5 px elastic row are diagnostic only. They are reported in a separate diagnostic table and are excluded from every primary metric, from the primary endpoint and from the bootstrap."
+seed_rule = "Every corruption realisation uses an independent seed derived with derive_noise_seed(dataset_seed, 'variant', source_id, family, severity_level), so severity levels are not correlated by a shared random field and the matched case keeps the same corruption seed schedule in every font."
+
+[counts]
+n_sources = 300
+n_fonts = 10
+n_cases_per_font = 30
+rows_per_source = 21
+total_rows = 6300
+primary_rows = 5700
+diagnostic_rows = 600
+clean_rows = 300
+blur_rows = 1200
+noise_rows = 1200
+thin_line_rows = 1200
+arc_stroke_rows = 1200
+elastic_primary_rows = 900
+elastic_diagnostic_rows = 300
+identity = "300 sources x 21 rows = 6,300 rows; 19 primary rows per source x 300 sources = 5,700 primary rows; 2 diagnostic rows per source x 300 sources = 600 diagnostic rows."
+
+[identifiers]
+source_id = "A stable identifier derived from the generation configuration hash, the font key, the case index, the text, the text length and the render seed, exactly as the Milestone 2 source identifier scheme. It must be unique across the 300 sources and is never reused."
+case_id = "A stable identifier derived from the generation configuration hash and the case index; identical for all ten fonts of one case, so the matched case is identifiable in every row."
+sample_id = "<source_id>__<variant_id>, with the clean variant using the same clean variant identifier as the Milestone 2 and Milestone 7B datasets."
+split = "One split named eval containing all 300 sources. The benchmark is evaluation-only: there is no train, validation or test partition, and no source is ever fitted on."
+split_group_id = "The source identifier, so all variants of a source and all font renders of a case remain groupable."
+provenance_columns = "Every manifest row records the font key, the font SHA-256, the case index, the text length, the text SHA-256, the render seed, the variant seed, the image SHA-256, the reference SHA-256, the SSIM target, the PSNR diagnostic, the dataset version and the generation configuration hash."
+
+[model]
+model_dir = "models/retention_aware_selection_v0_1_0"
+model_stem = "selected_policy"
+artifact_sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+card_sha256 = "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+expected_model_family = "expanded_random_forest"
+expected_calibration = "none"
+target = "ssim_target"
+feature_set_version = "v1"
+feature_names = ["intensity_mean", "intensity_std", "contrast_rms", "ink_fraction", "laplacian_variance", "edge_density", "histogram_entropy", "noise_sigma_immerkaer"]
+inference_interface = "Load the pinned artifact with joblib, extract the eight features from the corrupted image with the frozen extractor, and call predict. The feature names, their order and the feature set version must match the model card exactly, the estimator must accept exactly eight inputs, and the extracted features must contain no missing values."
+code_identity = "The feature extractor, the renderer, the corruption operators, the dataset and split code, the modelling code and the frozen M7B inference implementation are pinned by source hash in the lifecycle protocol."
+isolation = "The M5C champion is used exactly as frozen. No fit, partial_fit, calibration, selector, feature change or threshold change may be applied to the new benchmark, and the new benchmark may not be used to select anything."
+
+[metrics]
+primary_metrics = ["mae", "rmse", "r2"]
+aggregation_levels = ["overall", "by_font", "by_corruption_family", "by_corruption_severity", "by_font_group"]
+font_groups = ["familiar", "m7b_held_out", "new_held_out"]
+uncertainty = "Source-grouped percentile bootstrap, as in M7B and M7C: 2,000 replicates that resample whole source groups and keep every variant of a sampled source together, with a matched-case variant that resamples whole cases and keeps all ten font renders of a case together. Intervals are descriptive uncertainty summaries over the observed 300 sources and ten font identities; they are not significance tests and they do not estimate a font population."
+r2_policy = "R^2 is reported only where the target is not degenerate. A slice whose target standard deviation is below 0.005 suppresses R^2, as in the frozen M7B and M7C protocols."
+diagnostics = "Clean-reference and 0.5 px elastic metrics are reported in a separate diagnostic table, never merged into a primary metric."
+baseline_comparison = "The frozen familiar-font M5C test-slice metrics are shown alongside the new results as a recorded reference. No refitting, selection or threshold choice is made from the new evaluation results."
+prohibitions = "No SSIM result may be described as human readability, CAPTCHA solvability, CAPTCHA security or production robustness. The target is synthetic reference similarity, and the seven held-out font identities are a purposive roster rather than a font sample."
+
+[execution]
+order = "1. Verify every pinned input, the ten font files and the M5C champion artifact and card. 2. Resolve all ten fonts; a missing or changed font file is a hard failure and never a silent substitution. 3. Plan the 30 matched cases and the 300 sources. 4. Render the 300 clean references and their 6,300 variants. 5. Extract features and compute the SSIM targets. 6. Load the frozen champion once and predict every row. 7. Aggregate, bootstrap and write the report."
+failure_behaviour = "Any failure aborts the run with a non-zero exit and no partial dataset is promoted. A missing font, a font hash mismatch, a render failure, a duplicate source identifier, a row-count mismatch, a target mismatch or a model-card mismatch is a hard failure. There is no retry with a substituted font, a re-drawn case or a relaxed check."
+determinism = "Two runs from the same clean commit and the same pinned inputs must produce byte-identical images, manifests, features, targets, predictions and report, apart from the runtime-only metadata field."
+zero_shot = "The champion is evaluated once. There is no iterative peeking, no endpoint change, no threshold tuning and no optional extension after results are seen."
+
+[environment]
+requirements = "Python 3.11 or later with the image extra (Pillow, scikit-image, OpenCV) and the machine-learning extra (scikit-learn, joblib). The M5C artifact was produced with scikit-learn 1.9.1 and must be loaded with a compatible major and minor version."
+platform = "The benchmark is generated and evaluated on macOS, because the ten pinned faces are the Apple-bundled builds. The pinned SHA-256 values are platform-specific."
+reproducibility_checks = "The lifecycle verifier re-hashes every pinned input, the ten font files, the model artifact and card, and the pinned source files of the rendering, corruption, feature and inference implementations."
+
+[licensing]
+conditions = "All ten faces are proprietary. The benchmark renders text locally and distributes only the rendered images and derived tables; no font binary may ever enter the repository, the dataset or the report, and no font file may be converted, embedded, modified or redistributed."
+evaluation_only = "The faces are used for evaluation only. Training or fine-tuning a model on font-rendered data that includes these faces requires a fresh licence review."
+audit_reference = "The eligibility evidence and the binding conditions for every face are recorded in the M7E font-roster audit protocol version 0.2.0 (SHA-256 bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa). A face may not be rendered unless that protocol records it as eligible."
+redistribution_rule = "The rendered PNG images and the derived tables may be distributed as the benchmark dataset. The font files may not be distributed."
+
+[failure_handling]
+unavailable_font = "A missing font file, a font whose SHA-256 differs from the pinned value, or a face whose glyph coverage is incomplete for the project charset aborts the run. The face is never replaced by a similar family."
+hash_mismatch = "A mismatch in any pinned input, model artifact, model card, source file or output artifact aborts the run and is reported with the expected and observed digests."
+render_failure = "A source or variant that fails to render, fails the strict bounds check, or is clipped aborts the run."
+duplicates = "A duplicate source identifier, a duplicate sample identifier, or a case that resolves to different text in two fonts aborts the run."
+malformed_output = "A row that is missing a declared column, carries a non-finite target, or whose image or reference SHA-256 does not match the file on disk aborts the run."
+unauthorised_paths = "Any file written outside the authorised dataset and report directories, and any font binary anywhere in the working tree, fails the lifecycle verification."
+
+[text_case_manifest]
+path = "configs/cross_font_text_cases_v0_1_0.toml"
+version = "v0.1.0"
+n_cases = 30
+file_sha256 = "fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48"
+manifest_hash = "d1d55b841d96d507f5e8031268ce454bbec238e6bfc32f9aaa47322f3eeeb010"
+hash_scope = "The manifest hash is the SHA-256 digest of the canonical JSON list of the thirty canonical case records in their pinned order. The file hash is the SHA-256 digest of the manifest file bytes. Both are pinned here; neither is computed from a current output, and the manifest does not contain its own digest, so no hash is circular."
+encoding = "utf-8"
+normalization = "none"
+text_materialisation = "The text cases are committed. The generator reads the stored strings verbatim and never samples text at runtime."
+
+[identity]
+scheme_version = "v1"
+render_config_version = "v1"
+canonical_serialization = "json.dumps(payload, sort_keys=True, separators=(',', ':'), allow_nan=False) encoded as UTF-8"
+hash_algorithm = "sha256"
+generation_config_hash = "147df5002e93e5f280d60ed10ed417d3100c8c9ccb24191b065f486d3b580e06"
+split = "eval"
+split_group_id_rule = "The split group identifier is the source identifier, so every variant of a source and every font render of a case stay groupable."
+source_id = "src-<first 16 hex characters of the SHA-256 digest of the canonical source payload>. The payload distinguishes the text case identifier, the font identifier, the pinned font SHA-256, the generation configuration hash, the per-case render configuration hash, the render seed, the exact text and the text length. The identifier therefore changes if the case, the face, the font file, the renderer configuration or the generation configuration changes, and it never depends on directory traversal order, wall-clock time, absolute paths, runtime randomness or row ordering."
+variant_id = "clean_s0 for the clean reference of a source, and <family>_s<severity> for every corruption, following the Milestone 2 identifier scheme."
+sample_id = "<source_id>__<variant_id>, following the Milestone 2 and Milestone 7B convention."
+row_id = "row-<first 16 hex characters of the SHA-256 digest of the canonical row payload>. The payload additionally distinguishes the corruption family, the corruption severity, the derived variant seed and the primary or diagnostic status, none of which the sample identifier encodes on its own."
+image_path_rule = "images/<family>/<sample_id>.png for every corruption, and images/clean/<source_id>.png for the clean reference, so the 6,300 image identities are unique."
+seed_rule = "The render seed is derive_noise_seed(dataset_seed, 'render', font_key, str(case_index)). The corruption seed is derive_noise_seed(dataset_seed, 'variant', source_id, family, severity_level). Both are pure functions of documented inputs, so the same source and corruption configuration always reproduce the same realisation and two severity levels never share a random field."
+image_subdirectories = ["clean", "gaussian_blur", "gaussian_noise", "thin_lines", "arc_strokes", "elastic"]
+source_id_payload = ["case_id", "font_id", "font_sha256", "generation_config_hash", "render_config_hash", "render_seed", "text", "text_length"]
+row_id_payload = ["case_id", "corruption_family", "corruption_severity", "font_id", "font_sha256", "generation_config_hash", "primary", "render_config_hash", "render_seed", "sample_id", "source_id", "variant_id", "variant_seed"]
+
+[identity.families.gaussian_blur]
+severities = [1, 2, 3, 4]
+parameter_rule = "Severity k applies blur_radii_px[k-1]."
+
+[identity.families.gaussian_noise]
+severities = [1, 2, 3, 4]
+parameter_rule = "Severity k applies noise_sigmas[k-1]."
+
+[identity.families.thin_lines]
+severities = [1, 2, 3, 4]
+parameter_rule = "Severity k applies thin_line_stroke_counts[k-1] strokes."
+
+[identity.families.arc_strokes]
+severities = [1, 2, 3, 4]
+parameter_rule = "Severity k applies arc_stroke_counts[k-1] strokes."
+
+[identity.families.elastic]
+severities = [1, 2, 3, 4]
+parameter_rule = "Severity k applies elastic_severity_amplitudes_px[k-1]."
+
+[identity.diagnostic_severities]
+elastic = [1]
+
+[unresolved]
+items = []
+policy = "Every unresolved item makes the lifecycle verifier fail closed in the post-execution state. The execution milestone must resolve each item in the produced artifacts before the benchmark may be reported."
+resolution = "Version 0.2.0 resolves both items that version 0.1.0 left open. The thirty matched text strings are now committed in the versioned text-case manifest pinned below, and the source identifier scheme is now defined in full under [identity]. The list is empty; it is re-checked on every run, and a non-empty list fails the verification closed."
+
+[provenance]
+design = "M7D plan e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3; M7E audit protocol v0.2.0 bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa"
+lifecycle = "The output-lifecycle protocol that authorises the paths and defines the pre- and post-execution verification rules is a separate, explicitly versioned file."
+status = "frozen_not_executed: this protocol authorises a future execution milestone and creates nothing itself."
+supersedes = "v0.1.0"
+change_log = "Version 0.2.0 supersedes version 0.1.0 and changes nothing about the scientific design. It corrects the TOML type of the numeric parameter arrays, which version 0.1.0 quoted as strings; every value is unchanged.  It adds the committed, versioned matched text-case manifest and pins it by file hash and by canonical manifest hash; it defines the canonical source, variant, sample and row identifier scheme together with the canonical serialisation and hash algorithm; it states the severity levels of every corruption family, the elastic severity-to-amplitude mapping and the diagnostic severities explicitly, so the planned row identities are derivable from the protocol alone; it records the generation-configuration hash that anchors every source identifier; and it closes the two unresolved items that version 0.1.0 left open. Version 0.1.0 remains byte-for-byte unchanged as the historical record of the Milestone 8A design freeze."

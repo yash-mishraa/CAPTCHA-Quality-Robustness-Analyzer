@@ -83,6 +83,7 @@ class RunSettings:
     milestone: str
     status: str
     seed: int
+    supersedes: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,6 +136,7 @@ class LifecycleConfig:
     verification_rules: dict[str, str]
     inputs: tuple[InputPin, ...]
     membership: dict[str, str]
+    changelog: dict[str, str]
     config_path: Path
     config_sha256: str
     config_hash: str
@@ -147,6 +149,7 @@ class LifecycleConfig:
                 "milestone": self.run.milestone,
                 "status": self.run.status,
                 "seed": self.run.seed,
+                "supersedes": self.run.supersedes,
             },
             "states": self.states,
             "historical_state": self.historical_state,
@@ -181,6 +184,7 @@ class LifecycleConfig:
             ],
             "verification_rules": self.verification_rules,
             "membership": self.membership,
+            "changelog": self.changelog,
             "inputs": [
                 {"key": pin.key, "path": pin.path, "sha256": pin.sha256, "role": pin.role}
                 for pin in self.inputs
@@ -188,10 +192,17 @@ class LifecycleConfig:
         }
 
 
-def _check_keys(raw: Mapping[str, object], expected: set[str], label: str) -> None:
+def _check_keys(
+    raw: Mapping[str, object],
+    expected: set[str],
+    label: str,
+    *,
+    optional: set[str] | None = None,
+) -> None:
+    allowed = expected | (optional or set())
     actual = set(raw)
     missing = sorted(expected - actual)
-    unknown = sorted(actual - expected)
+    unknown = sorted(actual - allowed)
     if missing:
         raise LifecycleConfigError(f"{label} is missing key(s): {missing}")
     if unknown:
@@ -231,13 +242,19 @@ def _sha256(value: object, label: str) -> str:
 
 
 def _parse_run(raw: Mapping[str, object]) -> RunSettings:
-    _check_keys(raw, {"name", "version", "milestone", "status", "seed"}, "run")
+    _check_keys(
+        raw,
+        {"name", "version", "milestone", "status", "seed"},
+        "run",
+        optional={"supersedes"},
+    )
     run = RunSettings(
         name=_as_str(raw["name"], "run.name"),
         version=_as_str(raw["version"], "run.version"),
         milestone=_as_str(raw["milestone"], "run.milestone"),
         status=_as_str(raw["status"], "run.status"),
         seed=_as_int(raw["seed"], "run.seed"),
+        supersedes=_as_str(raw["supersedes"], "run.supersedes") if "supersedes" in raw else "",
     )
     if run.milestone != "M8A":
         raise LifecycleConfigError("run.milestone must be 'M8A'")
@@ -313,6 +330,7 @@ def load_config(path: Path | str) -> LifecycleConfig:
             "inputs",
         },
         "top-level",
+        optional={"changelog"},
     )
     run = _parse_run(_section(payload, "run"))
     states = {
@@ -379,6 +397,10 @@ def load_config(path: Path | str) -> LifecycleConfig:
         key: _as_str(value, f"membership.{key}")
         for key, value in _section(payload, "membership").items()
     }
+    changelog_raw = payload.get("changelog", {})
+    if not isinstance(changelog_raw, dict):
+        raise LifecycleConfigError("changelog must be a table")
+    changelog = {key: _as_str(value, f"changelog.{key}") for key, value in changelog_raw.items()}
     config = LifecycleConfig(
         run=run,
         states=states,
@@ -394,6 +416,7 @@ def load_config(path: Path | str) -> LifecycleConfig:
         verification_rules=rules,
         inputs=_parse_inputs(payload.get("inputs")),
         membership=membership,
+        changelog=changelog,
         config_path=config_path,
         config_sha256=sha256_bytes(raw_bytes),
         config_hash="",
@@ -410,6 +433,7 @@ def load_config(path: Path | str) -> LifecycleConfig:
         verification_rules=config.verification_rules,
         inputs=config.inputs,
         membership=config.membership,
+        changelog=config.changelog,
         config_path=config.config_path,
         config_sha256=config.config_sha256,
         config_hash=identity_hash,
@@ -838,6 +862,8 @@ def _build_protocol(config: LifecycleConfig) -> dict[str, Any]:
             {"name": item.name, "role": item.role} for item in config.authorised_report_files
         ],
         "verification_rules": config.verification_rules,
+        "membership": config.membership,
+        "changelog": config.changelog,
         "inputs": [
             {"key": pin.key, "path": pin.path, "sha256": pin.sha256, "role": pin.role}
             for pin in config.inputs

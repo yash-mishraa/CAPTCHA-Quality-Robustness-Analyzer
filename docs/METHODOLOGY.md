@@ -2802,6 +2802,150 @@ lifecycle manifest fails; the roster must match the M7E version 0.2.0 evidence;
 a font binary in the tree fails; unrelated additions to shared directories are
 accepted; and the M7C, M7D and M7E verifiers retain their behaviour.
 
+### 5.25 M8B deterministic source cases and generator preflight
+
+M8B resolves the two execution blockers that the frozen M8A protocol left
+open: the exact matched text strings and the deterministic source identifier
+and provenance scheme. It is a **planning and verification** milestone. It
+creates no dataset, renders no benchmark image, runs no M5C inference and
+produces no benchmark result. The 6,300 authorised PNGs are not rendered; the
+bounded generator preflight exercises a small, explicitly enumerated set of
+representative images in a temporary directory that is removed again.
+
+**The committed matched text-case manifest.**
+`configs/cross_font_text_cases_v0_1_0.toml` is a versioned, committed
+manifest of exactly thirty text cases shared by all ten typefaces. Each case
+records its identifier, its index, the exact Unicode text, the UTF-8 hex of
+that text, the SHA-256 of the UTF-8 bytes, the text length and the digest of
+its canonical record. The order of the cases is part of the frozen evidence:
+the canonical manifest digest is taken over the ordered list of the canonical
+case records, so a reordering changes the digest.
+
+The normalisation policy is explicit and is **never** applied silently. The
+policy is `none`: the stored string is used exactly as written. The verifier
+asserts that each stored string is already NFC, NFD, NFKC and NFKD normalised,
+is pure ASCII, and contains only characters of the project charset, and it
+raises rather than rewriting a string that would need normalisation. All
+thirty cases are pure ASCII, so their UTF-8 encoding is unambiguous and the
+Unicode normal forms agree by construction.
+
+The manifest is pinned twice by the execution protocol version 0.2.0: by the
+SHA-256 digest of the file bytes and by the canonical manifest digest. The
+manifest does not contain its own digest, so no hash is circular, and the
+digests are never regenerated from a current output. The verifier also
+re-derives all thirty cases from the pinned derivation rule — one generator
+per case index seeded with `derive_noise_seed(dataset_seed, "matched_case",
+str(i))` that draws the length and then the text — and fails if the committed
+rows no longer match it. The derivation is provenance; the committed rows are
+the authority.
+
+**Glyph coverage is proven, not assumed.** Coverage is read from the `cmap`
+table of each pinned font file with fontTools, so the evidence is the font's
+own character map rather than a rendering comparison. All thirty-one
+characters of the project charset are present in all ten pinned faces, so
+every case is renderable by every face. A face that is missing a character, a
+font file that is absent and a font file whose SHA-256 differs from the
+pinned value are all hard failures: the pipeline never substitutes a glyph
+and never replaces a character with a question mark.
+
+**The canonical identity scheme.** `src/captcha_quality/source_identity.py`
+defines one identifier per level of the hierarchy and one documented digest
+per canonical record. The canonical serialisation is JSON with sorted keys,
+compact separators and no non-finite floats, encoded as UTF-8, and every
+digest is SHA-256.
+
+* `case_id` is `case-{index:03d}`: the matched text case, identical in all
+  ten typefaces, which is what makes the design matched.
+* `source_id` is `src-<16 hex>` over a payload that distinguishes the text
+  case, the typeface, the pinned font SHA-256, the generation configuration
+  hash, the per-case render configuration hash, the render seed, the exact
+  text and the text length. It changes if the case, the face, the font file,
+  the renderer configuration or the generation configuration changes.
+* `variant_id` is `clean_s0` for the clean reference and `<family>_s<severity>`
+  for a corruption, following the existing Milestone 2 scheme.
+* `sample_id` is `<source_id>__<variant_id>`, the frozen Milestone 8A
+  requirement and the Milestone 2 and 7B convention.
+* `row_id` is `row-<16 hex>` over a payload that additionally distinguishes
+  the corruption family, the corruption severity, the derived variant seed
+  and the primary or diagnostic status, none of which `sample_id` encodes on
+  its own.
+
+The seeds are pure functions of documented inputs: the render seed is
+`derive_noise_seed(dataset_seed, "render", font_key, str(case_index))` and the
+corruption seed is `derive_noise_seed(dataset_seed, "variant", source_id,
+family, severity_level)`. No identifier depends on directory traversal order,
+wall-clock time, absolute paths, runtime randomness or row ordering. The
+Milestone 2 and 7B identifier helpers are imported rather than re-implemented,
+so the scheme is a single implementation, not a parallel one.
+
+**The versioned protocol update.** Execution protocol version 0.2.0
+supersedes version 0.1.0 and changes nothing about the scientific design. It
+adds the committed text-case manifest and pins it, defines the identifier
+scheme, states the severity levels of every corruption family, the
+elastic severity-to-amplitude mapping and the diagnostic severities
+explicitly so the planned row identities are derivable from the protocol
+alone, records the generation-configuration hash that anchors every source
+identifier, and closes the two unresolved items version 0.1.0 left open. It
+also corrects the TOML type of the numeric parameter arrays, which version
+0.1.0 quoted as strings; every value is unchanged. Version 0.1.0 remains
+byte-for-byte unchanged as the historical record of the M8A design freeze.
+
+Lifecycle protocol version 0.2.0 supersedes version 0.1.0 and keeps the
+**authorized-but-not-executed** state. It authorises execution protocol
+version 0.2.0 instead of version 0.1.0 and adds two declared dependencies:
+the committed text-case manifest and the canonical identity scheme
+implementation. The historical M7D state, the authorised paths, their exact
+membership and the pre- and post-execution verification rules are unchanged.
+Version 0.1.0 remains byte-for-byte unchanged.
+
+**The generator preflight.** The existing project code is reused; no renderer
+or corruption implementation is duplicated. The clean reference comes from
+`render.render_clean`, the blur and noise operators from
+`corruptions.apply_corruption`, the thin-line and arc-stroke operators from
+`interference.apply_strokes` with `interference.plan_stroke_pool`, and the
+elastic operator from `geometric.apply_elastic` with a `geometric.ElasticFieldSpec`.
+The preflight renders the clean reference of one matched case in all ten
+faces, sweeps every corruption family and every severity on a two-face
+subset, and probes the explicit failure paths. It verifies the exact 192×64
+dimensions, the `L` grayscale mode, PNG encoding and decodability, byte-identical
+repeated renders of the same source, reproducible seeded corruptions, the
+correct family and severity assignment, the identifier and image-path
+conventions, the join from every row to its source, its case, its face and
+the protocol version, and the separation of the diagnostic rows. Six explicit
+failure probes must fail closed: a missing font file, a font hash mismatch, a
+missing font in the coverage check, a character outside the charset, an
+invalid renderer configuration and an unexpected output size.
+
+**Counts and join contracts.** The planned identities are proven without
+materialising the dataset: ten font identities, thirty matched text cases,
+300 clean font/text source combinations, 6,300 total planned rows, 5,700
+primary rows and 600 diagnostic rows, 21 rows per source, and exactly 6,300
+unique image identities across the six declared corruption subdirectories.
+Every derived row references a valid source, no source or configuration
+identity is duplicated, and the diagnostic rows are exactly the clean
+reference row and the 0.5 px elastic rung, matching the frozen M8A and M7B
+definitions.
+
+**The verifier fails closed.** `captcha-benchmark-preflight verify` refuses a
+missing or changed text-case manifest, a duplicate or missing case
+identifier, a font roster or font-hash mismatch, an invalid canonical
+serialisation, a duplicate or unstable source identifier, unsupported or
+unresolved glyph coverage, a changed renderer configuration or an unpinned
+dependency, unexpected files or outputs, and any attempt to bypass the M8A
+lifecycle contract. The dependency membership is file-exact: an unrelated
+configuration, dataset, model or report added to a shared directory later does
+not invalidate the verification, while a modified or deleted declared input
+does. No growing directory is fingerprinted, no expected hash is generated
+from a current output and no hash is circular.
+
+**Environment.** The preflight was run on macOS 27.0.1 (arm64) with CPython
+3.13.16, Pillow 12.3.0, NumPy 2.5.4, OpenCV 5.0.0, scikit-image 0.26.0,
+scikit-learn 1.9.1 and fontTools 4.67.0. The ten pinned faces are the
+Apple-bundled builds, so the pinned SHA-256 values and the rasterisation are
+platform-specific. Determinism has been demonstrated in this environment
+only; no cross-platform determinism is claimed, and the benchmark must be
+generated and evaluated in the environment the protocol pins.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0020` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0021` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0021` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only milestone (no dataset, no benchmark image, no inference, no result): closes both M8A execution blockers — thirty deterministic matched text cases are committed in a versioned, hash-pinned manifest with an explicit no-normalisation policy and glyph coverage proven from every pinned face's `cmap` (31/31 characters in all ten faces) — and a canonical identity scheme (`case_id`, `source_id`, `variant_id`, `sample_id`, `row_id`) is defined over a documented serialisation, reusing the existing Milestone 2 helpers; execution protocol v0.2.0 and lifecycle v0.2.0 supersede their v0.1.0 versions (which stay byte-for-byte) and the lifecycle stays **authorized-but-not-executed**; the existing generator is exercised on a bounded set in a temporary directory with 6 explicit failure probes, and the 10 fonts, 30 cases, 300 sources, 6,300 rows, 5,700/600 split and 6,300 image identities are proven without materialising anything |
 | `EXP-0020` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only protocol and lifecycle milestone (no image, text case, dataset row, prediction or model artifact): a frozen execution protocol fixes the M7D design verbatim (10 typefaces, 30 matched cases, 300 sources, 6,300 rows, the M7B ladder, the frozen renderer, the zero-shot frozen M5C champion) and a versioned lifecycle protocol enumerates the only two paths a future milestone may create plus their exact membership, with a file-exact 20-member dependency set, the M7D planning-state check classified rather than deleted, and two unresolved details recorded as fail-closed; the lifecycle is left in the **authorized-but-not-executed** state and every transition was exercised only in isolated temporary shadow trees |
 | `EXP-0019` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only licence resolution for the one face M7E left unresolved (no images, dataset rows, predictions or model artifacts): Luminari is cleared as **eligible** for the intended evaluation-only workflow, because the installed copy is governed by the macOS 27 product licence and the rights holder's own terms treat a software rasteriser producing static png, jpeg and gif images from the installed font data as a licensed use while restricting only the font software; four binding conditions are recorded (pinned environment and hash, no font binary in the tree, evaluation only with no training on font-rendered data, and a fresh review before leaving the macOS product licence); all ten faces are eligible, the audit gate is passed and the benchmark generation gate is **open**, with no roster change proposed and three residual uncertainties recorded rather than resolved |
 | `EXP-0018` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only font-roster licensing and availability audit of the ten typefaces the M7D plan proposes (no images, text cases, dataset rows, predictions or model artifacts): all ten are available with the M7D-pinned SHA-256 and are proprietary, none is open-licensed; nine are eligible for the intended evaluation-only workflow because the licence permits distributing the rendered images and the workflow never redistributes a font binary; Luminari is `review_required` because the macOS product licence is silent on redistributing the rendered output while the Canada Type terms that cover it require a paid licence, so the audit gate is partially passed and the benchmark generation gate is closed |
@@ -104,6 +105,185 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0021 — Deterministic matched source cases, canonical identity scheme and generator preflight
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Can the two execution blockers left open by the
+  frozen Milestone 8A protocol — the exact matched text strings and the
+  deterministic source identifier and provenance scheme — be resolved and
+  frozen, and can the existing generator be validated against the frozen
+  protocol in an isolated temporary environment, without creating the
+  benchmark? This is a **planning and verification** milestone. It creates no
+  dataset, renders none of the 6,300 authorised PNGs, runs no M5C inference
+  and produces no benchmark result. The target remains synthetic-reference
+  SSIM; nothing here bears on human readability, CAPTCHA solvability, CAPTCHA
+  security or production robustness.
+- **Code revision:** base `e7a8998` (M8A protocol and lifecycle versioning)
+  plus the M8B implementation, committed as `feat: define deterministic
+  cross-font source cases`.
+- **Environment:** CPython 3.13.16; macOS 27.0.1 (arm64); Pillow 12.3.0;
+  NumPy 2.5.4; pandas 3.0.6; OpenCV 5.0.0; scikit-image 0.26.0;
+  scikit-learn 1.9.1; fontTools 4.67.0. No GPU was used. Determinism is
+  demonstrated in this environment only; no cross-platform determinism is
+  claimed.
+- **Configuration:** `configs/cross_font_text_cases_v0_1_0.toml` (the
+  committed matched text-case manifest), `configs/cross_font_benchmark_protocol_v0_2_0.toml`
+  (the superseding execution protocol) and `configs/benchmark_lifecycle_v0_2_0.toml`
+  (the superseding lifecycle protocol, still `authorized_not_executed`).
+  Protocol seed `20260821`; case namespace `matched_case`; render namespace
+  `render`; variant namespace `variant`.
+- **Upstream frozen inputs:** the twenty-two file-exact declared dependencies
+  of lifecycle protocol version 0.2.0, each pinned by SHA-256: the M7D
+  planning configuration
+  (`e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3`), the
+  M7D plan manifest
+  (`7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8`), the
+  M7D report
+  (`bb6755f800874903cf19c7e1ad83cb856462033b801e9e2a158267d3004195c2`), the
+  M7E audit protocols v0.1.0 and v0.2.0, the M7E v0.2.0 eligibility and
+  licence-evidence tables, the M5C champion artifact
+  (`c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`) and
+  card (`9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`),
+  the pinned source files of the feature extractor, renderer, corruption
+  operators, dataset and split code, modelling code and the frozen M7B
+  zero-shot inference implementation, and the two new dependencies added by
+  this milestone: the text-case manifest
+  (`fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48`) and
+  the canonical identity scheme implementation.
+- **Dataset:** none created. The *planned* dataset would be
+  `matched-font-v0.1.0` at `data/processed/matched_font_benchmark_v0.1.0/`
+  with the benchmark report at `reports/matched_font_benchmark_v0_1_0/`; M8B
+  created nothing at either path, and M7D's `no_planned_outputs_created`
+  check still passes.
+- **Split:** none created. The protocol fixes one `eval` split containing all
+  300 sources, with the source identifier as the split group.
+- **Seeds:** protocol seed `20260821`; the benchmark dataset seed is pinned at
+  `20260821`; the render seed is
+  `derive_noise_seed(dataset_seed, "render", font_key, str(case_index))` and
+  the corruption seed is
+  `derive_noise_seed(dataset_seed, "variant", source_id, family, severity_level)`.
+- **Runtime:** recorded in the verification output; two clean-commit runs give
+  identical substantive results.
+
+**Method.** The thirty matched text cases are committed in a versioned
+manifest. Each case stores its identifier, index, exact Unicode text, UTF-8
+hex, text SHA-256, length and canonical record digest; the order is pinned by
+the canonical manifest digest, which the execution protocol pins together with
+the file digest. The normalisation policy is `none` and is asserted rather
+than applied: the verifier requires every stored string to be already NFC,
+NFD, NFKC and NFKD normalised, to be pure ASCII and to use only characters of
+the project charset, and it raises instead of rewriting a string. Glyph
+coverage is read from the `cmap` table of each pinned face with fontTools:
+all thirty-one charset characters are present in all ten faces, and a missing
+character, a missing font file or a font hash mismatch is a hard failure with
+no substitution and no question mark.
+
+The canonical identity scheme defines `case_id`, `source_id`, `variant_id`,
+`sample_id` and `row_id` over a documented canonical serialisation and the
+SHA-256 digest of a payload that distinguishes the text case, the typeface
+and its pinned hash, the render configuration and its version, the generation
+configuration, the source image identity, the corruption family, the
+corruption severity, the derived noise seed and the primary or diagnostic
+status. The Milestone 2 and 7B identifier helpers are imported rather than
+duplicated. The verifier proves that the 300 source identifiers are unique,
+stable across repeated computation and independent of the filesystem, and
+that the 6,300 planned rows, the 5,700 primary and 600 diagnostic split, the
+6,300 unique image identities and the six corruption subdirectories all hold
+without materialising anything.
+
+The generator preflight reuses the existing renderer and corruption code —
+`render.render_clean`, `corruptions.apply_corruption`,
+`interference.plan_stroke_pool` and `interference.apply_strokes`, and
+`geometric.apply_elastic` — and exercises a bounded set in a temporary
+directory: the clean reference of one matched case in all ten faces, every
+corruption family and severity on a two-face subset, and six explicit failure
+probes.
+
+**Metrics.**
+
+| Metric | Value | Notes |
+| --- | --- | --- |
+| Matched text cases committed | 30 | unique identifiers, unique texts, lengths 4–6 |
+| Text-case manifest file digest | `fa9a2c57…` | pinned by execution protocol v0.2.0 |
+| Text-case canonical manifest digest | `d1d55b84…` | pins the content and the order |
+| Charset characters covered by all ten faces | 31 / 31 | read from each face's `cmap` |
+| Source identifiers | 300 | unique, stable, filesystem-independent |
+| Planned rows | 6,300 | 5,700 primary and 600 diagnostic, 21 per source |
+| Planned image identities | 6,300 | unique, across six corruption subdirectories |
+| Generation-configuration hash | `147df500…` | anchors every source identifier |
+| Execution protocol version | v0.2.0 | supersedes v0.1.0, which is unchanged |
+| Lifecycle protocol version | v0.2.0 | supersedes v0.1.0, still `authorized_not_executed` |
+| Generator preflight renders | 10 clean + 40 corruptions | bounded, in a temporary directory |
+| Explicit failure probes that fail closed | 6 / 6 | missing font, hash mismatch, missing coverage, bad charset, invalid config, bad output |
+| Images, dataset rows, predictions, model artifacts created | 0 | the 6,300 PNGs were not rendered |
+| Unresolved protocol items | 0 | both M8A blockers closed |
+
+**Observations.** The two M8A blockers were genuinely open rather than
+presentational: the text cases were pinned only by a derivation rule, so a
+generator that differed in the draw order would have produced a different
+benchmark, and the source identifier scheme was not defined for the matched
+design at all. Committing the cases removes the first ambiguity: the
+committed rows are the authority and the derivation rule is retained as
+provenance, and the verifier re-derives them to prove the two agree. The
+identity scheme reuses the Milestone 2 helpers, so the benchmark does not
+introduce a second identifier convention; what is new is the `row_id`, which
+carries the corruption family, severity, seed and primary status that the
+`sample_id` alone does not encode. The M8A protocol also turned out to have
+serialised its numeric parameter arrays as strings, a defect that would have
+made the corruption ladders unusable; version 0.2.0 corrects the type without
+changing a value, and version 0.1.0 is preserved byte-for-byte as the
+historical record. One structural point deserves recording: the M7D verifier
+compares a recomputed isolation-check table with the stored one byte for
+byte, so its planning-state check necessarily reports the transition once the
+benchmark exists; the lifecycle verifier classifies that check rather than
+weakening it, and the M8B verifier requires the whole M8A lifecycle
+verification to pass, so the contract cannot be bypassed.
+
+**Conclusion.** The two M8A execution blockers are closed with committed,
+versioned, hash-pinned evidence: thirty deterministic matched text cases with
+an explicit normalisation policy and proven glyph coverage, and a canonical,
+documented identity scheme whose identifiers are unique, stable and
+independent of the filesystem. The frozen design is unchanged, the count and
+join invariants are proven without materialising the dataset, and the existing
+generator has been exercised against the protocol in an isolated temporary
+environment with explicit failure behaviour. The lifecycle remains
+**authorized-but-not-executed**: the benchmark output paths do not exist and
+nothing was generated.
+
+**Limitations.** This milestone specifies and verifies, it does not execute.
+No dataset row, no benchmark image, no prediction and no metric exists, so
+nothing here is evidence about the benchmark's outcome. Determinism has been
+demonstred on one platform with one pinned stack; the ten faces are the
+Apple-bundled builds, so the pinned hashes and the rasterisation are
+platform-specific and the benchmark must be produced in the environment the
+protocol pins. The text cases are synthetic CAPTCHA-like labels for a
+synthetic image pipeline; they are not sampled from real CAPTCHA traffic and
+carry no information about human difficulty. The glyph-coverage evidence is
+the character map of the pinned files, which is exact but does not certify
+that a glyph is legible at the fitted size in every face. The M7D
+planning-state check will necessarily report the transition once the
+benchmark exists, which the lifecycle verifier classifies rather than
+suppresses.
+
+**Next step.** Stop for review. The next milestone may execute the reviewed
+protocol as a separate, explicitly authorised run, together with the
+separate, versioned lifecycle change that moves the planned benchmark output
+paths into existence. Neither is started here.
+
+**Artifacts.** The committed text-case manifest
+`configs/cross_font_text_cases_v0_1_0.toml`, the superseding execution
+protocol `configs/cross_font_benchmark_protocol_v0_2_0.toml`, the superseding
+lifecycle protocol `configs/benchmark_lifecycle_v0_2_0.toml`, the identity
+scheme module `src/captcha_quality/source_identity.py`, the preflight
+verifier `src/captcha_quality/benchmark_preflight.py` with the
+`captcha-benchmark-preflight` CLI, and the regression tests
+`tests/test_benchmark_preflight.py` are the reproducible protocol. No
+benchmark output was created.
 
 ---
 

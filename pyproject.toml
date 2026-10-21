@@ -42,6 +42,8 @@ dependencies = [
 image = [
   "opencv-python-headless>=4.9",
   "scikit-image>=0.22",
+  # Exact glyph-coverage evidence for the Milestone 8 source-case manifest.
+  "fonttools>=4.50",
 ]
 # Conventional baselines (Milestone 3); the CNN extra remains separate.
 ml = [
@@ -85,6 +87,7 @@ captcha-cross-font-analysis = "captcha_quality.cross_font_analysis:main"
 captcha-evaluation-plan = "captcha_quality.evaluation_plan:main"
 captcha-font-roster-audit = "captcha_quality.font_roster_audit:main"
 captcha-benchmark-lifecycle = "captcha_quality.benchmark_lifecycle:main"
+captcha-benchmark-preflight = "captcha_quality.benchmark_preflight:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

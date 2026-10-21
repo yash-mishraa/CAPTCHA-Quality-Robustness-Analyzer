@@ -1,0 +1,330 @@
+# Milestone M8B committed matched text-case manifest, version 0.1.0.
+#
+# These are the thirty matched text cases of the planned cross-font
+# generalization benchmark. The same thirty cases are rendered in all ten
+# pinned typefaces, which is what makes the design matched rather than
+# merely parallel.
+#
+# The manifest is frozen evidence, not a runtime input: the generator
+# reads the stored strings verbatim and never samples text at runtime. The
+# stored strings are pure ASCII, so their UTF-8 encoding is unambiguous.
+#
+# Normalisation is explicit and is never applied silently. The policy is
+# 'none': the stored string is used exactly as written. The verifier
+# asserts that the stored string is already NFC, NFD, NFKC and NFKD
+# normalised and that it contains only characters of the project charset,
+# and it raises rather than rewriting a string that would need
+# normalisation.
+#
+# Glyph coverage is proven, not assumed. Every character of the project
+# charset is present in the character map of all ten pinned faces, so no
+# case can be rendered with a substituted glyph or a question mark. The
+# verifier re-derives this from the pinned font files on every run and
+# fails closed if a face is missing a character.
+#
+# The derivation below records where the cases came from. It is
+# provenance, not a runtime instruction: the committed rows are the
+# authority, and the verifier re-derives them to prove the manifest
+# still matches the rule.
+
+[manifest]
+name = "cross-font-matched-text-cases"
+version = "v0.1.0"
+milestone = "M8B"
+status = "frozen"
+n_cases = 30
+seed = 20260821
+case_namespace = "matched_case"
+render_namespace = "render"
+variant_namespace = "variant"
+charset = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+text_lengths = [4, 5, 6]
+text_length_weights = [0.3, 0.4, 0.3]
+encoding = "utf-8"
+normalization = "none"
+normalization_policy = "The stored string is used verbatim. No runtime normalisation is applied. The verifier asserts that the stored string is already NFC, NFD, NFKC and NFKD normalised, is pure ASCII, and contains only characters of the project charset, and it raises rather than rewriting a string that would need normalisation."
+case_id_format = "case-{index:03d}"
+canonical_serialization = "json.dumps(payload, sort_keys=True, separators=(',', ':'), allow_nan=False) encoded as UTF-8"
+case_hash_algorithm = "sha256"
+manifest_hash_algorithm = "sha256"
+manifest_hash_scope = "The SHA-256 digest of the canonical JSON list of the thirty canonical case records, in the order they appear in this file. The digest therefore pins the content and the ordering. The digest is pinned by the execution protocol, not stored here, so it is not self-referential."
+derivation = "For case index i in 0..29 the generator draws, from a single numpy generator seeded with derive_noise_seed(dataset_seed, 'matched_case', str(i)): first the text length from the configured length distribution, then the text itself from the project charset. The per-font render seed is derived separately with derive_noise_seed(dataset_seed, 'render', font_key, str(i)), so a change to the render jitter can never change a text case."
+selection_constraints = ["The text is drawn only from the project charset 23456789ABCDEFGHJKMNPQRSTUVWXYZ, which omits the visually ambiguous characters 0, O, 1, I, 5 and S is retained only where the frozen M7B charset admits it.", "The text length is drawn from the frozen M7B length distribution of 4, 5 or 6 characters with weights 0.3, 0.4 and 0.3.", "The thirty cases are unique as strings and their case identifiers are unique.", "Every character of every case is present in the character map of all ten pinned faces.", "The cases are synthetic CAPTCHA-like labels for a synthetic image pipeline. They are not sampled from real CAPTCHA traffic, they carry no information about human difficulty, and no claim about solvability or security is made or implied."]
+case_record_fields = ["case_id", "case_index", "normalization", "text", "text_length", "text_sha256", "text_utf8_hex"]
+
+[glyph_coverage]
+method = "The character map of each pinned font file is read with fontTools (fontTools.ttLib.TTFont.getBestCmap) and compared with the codepoints of the project charset."
+faces_checked = 10
+charset_codepoints_checked = 31
+result = "All ten pinned faces declare a character map that contains every codepoint of the project charset, so all thirty cases are renderable by every face without a substituted glyph."
+failure_behaviour = "A face that is missing a required character, a font file whose SHA-256 differs from the pinned value and a font file that is absent are all hard failures. The generator never substitutes a glyph and never replaces a character with a question mark."
+
+[[cases]]
+case_id = "case-000"
+case_index = 0
+text = "6RTX"
+text_utf8_hex = "36525458"
+text_sha256 = "0e62ddfa594410f462d717405370fd6553547074cc068dc1ff596c637692466c"
+text_length = 4
+case_hash = "3d9ae0c028549c849073b613a539a46f0af4f032b35834c6f96ee06f86980959"
+
+[[cases]]
+case_id = "case-001"
+case_index = 1
+text = "B3J84"
+text_utf8_hex = "42334a3834"
+text_sha256 = "4fe8383bb6fe6de0bec9643ba38d6385a77006615d4147fcaafe4cc4f82fac06"
+text_length = 5
+case_hash = "4adc331ba0ca71a10d86977f8a14437c575f1f864d1e5112c405e3b07f34fece"
+
+[[cases]]
+case_id = "case-002"
+case_index = 2
+text = "V5JS8"
+text_utf8_hex = "56354a5338"
+text_sha256 = "d7539e0b5c92246f0f8b9566a4f6bdc7d0d9193e359819aebad0cfacd4d38d77"
+text_length = 5
+case_hash = "f542ec45bd1450e02c78e700e8e2886985a32ba7cee3f8ab8f9bd3d5e4391a45"
+
+[[cases]]
+case_id = "case-003"
+case_index = 3
+text = "GMD2F"
+text_utf8_hex = "474d443246"
+text_sha256 = "7753e133aa19620903142e9524452e3b01dcad8ac7bd55daea672e8b160a9be9"
+text_length = 5
+case_hash = "9313cbdb31003797134a36e047cd39737efde2c0604784795f05cc863ee120b4"
+
+[[cases]]
+case_id = "case-004"
+case_index = 4
+text = "PYBW"
+text_utf8_hex = "50594257"
+text_sha256 = "b885a3de5854f5950f7a8c452c9c2c231837a0947cab7daeff6106ee3267b3c7"
+text_length = 4
+case_hash = "4331e25578e6de1a67768d6a42a55c26d7ad191606eb875b1f5598358cdacdf5"
+
+[[cases]]
+case_id = "case-005"
+case_index = 5
+text = "JEX87R"
+text_utf8_hex = "4a4558383752"
+text_sha256 = "5e44fae7eff5eb74c29e9b855383b8fa35071e9652065f7439ade0ab6619c846"
+text_length = 6
+case_hash = "1fe678fe6c229b3949f487eaf2047e4469db8a46ac6753eb60a5b479c3bab494"
+
+[[cases]]
+case_id = "case-006"
+case_index = 6
+text = "2CM6WN"
+text_utf8_hex = "32434d36574e"
+text_sha256 = "6c92847fcc4e64f64e3b3985ffb8167a049851287ab4935b6ecbeb4ae9021787"
+text_length = 6
+case_hash = "e861d4db93c780c83d9d1baaa8670434ec5eed74ec036f01b65afed761838b28"
+
+[[cases]]
+case_id = "case-007"
+case_index = 7
+text = "XTP6J7"
+text_utf8_hex = "585450364a37"
+text_sha256 = "c702fd5855d7e43609114933b41a7e71911a965bc949c9ffd614a7cc7ce51967"
+text_length = 6
+case_hash = "8f59bf6dab821ec4d78d869fe158b7a3d7580f0e95913d7c68d1604a4e0f0872"
+
+[[cases]]
+case_id = "case-008"
+case_index = 8
+text = "6HQQ6G"
+text_utf8_hex = "364851513647"
+text_sha256 = "a1dabef1f99f46d397650ad72ed973c6341f396bb352b20fee848f5d864171f3"
+text_length = 6
+case_hash = "07cc51cfad64937c84c22cb465424a6a6f2f24214a25122e7ea0730a1df388a5"
+
+[[cases]]
+case_id = "case-009"
+case_index = 9
+text = "4WS4C8"
+text_utf8_hex = "345753344338"
+text_sha256 = "12022e8dbe2ebc3074e04a45d419b107839492edcb73d6894e4b07e106240aad"
+text_length = 6
+case_hash = "579eba73e6ee56b05a8f8138b08641e2128b012a0e093208a0fb48564bc2ed55"
+
+[[cases]]
+case_id = "case-010"
+case_index = 10
+text = "YYT5DA"
+text_utf8_hex = "595954354441"
+text_sha256 = "0e029e28aff6589a35796f4364167b4b365d322ec6a8ff96cc24bdbbdf812cb2"
+text_length = 6
+case_hash = "6309763ad96ed9d993ea81849fd52a95272ce8249fd8ef5a0a0fc1c0dec59abe"
+
+[[cases]]
+case_id = "case-011"
+case_index = 11
+text = "AYQA"
+text_utf8_hex = "41595141"
+text_sha256 = "a07da5dc702f6f8c00c0334144d808100796039132c29907e8a6128ba228e3a4"
+text_length = 4
+case_hash = "9f0f11c73f939996a321f466288fd9346f1c58ba61c40734a25bcc4a0481f2c8"
+
+[[cases]]
+case_id = "case-012"
+case_index = 12
+text = "GGU54"
+text_utf8_hex = "4747553534"
+text_sha256 = "0df8af7bb95014ff390b092068b8379b9c1ba5f83a69ac9d656b2e076b1342f0"
+text_length = 5
+case_hash = "42814e74af6f3768ec99d0ce971d5927e3144fdc822570b4cd44090d398e415d"
+
+[[cases]]
+case_id = "case-013"
+case_index = 13
+text = "EFWXC"
+text_utf8_hex = "4546575843"
+text_sha256 = "597a69e60cb20aa492b52f37c968c6699f1714b06be3108fdf7f464efe44c364"
+text_length = 5
+case_hash = "212de00d44d9ec2c88cf342fee6264a6b601442bd3caaaffef75402b82b6fc62"
+
+[[cases]]
+case_id = "case-014"
+case_index = 14
+text = "9QJC"
+text_utf8_hex = "39514a43"
+text_sha256 = "3d5a745859cd7864828c098378a5e47c653ca481b71feba39efccba26d957df9"
+text_length = 4
+case_hash = "ca00b99c560046cc8046444cf45af726f4612cdd5d521a15173c765e43f05f68"
+
+[[cases]]
+case_id = "case-015"
+case_index = 15
+text = "3E5PK"
+text_utf8_hex = "334535504b"
+text_sha256 = "214d64bbb46b9c8f67a820051da6f446df10feea0a195f125445f7d3705806f4"
+text_length = 5
+case_hash = "b822958500ac147be6eb3e00bef3031f875cdfb2ab7f80133c5a6f186d50e2e1"
+
+[[cases]]
+case_id = "case-016"
+case_index = 16
+text = "B97CDD"
+text_utf8_hex = "423937434444"
+text_sha256 = "a778c1f24dd4f881eb6995dd682fb6c1db7e5612dbb5b3cbca1fa7aac116edf6"
+text_length = 6
+case_hash = "540b1bcca51bf9f33f1fab807a4054e01ccca4e0bcf3ab73b95ce8cbead49178"
+
+[[cases]]
+case_id = "case-017"
+case_index = 17
+text = "UNF6"
+text_utf8_hex = "554e4636"
+text_sha256 = "2f1cef586d33370a3eec77ddbf2982b6b9037c0bfe9fc3351fafb686cccb3340"
+text_length = 4
+case_hash = "b242f0c75c492c2c8d604c74e92e213416200e702dce75dcc4be6f3ee5103108"
+
+[[cases]]
+case_id = "case-018"
+case_index = 18
+text = "HY47"
+text_utf8_hex = "48593437"
+text_sha256 = "e06ec3342178543abdcf43f628460dd6df027461404826c0f94f66510d5278fc"
+text_length = 4
+case_hash = "72f1a694ff8934e8f1388d0af5821bb5bb871bc435bb15773c948d22bcc22462"
+
+[[cases]]
+case_id = "case-019"
+case_index = 19
+text = "2Z23"
+text_utf8_hex = "325a3233"
+text_sha256 = "9dafc48b4f21b78f2a57172712415c0486662507a02e1845564911ac1fa50bbd"
+text_length = 4
+case_hash = "ba6dc11397686c8f39a3a3f0fe0c8dfaab358d6d84f9ac796ef001f1ec0898a1"
+
+[[cases]]
+case_id = "case-020"
+case_index = 20
+text = "YF8W2J"
+text_utf8_hex = "59463857324a"
+text_sha256 = "00b0040c4a556597ab70eb53f61acf44321b31b31669141731c7eaedd6a90070"
+text_length = 6
+case_hash = "ad07016167c199eee209fb068e331b1a8448f5e9038bd89d7718c982ba5ef0b8"
+
+[[cases]]
+case_id = "case-021"
+case_index = 21
+text = "B8Z4C"
+text_utf8_hex = "42385a3443"
+text_sha256 = "bbc9adc50f7562ec783b0494b2d25c8315f30ded68b3dda90e4f1cf7e261fd45"
+text_length = 5
+case_hash = "25c4aab74c6ea75b92a1fedcde9a10542dfe19c2016b61e059add6eabcf2f23a"
+
+[[cases]]
+case_id = "case-022"
+case_index = 22
+text = "RPNX"
+text_utf8_hex = "52504e58"
+text_sha256 = "ee141cd6cbb64cdda60a40fa9908b540c8136a887a310ce8e6e78841f417381c"
+text_length = 4
+case_hash = "140ed161b3e66e5b86b7be15fe1aebe810259c1f84ae968068d045e4c8bcaf3d"
+
+[[cases]]
+case_id = "case-023"
+case_index = 23
+text = "NQQFD"
+text_utf8_hex = "4e51514644"
+text_sha256 = "bb0ca7187e905c4d482acc3fbcc6af0cbf3bf7dffd5ff4414adc4a7d75ff4535"
+text_length = 5
+case_hash = "58343e1563e07569350c3a36c6fcaf60a78ce04c96cbf0d97a7fb5084c9795d2"
+
+[[cases]]
+case_id = "case-024"
+case_index = 24
+text = "6BNVP"
+text_utf8_hex = "36424e5650"
+text_sha256 = "a1fe389ed2dd68567d3db9fc3178c3d2d89910b3c6670933e0a0d03f7e71b01c"
+text_length = 5
+case_hash = "7f4a1c29e3ddbc653beba6b3a8f2b1c4eaff9bc26bcd4e4d13781a9f0f83ea24"
+
+[[cases]]
+case_id = "case-025"
+case_index = 25
+text = "JSAT9E"
+text_utf8_hex = "4a5341543945"
+text_sha256 = "7377207615c25e34a3d6ba4e9b819edf2f432badca5ec96630520d07ba785f75"
+text_length = 6
+case_hash = "a307a642455d113777c76d23b095dca5a57e2098b4b0411c9c307de451c53120"
+
+[[cases]]
+case_id = "case-026"
+case_index = 26
+text = "9S6T"
+text_utf8_hex = "39533654"
+text_sha256 = "8609bc04d8c4d4c87be998ce5e07a0518684b8eac8b2cf97d219d1024cc7b1d0"
+text_length = 4
+case_hash = "43488884ff07f5482da5fd957a83473a2b527b5f2ffa3d81f3fec775eda66630"
+
+[[cases]]
+case_id = "case-027"
+case_index = 27
+text = "H7A5S"
+text_utf8_hex = "4837413553"
+text_sha256 = "701a7baf41f1233693ad87f1fffacb5852b110523e2654781e9a2a220dc65013"
+text_length = 5
+case_hash = "6823ed1386f819788b71b0fbdbf8de740af4518a80a1e4ef0b4b189b0f525c61"
+
+[[cases]]
+case_id = "case-028"
+case_index = 28
+text = "ZZ9W6P"
+text_utf8_hex = "5a5a39573650"
+text_sha256 = "2b64b882a767d149979d0e85f441339f3f599326d370213d332f3b45db65d7c0"
+text_length = 6
+case_hash = "c43f4bb9e60d577bbe8ed184940ceb0cf4625aedb1ec1b9e36eb051255fc65b1"
+
+[[cases]]
+case_id = "case-029"
+case_index = 29
+text = "SD36EB"
+text_utf8_hex = "534433364542"
+text_sha256 = "8399ccf2b4d020e2a0e9174e5576083cb36f2bc5ef87d90f68e4536e3afb22f4"
+text_length = 6
+case_hash = "2914b9eab9e05177bd4ea7c4441adeb6e7deb3b99df975bb13d0ced5c81a5750"

@@ -19,14 +19,21 @@ spatial-aware feature study, a spatial resolution study, a no-reference local
 structural feature study, a no-reference multi-scale structure-tensor study, a
 read-only evaluation audit, a separately versioned unseen-font benchmark, a
 read-only cross-font analysis, a read-only evaluation-design plan, a read-only
-font-roster licensing and availability audit and a read-only benchmark protocol
-and output-lifecycle versioning exist.
+font-roster licensing and availability audit, a read-only benchmark protocol
+and output-lifecycle versioning and a read-only source-case and generator
+preflight exist.
 M7D is a **planning** milestone: the dataset, benchmark, endpoints and success
 criteria it specifies are *planned, not executed*. M7E is an **audit**
 milestone: it clears all ten proposed typefaces, so the benchmark generation
 gate is **open**, while the M7D plan itself remains a plan. M8A freezes the
 execution protocol and versions the output-lifecycle transition, leaving the
-lifecycle in the **authorized-but-not-executed** state. The CNN
+lifecycle in the **authorized-but-not-executed** state. M8B closes the two
+execution blockers M8A left open — the exact matched text strings and the
+deterministic source identifier scheme — with a committed, hash-pinned
+text-case manifest whose glyph coverage is proven from every pinned face's
+character map, and with a canonical identity scheme that reuses the existing
+Milestone 2 helpers, and it validates the existing generator against the
+frozen protocol in an isolated temporary environment. The CNN
 comparison, full M5 error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-21
 
@@ -350,6 +357,29 @@ the default; a CNN must justify its cost out-of-sample.
   rules. The M7D planning-state check is classified rather than deleted, and
   the M7D plan artifacts stay immutable. Nothing is generated.
 
+**Implemented for M8B (deterministic source cases and generator preflight):**
+
+- A committed, versioned manifest of the thirty matched text cases with the
+  exact Unicode text, the UTF-8 encoding, the per-case canonical record
+  digest, an explicit no-normalisation policy and a pinned order. Glyph
+  coverage is proven from the `cmap` table of every pinned face; a missing
+  character, a missing font or a font hash mismatch is a hard failure with no
+  substitution.
+- A canonical identity scheme with one documented identifier per level of the
+  benchmark hierarchy — `case_id`, `source_id`, `variant_id`, `sample_id` and
+  `row_id` — over a documented canonical serialisation and SHA-256 digest,
+  reusing the existing Milestone 2 and 7B identifier helpers.
+- A superseding execution protocol v0.2.0 that pins the manifest, defines
+  the identity scheme, states the severity and diagnostic mappings explicitly
+  and closes the two unresolved items, and a superseding lifecycle protocol
+  v0.2.0 that authorises it and stays authorized-but-not-executed. The v0.1.0
+  versions remain byte-for-byte unchanged.
+- A preflight verifier and a bounded generator preflight that reuses the
+  existing renderer and corruption code, proves the 10 fonts, 30 cases, 300
+  sources, 6,300 rows, 5,700/600 split and 6,300 image identities without
+  materialising anything, and probes six explicit failure paths. Nothing is
+  generated.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -410,6 +440,8 @@ src/captcha_quality/
 ├── evaluation_plan.py    # read-only evaluation-design plan, CLI  (implemented, M7D)
 ├── font_roster_audit.py # read-only font-roster licensing audit, CLI (implemented, M7E)
 ├── benchmark_lifecycle.py # benchmark protocol and lifecycle verifier, CLI (implemented, M8A)
+├── source_identity.py  # canonical source, variant, sample and row identifiers (implemented, M8B)
+├── benchmark_preflight.py # matched source cases and generator preflight, CLI (implemented, M8B)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -505,6 +537,7 @@ byte-for-byte.
 | M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark (complete as a plan; the benchmark itself is not implemented) |
 | M7E | Font-roster licensing and availability audit for the planned cross-font benchmark (complete as an audit; the benchmark generation gate is open) |
 | M8A | Benchmark protocol and output-lifecycle versioning for the planned cross-font benchmark (complete as a protocol; the lifecycle is authorized but not executed) |
+| M8B | Deterministic matched source cases, canonical identity scheme and generator preflight for the planned cross-font benchmark (complete as a protocol; nothing generated) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -916,6 +949,21 @@ restricts using rendered glyphs in connection with training artificial-
 intelligence models, which does not apply to the macOS-bundled copies audited
 here but would matter for any future directly licensed copy or for training on
 font-rendered data.
+
+Milestone M8B: a read-only source-case and generator-preflight milestone. It
+closes the two execution blockers M8A left open. The thirty matched text
+cases are committed in a versioned manifest with the exact Unicode text, the
+UTF-8 encoding, per-case canonical record digests, an explicit
+no-normalisation policy and a pinned order; the manifest's file digest and
+canonical manifest digest are pinned by the superseding execution protocol
+v0.2.0, and the verifier re-derives the cases from the pinned rule to prove
+the committed rows still agree with it. Glyph coverage is read from the
+`cmap` table of every pinned face, so it is exact rather than heuristic. The
+canonical identity scheme defines one documented identifier per level of the
+hierarchy and reuses the existing Milestone 2 helpers, and the planned counts
+and join contracts are proven without materialising the dataset. The
+superseding lifecycle protocol v0.2.0 keeps the authorized-but-not-executed
+state, and the v0.1.0 protocol versions remain byte-for-byte unchanged.
 
 Milestone M8A: a read-only protocol and output-lifecycle milestone. It freezes
 the execution protocol for the planned cross-font benchmark — the M7D design

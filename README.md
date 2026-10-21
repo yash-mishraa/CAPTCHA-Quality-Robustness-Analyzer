@@ -5,7 +5,7 @@ CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
 > **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C,
-> M6D, M7A, M7B, M7C, M7D, M7E and M8A complete — the metric-validation pilot, a reproducible
+> M6D, M7A, M7B, M7C, M7D, M7E, M8A and M8B complete — the metric-validation pilot, a reproducible
 > dataset/feature pipeline, a leakage-safe conventional-ML benchmark, an
 > occlusion/interference feasibility pilot, a grouped occlusion/interference
 > robustness benchmark, a geometric-distortion feasibility pilot, a grouped
@@ -22,7 +22,11 @@ image quality, and modelling how those distortions affect image degradation.
 > decision, so the benchmark generation gate is **open** (the M7D plan itself is
 > still only a plan). M8A freezes the execution protocol and versions the
 > output-lifecycle transition, and leaves the lifecycle in the
-> **authorized-but-not-executed** state. The CNN
+> **authorized-but-not-executed** state. M8B closes the two execution blockers M8A
+> left open — the exact matched text strings and the deterministic source
+> identifier scheme — with a committed, hash-pinned text-case manifest and a
+> canonical identity scheme, and validates the existing generator against the
+> frozen protocol in an isolated temporary environment. The CNN
 > comparison, full M5 error taxonomy and dashboard are
 > **not implemented**, and the project does **not** predict human CAPTCHA
 > solvability. See [Current status](#current-status).
@@ -322,6 +326,7 @@ environment files are required at this stage.
 | M7C | Cross-font evaluation analysis of the frozen M7B and M5C predictions | **Complete** — read-only, 31 pinned inputs and 13 audited claims (3 supported / 0 suggestive / 10 unsupported); all-primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; per-font all-primary RMSE 0.0852 / 0.0761 / 0.1134; blur/noise RMSE 0.0279 / 0.0346 / 0.1601 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; uncertainty and font differences are descriptive only |
 | M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark | **Complete as a plan** — read-only, 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated, Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic), frozen M5C champion evaluated zero-shot; no dataset, image, model or prediction was produced |
 | M7E | Font-roster licensing and availability audit of the planned cross-font benchmark | **Complete as an audit** — read-only, 3 pinned inputs; all 10 faces available with the M7D-pinned SHA-256 and all proprietary (none open-licensed); protocol v0.2.0 (superseding v0.1.0 for Luminari only) records **10 eligible, 0 `review_required`, 0 ineligible, 0 unavailable**; audit gate **passed**, **benchmark generation gate open**; the roster is unchanged and no image, text case, dataset row, prediction or model artifact was produced |
+| M8B | Deterministic matched source cases, canonical identity scheme and generator preflight | **Complete as a protocol** — read-only, nothing generated; thirty deterministic matched text cases committed in a versioned, hash-pinned manifest with an explicit no-normalisation policy and glyph coverage proven from every pinned face's `cmap` (31/31 characters in all ten faces), a canonical `case_id`/`source_id`/`variant_id`/`sample_id`/`row_id` scheme over a documented serialisation that reuses the existing Milestone 2 helpers, execution protocol v0.2.0 and lifecycle v0.2.0 superseding their byte-for-byte unchanged v0.1.0 versions, and a bounded generator preflight in a temporary directory with six explicit failure probes; the 10 fonts, 30 cases, 300 sources, 6,300 rows, 5,700/600 split and 6,300 image identities are proven without materialising anything |
 | M8A | Benchmark protocol and output-lifecycle versioning for the planned cross-font benchmark | **Complete as a protocol** — read-only, nothing generated; frozen execution protocol fixes the M7D design verbatim (10 typefaces, 30 matched cases, 300 sources, 6,300 rows) and a versioned lifecycle protocol enumerates the only two authorisable output paths with their exact membership, a file-exact 20-member dependency set, the M7D planning-state check classified rather than deleted, and two unresolved details recorded as fail-closed; lifecycle left **authorized-but-not-executed** |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
@@ -828,6 +833,34 @@ report the transition afterwards, while every other M7D artifact check must
 still pass. See `EXP-0020` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.24.
 
+## Quick start: matched source cases and generator preflight
+
+M8B is a **planning and verification** milestone. It closes the two execution
+blockers the frozen M8A protocol left open — the exact matched text strings
+and the deterministic source identifier scheme — and validates the existing
+generator against the protocol in an isolated temporary environment. It
+creates no dataset, renders none of the 6,300 authorised PNGs, runs no M5C
+inference and produces no benchmark result.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+# Verify the committed text cases, the identity scheme and the planned row identities
+uv run --extra image --extra ml captcha-benchmark-preflight verify
+
+# Exercise the existing generator on a bounded set of representative cases
+uv run --extra image --extra ml captcha-benchmark-preflight preflight
+```
+
+The verifier fails closed on a missing or changed text-case manifest, a
+duplicate or missing case identifier, a font roster or font-hash mismatch, an
+invalid canonical serialisation, a duplicate or unstable source identifier,
+unsupported or unresolved glyph coverage, a changed renderer configuration or
+an unpinned dependency, unexpected files or outputs, and any attempt to bypass
+the M8A lifecycle contract. The dependency membership is file-exact, so
+unrelated shared-directory additions do not invalidate the verification.
+See `EXP-0021` and [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.25.
+
 ## Current status
 
 Implemented:
@@ -941,6 +974,17 @@ Implemented:
   scenarios, fourteen success criteria, eight stopping rules, a twelve-row
   claim-limit table, a machine-readable plan manifest, output protection and a
   run/verify CLI. It produces no dataset, image, model or prediction.
+- A canonical source-identity scheme (`source_identity.py`) and a matched
+  source-case and generator-preflight verifier (`benchmark_preflight.py`,
+  `configs/cross_font_text_cases_v0_1_0.toml`,
+  `configs/cross_font_benchmark_protocol_v0_2_0.toml`): thirty committed,
+  deterministic, hash-pinned matched text cases with an explicit
+  no-normalisation policy, glyph coverage proven from every pinned face's
+  `cmap`, one documented identifier per level of the benchmark hierarchy
+  (`case_id`, `source_id`, `variant_id`, `sample_id`, `row_id`) over a
+  canonical serialisation, the planned counts and join contracts proven
+  without materialising anything, and a bounded generator preflight that
+  reuses the existing renderer and corruption code. It creates nothing.
 - A benchmark protocol and output-lifecycle verifier (`benchmark_lifecycle.py`,
   `configs/benchmark_lifecycle_v0_1_0.toml`,
   `configs/cross_font_benchmark_protocol_v0_1_0.toml`): a frozen execution
@@ -964,7 +1008,7 @@ Implemented:
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 722 tests in total, all passing, including byte-identical dataset
+- 761 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -1421,6 +1465,36 @@ readability or solvability):
   product licence. M7D's `no_planned_outputs_created` check is preserved and
   still passes; the audit created nothing at the planned benchmark output
   paths.
+
+Milestone M8B findings (protocol and preflight only — **not** results):
+
+- **M8B generates nothing.** No dataset, no benchmark image, no prediction and
+  no metric. The 6,300 authorised PNGs were not rendered; the bounded
+  preflight exercised 10 clean references and 40 seeded corruptions in a
+  temporary directory that was removed again.
+- **Both M8A execution blockers are closed with committed evidence.** The
+  thirty matched text cases are frozen in a versioned manifest whose file
+  digest and canonical manifest digest are pinned by execution protocol
+  v0.2.0, and the derivation rule is retained as provenance and re-derived by
+  the verifier to prove the two still agree. The identity scheme reuses the
+  existing Milestone 2 helpers rather than introducing a second convention.
+- **Normalisation is explicit and never silent.** The policy is `none`: the
+  stored strings are used verbatim, and the verifier raises rather than
+  rewriting a string that would need normalising.
+- **Glyph coverage is proven, not assumed.** All 31 characters of the project
+  charset are in the character map of all ten pinned faces. A missing
+  character, a missing font file or a font hash mismatch is a hard failure:
+  no glyph is ever substituted and no character is ever replaced with a
+  question mark.
+- **The counts and joins are proven without the dataset.** 10 fonts, 30
+  cases, 300 unique and stable source identifiers, 6,300 planned rows with
+  5,700 primary and 600 diagnostic, 21 rows per source and 6,300 unique image
+  identities across the six corruption subdirectories.
+- **One protocol defect was found and corrected, not hidden.** The M8A
+  protocol had serialised its numeric parameter arrays as strings, which
+  would have made the corruption ladders unusable. Protocol v0.2.0 corrects
+  the type without changing a value; v0.1.0 stays byte-for-byte unchanged as
+  the historical record.
 
 Milestone M8A findings (protocol and lifecycle only — **not** results):
 
