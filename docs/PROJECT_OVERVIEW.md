@@ -7,16 +7,19 @@ benchmark, the M5C retention-aware selection and calibration study, the M5D
 retention-aware training-objective study, the M6A spatial-aware feature study,
 the M6B spatial resolution study, the M6C local structural feature study, the
 M6D multi-scale structure-tensor study, the M7A dataset-adequacy audit, the
-M7B held-out-font generalisation benchmark and the M7C cross-font evaluation
-analysis. A reproducible dataset and image-feature pipeline, a leakage-safe
+M7B held-out-font generalisation benchmark, the M7C cross-font evaluation
+analysis and the M7D next-benchmark evaluation-design plan. A reproducible
+dataset and image-feature pipeline, a leakage-safe
 conventional-ML benchmark, source-isolated zero-shot/adaptation evaluation, a
 replayable elastic-warp pilot, a grouped geometric-robustness benchmark, a
 retention-aware selection study, a retention-aware training-objective study, a
 spatial-aware feature study, a spatial resolution study, a no-reference local
 structural feature study, a no-reference multi-scale structure-tensor study, a
-read-only evaluation audit, a separately versioned unseen-font benchmark and a
-read-only cross-font analysis exist. The CNN comparison, full M5 error taxonomy
-and dashboard are planned.
+read-only evaluation audit, a separately versioned unseen-font benchmark, a
+read-only cross-font analysis and a read-only evaluation-design plan exist.
+M7D is a **planning** milestone: the dataset, benchmark, endpoints and success
+criteria it specifies are *planned, not executed*. The CNN comparison, full M5
+error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-21
 
 ## 1. Purpose
@@ -286,6 +289,22 @@ the default; a CNN must justify its cost out-of-sample.
   descriptive. It refuses protected output paths and fingerprints 360 protected
   non-image files before and after the run.
 
+**Implemented for M7D (evaluation-design and dataset-expansion plan):**
+
+- A read-only planning milestone that compares three candidate directions
+  (broader unseen fonts, unseen renderer, matched font transfer), selects one,
+  and pre-registers the next benchmark. It pins 38 upstream files, reproduces
+  46 numerical claims from the frozen M3/M5C/M7A/M7B/M7C frames, and verifies
+  the ten planned font files by path, SHA-256 and charset glyph coverage. It
+  writes direction assessment, research questions, independent units, split
+  hierarchy, endpoints, sample-size scenarios, leakage controls, success
+  criteria, stopping rules, claim limits, an evidence snapshot, a plan
+  manifest and a report. It generates no dataset, image, model or prediction;
+  the planned design is 10 fonts × 30 matched text cases = 300 sources and
+  6,300 rows, evaluated zero-shot with the frozen M5C champion. It refuses
+  protected output paths and fingerprints 376 protected non-image files before
+  and after the run.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -293,6 +312,9 @@ the default; a CNN must justify its cost out-of-sample.
 - Broader error taxonomy and qualitative examples.
 - Cross-family or cross-generator generalisation beyond the current split.
 - A retention-aware selection or calibration protocol, if the line continues.
+- The M7D benchmark itself: a separately versioned matched-font dataset and
+  zero-shot evaluation. It is specified but not implemented, and any model
+  change would need its own authorized protocol with an untouched test set.
 
 ### Stage 9 — Dashboard and reporting
 
@@ -340,6 +362,7 @@ src/captcha_quality/
 ├── dataset_audit.py    # read-only dataset/evaluation audit, CLI        (implemented, M7A)
 ├── heldout_font_benchmark.py # unseen-font dataset, zero-shot benchmark, CLI (implemented, M7B)
 ├── cross_font_analysis.py # read-only cross-font analysis, CLI (implemented, M7C)
+├── evaluation_plan.py    # read-only evaluation-design plan, CLI  (implemented, M7D)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -363,6 +386,10 @@ and test frames without modifying them. `structure_tensor_features.py` and
 `structure_tensor_study.py` implement M6D in the same pattern, adding two
 predeclared Gaussian scales and nine coherence/anisotropy/energy summaries while
 keeping the frozen global schema, split, champion and selection rule unchanged.
+`evaluation_plan.py` implements M7D as a read-only planning module: it verifies
+the frozen M3/M5C/M7A/M7B/M7C inputs, reproduces their headline numbers,
+selects one benchmark direction and writes a deterministic, Git-ignored plan
+without generating a dataset, image, model or prediction.
 No CNN code exists yet.
 
 ## 4. Artifact contracts
@@ -428,6 +455,7 @@ byte-for-byte.
 | M7A | Dataset-adequacy and evaluation audit of the frozen dataset, targets, split, champion and feature studies (complete) |
 | M7B | Held-out-font generalisation benchmark of the frozen M5C champion (complete) |
 | M7C | Read-only cross-font evaluation analysis of the frozen M7B and M5C predictions (complete) |
+| M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark (complete as a plan; the benchmark itself is not implemented) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -521,7 +549,11 @@ byte-for-byte.
   three-font held-out result, but not unseen-renderer, real-world,
   human-readability or CAPTCHA-security claims. The 0.5 px geometric rungs in
   both M5A/M5B and M7B are near-degenerate and diagnostic only.
-- **Font licensing:** only redistributable fonts may be used or bundled.
+- **Font licensing:** only redistributable fonts may be used or bundled. M7D
+  verifies all ten planned font files by path, SHA-256 and charset glyph
+  coverage, but it deliberately does **not** assert a license: every planned
+  font carries `license_status = review_required_before_generation`, and the
+  future generator must fail closed rather than substitute a font.
 
 ## 7. Implemented today
 
@@ -754,3 +786,48 @@ unseen fonts, unseen renderers/resolutions/formats, human readability or solve
 rates, security or production robustness, a causal font effect, geometric
 equivalence, stable 0.5 px R²/ranking and font-population generalisation. No
 dashboard, deployment or final presentation exists yet.
+
+Milestone M7D: a read-only evaluation-design and dataset-expansion plan. It
+pins 38 upstream files, reproduces 46 numerical claims from the frozen
+M3/M5C/M7A/M7B/M7C frames, verifies the ten planned font files by path,
+SHA-256 and charset glyph coverage, fingerprints 376 protected non-image files
+before and after the run, and writes only to a Git-ignored report directory. It
+generates no dataset, image, model or prediction; the dataset, benchmark,
+endpoints and success criteria it specifies are *planned, not executed*. Three
+directions are compared. **Direction A (broader unseen fonts) is selected**,
+because it is the only option that expands the font-identity axis and it
+directly targets the M7C unsupported arbitrary-unseen-font and
+font-population claims. **Direction B (unseen renderer) is deferred**,
+because a second renderer confounds renderer with antialiasing, placement,
+canvas and format, and two renderers are not a renderer sample. **Direction C
+(matched font transfer) is not selected as a standalone benchmark**, because it
+reuses the same three held-out fonts; its matched text-case and
+matched-corruption logic is instead incorporated into A as a design control,
+which is what repairs the M7C unmatched familiar-versus-held-out comparison
+(+0.072595 blur/noise RMSE, -0.000167 geometric). The planned design is 10
+pre-specified typefaces (3 familiar, 7 held-out) × 30 matched text cases = 300
+font-specific sources, 6,300 rows (5,700 primary, 600 diagnostic), the frozen
+M7B corruption ladder, the frozen renderer at 192×64 8-bit grayscale PNG, and
+one primary endpoint: the matched held-out-minus-familiar all-primary RMSE
+contrast over 21 font pairs with a 2,000-replicate matched-case grouped
+percentile bootstrap. The roster widens the held-out set rather than replacing
+it: Georgia, Monaco and Impact were already used in M7B as an evaluation set,
+so only four of the seven held-out faces are genuinely new and the M7B
+three-font pattern is not independently re-tested. Nine independent units are
+separated explicitly, and
+font-level inference stays descriptive because ten purposive typefaces are not
+a font population. The planning source-level SD is 0.022634 (the observed M7C
+per-source RMSE SD); at 30 cases the normal-approximation 95% half-width for a
+mean source RMSE is 0.008099, while the paired and font-level half-widths are
+reported as sensitivity grids over assumed SDs, because the paired SD does not
+exist yet and no power calculation or effect size is fabricated. Licensing is
+not asserted: every planned font is `review_required_before_generation`, and
+generation must fail closed rather than substitute a font. The M5C champion
+(`expanded_random_forest`, calibration `none`) is frozen for zero-shot
+evaluation; M7D defines no universal SSIM improvement threshold, and any
+future model change needs a separate authorized protocol with untouched test
+groups. Because the M7C verifier fingerprints the whole `configs/` tree, adding
+the new M7D configuration changes that tree-level fingerprint; the difference is
+exactly one added file, and all 360 files recorded in the M7C run plus all 31
+M7C pinned inputs remain byte-identical. No dashboard, deployment or final
+presentation exists yet.

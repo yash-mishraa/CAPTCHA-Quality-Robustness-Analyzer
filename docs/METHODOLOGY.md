@@ -2081,6 +2081,196 @@ clean commit are byte-identical except for the runtime-only `elapsed_seconds`
 metadata field. The committed inputs are the TOML configuration, code, tests and
 documentation.
 
+### 5.22 M7D evaluation design and dataset-expansion plan
+
+M7D is a **read-only planning milestone**. It selects the next benchmark, fixes
+its protocol, sample-size rationale, leakage controls, endpoints, success
+criteria and stopping rules, and then stops. It does not generate a dataset,
+render an image, train, refit, recalibrate, select or tune a model, change a
+prediction, change a target or split, or modify any frozen benchmark artifact.
+Everything it proposes is *planned, not completed*.
+
+**Pinned inputs and isolation.** `configs/evaluation_design_plan_v0_1_0.toml`
+pins 38 upstream files by SHA-256: the M3 dataset configuration, summary,
+source table and manifest; the M5C configuration, champion model card, champion
+artifact, test predictions, test-slice metrics, run metadata and report; the
+M7A configuration, next-direction comparison, claim evidence and run metadata;
+the M7B configuration, dataset summary, source table, manifest, predictions,
+overall/per-font/family metrics, grouped uncertainty, familiar comparison, run
+metadata and report; and the M7C configuration, per-font/family/severity/source
+metrics, error concentration, grouped uncertainty, benchmark comparison, claim
+evidence, run metadata and report. Every path is read-only. The plan refuses to
+write outside the Git-ignored `reports/` tree or into any protected prior
+report directory, and fingerprints 376 protected non-image files under
+`configs/`, `data/processed/`, `models/` and the prior report directories before
+and after the run.
+
+**Evidence reproduction.** 46 numerical claims are recomputed from the pinned
+frames rather than copied from prior prose: M3 and M7B source/row/split counts,
+M7B and M7C all-primary MAE/RMSE/R², per-font all-primary and blur/noise RMSE,
+geometric severity RMSE at 1/2/3 px, source-level error concentration
+(top-3 share 0.099141, effective source count 48.409), the M7C
+familiar-versus-held-out differences (+0.072595 blur/noise, -0.000167
+geometric), the M5C familiar-font champion metrics, the champion artifact and
+card hashes, and the M7A/M7C claim classifications (3/2/7 and 3/0/10). All 46
+reproduce.
+
+**Direction comparison and decision.** Three directions are compared. **A** is a
+broader unseen-font benchmark: it expands the font-identity axis, targets the
+M7C unsupported claims about arbitrary unseen fonts and font-population
+generalisation, but is only partially resolvable because the roster remains
+purposive. **B** is an unseen-renderer benchmark: it addresses the unsupported
+unseen-renderer claim, but confounds renderer with antialiasing, glyph
+placement, canvas and format, and two renderers are not a renderer sample; it
+is **deferred** to a separate versioned protocol. **C** is a matched
+font-transfer benchmark: it has the highest internal validity and directly
+repairs the unmatched familiar-versus-held-out comparison, but reuses the same
+three held-out fonts, so it cannot broaden the font population on its own. The
+decision is **A**, with C's matched-case and matched-corruption logic
+**incorporated into A as a design control** rather than discarded.
+
+**Planned dataset expansion.** The planned benchmark has 10 typefaces (3
+familiar: Arial, Courier New, Times New Roman; 7 held-out: Georgia, Monaco,
+Impact, Verdana, Trebuchet MS, Chalkduster, Luminari), 30 matched text cases
+sampled once from the frozen charset and length distribution (4/5/6 characters,
+weights 0.30/0.40/0.30) and rendered in every font, 300 font-specific sources,
+6,300 rows, 5,700 primary rows and 600 diagnostic rows. Georgia, Monaco and
+Impact were already used in M7B as an *evaluation* set — the champion was never
+fit, calibrated or selected on them — so they remain valid held-out
+identities and keep three of the seven directly comparable with M7B, but only
+**four** of the seven held-out faces (Verdana, Trebuchet MS, Chalkduster,
+Luminari) are genuinely new. The roster therefore widens the held-out set
+rather than replacing it, and the M7B three-font pattern is *not* independently
+re-tested by this design; the per-font `m7b_status` column in
+`font_inventory.csv` records the distinction for every face. The renderer is
+the frozen Pillow ImageDraw + FreeType path at 192×64, 8-bit grayscale PNG. The
+corruption protocol is the frozen M7B ladder: Gaussian blur 1/2/3.5/5 px,
+Gaussian noise 6/12/20/32 sigma, thin lines 1/2/4/7, arc strokes 1/2/4/7 and
+elastic warp 1/2/3 px, with the clean reference and the 0.5 px elastic rung
+diagnostic only. Every font file is verified by path, SHA-256 and full charset
+glyph coverage; licensing is **not** asserted, and the recorded status
+`review_required_before_generation` blocks generation until a local-use review
+exists. A missing font, a changed hash, lost glyph coverage or an unresolved
+license stops the run: no substitute font may be selected after outcomes are
+seen.
+
+**Independent units.** The plan separates nine units that are often conflated:
+*font identity* (one typeface file in the purposive roster), *matched text case*
+(one string rendered in every font with the same render and corruption seed
+schedule), *source* (one clean render of one case in one font), *clean
+reference* (the exact PNG anchor for one source), *corrupted variant* (one
+family/severity applied to one source, nested within it), *renderer* (one fixed
+condition, not a sampled factor), *benchmark row* (one manifest row), *font
+pair* (one held-out/familiar pair on the same cases) and *source group* (all
+rows of one font-specific source, the bootstrap resampling unit). Font-level
+inference is descriptive: source grouping alone cannot establish
+font-population generalisation, because it resamples cases within the observed
+fonts rather than new fonts.
+
+**Split hierarchy and leakage controls.** The proposed benchmark is eval-only:
+all 300 sources sit in one untouched `eval` split and no model is fit. Held-out
+font identities never appear in training, validation, feature selection or
+calibration. All font renders of a case stay together if a case-level partition
+is ever needed; all variants of a source stay together in every split, metric
+and bootstrap replicate. Any future authorized training experiment must
+reserve at least two held-out font identities and disjoint text cases for a
+final test set that is never used for fitting, calibration or selection. Twelve
+declarative controls (L01–L12) cover font-level holdout, frozen model identity,
+no test-label fitting, matched-case grouping, source grouping, no row-level
+independence, future-training separation, manifest/split hashes, no font
+substitution, target recomputation, output protection, and no post-hoc
+endpoint search.
+
+**Pre-registered endpoints.** The primary endpoint P1 is the matched
+held-out-minus-familiar all-primary RMSE contrast, averaged over the 21
+held-out/familiar font pairs, with a matched-case grouped percentile bootstrap
+(2,000 replicates, 95%). P1d is the supporting per-font profile with
+leave-one-font-out range. Secondary endpoints cover original blur/noise, each
+predeclared corruption family, geometric primary and its 1/2/3 px rungs, paired
+within-source contrasts, font-level range/SD and source concentration.
+Diagnostics cover the clean reference, the 0.5 px rung and target distributions.
+R² is suppressed when the target SD is below the predeclared 0.005 margin or
+the target is constant; the clean and 0.5 px slices cannot support primary
+ranking claims. Endpoint F1 (a predeclared future improvement margin) is
+explicitly **not authorized** by this milestone.
+
+**Sample size and precision.** The planning source-level SD is 0.022634, the
+observed M7C all-primary per-source RMSE SD over 60 sources. With 30 matched
+cases the normal-approximation SE for a mean source RMSE is 0.004132 and the
+95% half-width is 0.008099. Because no matched cross-font data exist yet, the
+paired-difference SD is *not* estimated: the plan reports sensitivity across
+assumed SDs of 0.005, 0.010 and 0.020, giving half-widths of 0.001789,
+0.003578 and 0.007157 at 30 cases. Font-level precision is shown for
+illustrative between-font SDs of 0.010, 0.020 and 0.030 at 10 fonts (half-widths
+0.006198, 0.012396, 0.018594), with the explicit note that a normal multiplier
+understates small-df t uncertainty and that the three observed M7B fonts cannot
+supply a font-population variance. These are **precision scenarios, not power
+calculations**; no effect size is fabricated, and the sample is not extended
+after results are seen.
+
+**Frozen model and baseline policy.** The baseline is exactly the M5C
+`expanded_random_forest` champion with calibration `none`, artifact SHA-256
+`c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0` and card
+SHA-256 `9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`.
+M7D does not load it. The future evaluator may load the serialized estimator and
+predict; it must not call `fit`, `partial_fit`, a calibrator or a selector, and
+must not use held-out labels to choose features, thresholds, endpoints or a
+model. Any future model comparison requires a separate authorized experiment
+with untouched test groups and a predeclared practical margin. M7D defines **no
+universal SSIM improvement threshold**.
+
+**Success criteria, stopping rules and interpretation.** Fourteen criteria
+(G01–G14) gate the work: input integrity, font availability and hash/glyph
+verification, licensing review, exact dataset counts, matched coverage,
+font-level and source-level leakage isolation, byte-reproducible generation with
+target replay, non-degenerate primary targets, frozen-model identity, complete
+pre-registered reporting, reproducible artifacts, disciplined interpretation of
+null/mixed/negative findings, and a predeclared margin for any future
+improvement claim. Eight stopping rules (R01–R08) stop on data or protocol
+failure rather than on whether results look favourable. A null contrast means
+no detected matched difference on this roster and these corruptions; it is
+**not** equivalence, universal robustness or font-population homogeneity,
+because no equivalence margin was predeclared. A mixed result is a valid
+conditional finding, but the plan reports family and severity slices separately
+and does not average them into a universal ranking. A negative result is a
+conditional descriptive result and does not establish CAPTCHA insecurity or a
+causal font effect. A positive result is still conditional on the ten-font
+roster, the fixed renderer, the synthetic target and the observed cases.
+
+**Claim limits.** Twelve claims are recorded with an explicit status. Six
+limitations are structural: ten typefaces are a purposive roster rather than a
+font-population sample; three of the seven held-out faces were already used in
+M7B as an evaluation set, so only four held-out identities are genuinely new
+and the M7B three-font pattern is not independently re-tested; the roster
+deliberately includes two display/script stress faces and is not representative
+of production CAPTCHA fonts; 30 matched cases limit source-level precision and
+the paired SD is unknown before generation; one renderer, one canvas and one
+format are fixed; and SSIM against a synthetic clean reference is not human
+readability, solve rate, security or production robustness. Matching reduces
+but does not eliminate composition differences, because glyph metrics and ink
+distribution differ by font.
+
+**Verification and reproducibility.** `captcha-evaluation-plan run` writes only
+to `reports/evaluation_design_plan_v0_1_0/`; `verify` reloads the pinned
+inputs, recomputes every deterministic table, the protocol manifest and the
+report, compares them byte-for-byte, and rechecks input, output and
+frozen-asset hashes. Two runs from the same clean commit are byte-identical
+except for the runtime-only metadata field. The committed inputs are the TOML
+configuration, code, tests and documentation.
+
+**Frozen-verifier note.** The M7C `verify` command fingerprints the *entire*
+`configs/` tree, so adding the M7D configuration — a new, separately versioned
+planning file, not a modification of any frozen artifact — necessarily changes
+that tree-level fingerprint. After M7D, `captcha-cross-font-analysis verify`
+reports exactly one difference: the added file
+`configs/evaluation_design_plan_v0_1_0.toml`. Every one of the 360 files
+recorded in the M7C run is byte-identical, all 31 M7C pinned inputs still match
+their recorded SHA-256 values, and all M7C output artifacts are unchanged. M7C
+code and artifacts are deliberately **not** modified to silence the check.
+Instead, M7D pins and re-verifies the M7C configuration, tables, metadata and
+report directly, so the M7C evidence is validated by content rather than by a
+directory listing.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

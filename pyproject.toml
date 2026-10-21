@@ -82,6 +82,7 @@ captcha-structure-tensor-study = "captcha_quality.structure_tensor_study:main"
 captcha-dataset-audit = "captcha_quality.dataset_audit:main"
 captcha-heldout-font-benchmark = "captcha_quality.heldout_font_benchmark:main"
 captcha-cross-font-analysis = "captcha_quality.cross_font_analysis:main"
+captcha-evaluation-plan = "captcha_quality.evaluation_plan:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

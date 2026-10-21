@@ -5,7 +5,7 @@ CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
 > **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C,
-> M6D, M7A, M7B and M7C complete — the metric-validation pilot, a reproducible
+> M6D, M7A, M7B, M7C and M7D complete — the metric-validation pilot, a reproducible
 > dataset/feature pipeline, a leakage-safe conventional-ML benchmark, an
 > occlusion/interference feasibility pilot, a grouped occlusion/interference
 > robustness benchmark, a geometric-distortion feasibility pilot, a grouped
@@ -13,8 +13,10 @@ image quality, and modelling how those distortions affect image degradation.
 > study, a retention-aware training-objective study, a spatial-aware feature
 > study, a spatial resolution study, a local structural feature study, a
 > multi-scale structure-tensor study, a dataset-adequacy audit, a held-out-font
-> generalisation benchmark and a cross-font evaluation analysis have been run
-> and logged. The CNN comparison, full M5 error taxonomy and dashboard are
+> generalisation benchmark, a cross-font evaluation analysis and a next-benchmark
+> evaluation-design plan have been run and logged. M7D is a **planning** milestone:
+> the proposed dataset, benchmark, endpoints and success criteria are *planned,
+> not executed*. The CNN comparison, full M5 error taxonomy and dashboard are
 > **not implemented**, and the project does **not** predict human CAPTCHA
 > solvability. See [Current status](#current-status).
 
@@ -185,8 +187,9 @@ geometric-robustness benchmark, the M5C retention-aware selection study, the
 M5D retention-aware training-objective study, the M6A spatial-aware feature
 study, the M6B spatial resolution study, the M6C local structural feature study,
 the M6D multi-scale structure-tensor study, the M7A dataset-adequacy and
-evaluation audit, the M7B held-out-font generalisation benchmark and the M7C
-cross-font evaluation analysis. The full M5 error taxonomy and Stage 9 dashboard
+evaluation audit, the M7B held-out-font generalisation benchmark, the M7C
+cross-font evaluation analysis and the M7D next-benchmark evaluation-design
+plan. The full M5 error taxonomy and Stage 9 dashboard
 are planned.
 Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
@@ -310,6 +313,7 @@ environment files are required at this stage.
 | M7A | Dataset-adequacy and evaluation audit of the frozen dataset, targets, split, champion and feature studies | **Complete** — 60 sources, 12 independent test groups, 3 supported / 2 suggestive / 7 unsupported claims; recommended next direction is explicitly held-out fonts or rendering conditions |
 | M7B | Held-out-font generalisation benchmark of the frozen M5C champion | **Complete** — 60 new sources / 1,260 rows from Georgia, Monaco and Impact (absent from M3); zero-shot primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; blur/noise RMSE 0.0959 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; descriptive only |
 | M7C | Cross-font evaluation analysis of the frozen M7B and M5C predictions | **Complete** — read-only, 31 pinned inputs and 13 audited claims (3 supported / 0 suggestive / 10 unsupported); all-primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; per-font all-primary RMSE 0.0852 / 0.0761 / 0.1134; blur/noise RMSE 0.0279 / 0.0346 / 0.1601 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; uncertainty and font differences are descriptive only |
+| M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark | **Complete as a plan** — read-only, 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated, Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic), frozen M5C champion evaluated zero-shot; no dataset, image, model or prediction was produced |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -326,7 +330,7 @@ those same frames, M5D adds a retention-aware training-objective study, M6A adds
 a spatial-aware feature study, M6B adds a spatial resolution study, M6C adds
 a local structural feature study under a strict no-reference boundary, and M6D
 adds a multi-scale structure-tensor study under the same boundary. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all fifteen recorded
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all sixteen recorded
 experiments.
 
 ## Quick start: dataset pipeline
@@ -718,6 +722,39 @@ differences are unpaired and descriptive, not causal effects or significance
 tests. See `EXP-0016` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.21.
 
+## Quick start: evaluation-design and dataset-expansion plan
+
+M7D is a **read-only planning milestone**. It compares three candidate next
+benchmarks — broader unseen fonts (Direction A), an unseen renderer (Direction
+B) and a matched font-transfer design (Direction C) — selects one, and
+pre-registers the dataset, endpoints, uncertainty, sample-size rationale,
+leakage controls, success criteria and stopping rules. It then stops: no
+dataset is generated, no image is rendered, no model is trained, refitted,
+recalibrated, selected or tuned, no prediction is changed, and no frozen
+benchmark artifact is modified. Everything it proposes is *planned, not
+executed*.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-evaluation-plan run \
+    --config configs/evaluation_design_plan_v0_1_0.toml --overwrite
+
+# Replay every deterministic table/report and recheck input/output/frozen hashes
+uv run --extra image --extra ml captcha-evaluation-plan verify \
+    --config configs/evaluation_design_plan_v0_1_0.toml
+```
+
+The run writes only to `reports/evaluation_design_plan_v0_1_0/` (Git-ignored).
+The selected direction is **A**, with Direction C's matched text-case control
+incorporated into the design and Direction B deferred. The planned benchmark is
+10 pre-specified typefaces (3 familiar, 7 held-out) × 30 matched text cases =
+300 font-specific sources and 6,300 rows (5,700 primary, 600 diagnostic), with
+the frozen M5C champion evaluated zero-shot. The ten font files were verified
+by path, SHA-256 and charset glyph coverage; licensing is **not** asserted and
+every font is `review_required_before_generation`. See `EXP-0017` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.22.
+
 ## Current status
 
 Implemented:
@@ -822,10 +859,19 @@ Implemented:
   percentile intervals, paired within-source contrasts, unpaired font
   differences, an unmatched familiar-versus-held-out comparison, a 13-claim
   audit, output protection and a run/verify CLI.
+- An evaluation-design and dataset-expansion plan (`evaluation_plan.py`,
+  `configs/evaluation_design_plan_v0_1_0.toml`): 38 pinned frozen inputs, 46
+  recomputed evidence values, a three-way direction comparison with a single
+  selected direction, a ten-font roster verified by path/SHA-256/glyph
+  coverage, nine separated independent units, a split hierarchy, twelve leakage
+  controls, eleven pre-registered endpoints, source/paired/font precision
+  scenarios, fourteen success criteria, eight stopping rules, a twelve-row
+  claim-limit table, a machine-readable plan manifest, output protection and a
+  run/verify CLI. It produces no dataset, image, model or prediction.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 576 tests in total, all passing, including byte-identical dataset
+- 594 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -869,7 +915,13 @@ Implemented:
   M7C metric/residual/source-SSE accounting, grouped-bootstrap determinism,
   paired eligibility, severity and degenerate-target handling, claim-table and
   report consistency, output-path protection and frozen-input immutability
-  tests.
+  tests, and the M7D config/count/corruption-ladder validation, font-inventory
+  and glyph-coverage checks, evidence-reproduction assertions, direction
+  decision, research-question and independent-unit coverage, split-hierarchy
+  and leakage-control checks, endpoint/sample-size/success-criteria/stopping-rule
+  coverage, report-section and non-execution checks, output-path protection,
+  deterministic two-run output equality, tamper detection, JSON-safe metadata
+  and CLI run/verify tests.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -1187,6 +1239,96 @@ readability or solvability):
   descriptive. Interval overlap or non-overlap is not treated as a significance
   test, and no universal threshold was introduced after seeing test results.
 
+Milestone M7D findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **M7D is a plan, not a result.** It pins 38 frozen M3/M5C/M7A/M7B/M7C inputs,
+  recomputes 46 numerical claims from them, and writes only to
+  `reports/evaluation_design_plan_v0_1_0/`. No dataset was generated, no image
+  was rendered, no model was trained, refitted, recalibrated, selected or
+  tuned, no prediction was changed, and no frozen artifact was modified. The
+  proposed dataset, benchmark, endpoints, sample size, success criteria and
+  stopping rules are *planned, not executed*.
+- **Direction A is selected, C is folded in, B is deferred.** A is the only
+  option that expands the font-identity axis, so it directly targets the M7C
+  unsupported arbitrary-unseen-font and font-population claims. C has the
+  highest internal validity but reuses the same three held-out fonts, so its
+  matched text-case and matched-corruption logic is incorporated into A as a
+  design control — that is exactly what repairs the M7C unmatched
+  familiar-versus-held-out comparison (+0.072595 blur/noise RMSE, -0.000167
+  geometric). B is deferred because a second renderer confounds renderer with
+  antialiasing, placement, canvas and format, and two renderers are not a
+  renderer sample.
+- **The planned design is fixed before any new outcome exists.** 10
+  pre-specified typefaces (Arial, Courier New, Times New Roman as familiar;
+  Georgia, Monaco, Impact, Verdana, Trebuchet MS, Chalkduster, Luminari as
+  held-out) × 30 matched text cases = 300 font-specific sources, 6,300 rows,
+  5,700 primary and 600 diagnostic. The corruption ladder is the frozen M7B
+  one, the renderer is the frozen Pillow/FreeType path at 192×64 8-bit
+  grayscale PNG, and the sample is not extended after results are seen.
+- **The roster widens the held-out set rather than replacing it.** Georgia,
+  Monaco and Impact were already used in M7B as an *evaluation* set (the
+  champion was never fit, calibrated or selected on them), so they stay valid
+  held-out identities and keep three of the seven directly comparable with M7B
+  — but only four of the seven (Verdana, Trebuchet MS, Chalkduster, Luminari)
+  are genuinely new typefaces. The design therefore does **not** independently
+  re-test the M7B three-font pattern; the per-font `m7b_status` column records
+  this for every face.
+- **Nine independent units are separated explicitly.** Font identity, matched
+  text case, source, clean reference, corrupted variant, renderer, benchmark
+  row, font pair and source group are distinct. Font-level inference stays
+  descriptive: source grouping alone cannot establish font-population
+  generalisation, because it resamples cases within the observed fonts rather
+  than new fonts. Ten purposive typefaces are not a font population, and the
+  two display/script faces are deliberate stress conditions rather than
+  representative CAPTCHA fonts.
+- **One primary endpoint, with the rest pre-registered.** P1 is the matched
+  held-out-minus-familiar all-primary RMSE contrast over 21 font pairs with a
+  2,000-replicate matched-case grouped percentile bootstrap. P1d is the
+  per-font profile with leave-one-font-out range; eight secondary/diagnostic
+  endpoints cover blur/noise, each corruption family, geometric severity,
+  clean reference, target distributions, source concentration, font-level
+  spread and paired within-source contrasts. The clean target and the 0.5 px
+  elastic rung are diagnostic only, and R² is suppressed when target SD is
+  below 0.005.
+- **Precision is planned transparently, and no power calculation is
+  faked.** The source-level planning SD is 0.022634 (the observed M7C
+  per-source RMSE SD); at 30 cases the normal-approximation SE for a mean
+  source RMSE is 0.004132 and the 95% half-width 0.008099. The paired
+  within-case SD does not exist yet, so the plan reports sensitivity at
+  assumed SDs of 0.005/0.010/0.020 (half-widths 0.001789/0.003578/0.007157)
+  rather than a fabricated effect size, and the font-level half-widths at 10
+  fonts (0.006198/0.012396/0.018594 for SDs 0.010/0.020/0.030) are explicitly
+  roster description, not a population interval.
+- **The champion stays frozen and no threshold is invented.** The baseline is
+  the exact M5C `expanded_random_forest` champion with calibration `none`
+  (artifact `c9b1625d…`, card `9a75725b…`). Any future evaluator may predict
+  with it but must not fit, recalibrate, select or tune, and must not use
+  held-out labels. M7D defines no universal SSIM improvement threshold; a
+  future model comparison needs a separate authorized protocol, untouched
+  test groups and a predeclared practical margin.
+- **Licensing is not asserted, and generation fails closed.** All ten planned
+  font files were present on the development machine, matched their recorded
+  SHA-256 and covered the full project charset, but every font carries
+  `license_status = review_required_before_generation`. A missing font, a
+  changed hash, lost glyph coverage or an unresolved license stops the run —
+  no substitute font may be chosen after outcomes are seen.
+- **One frozen-verifier interaction is recorded rather than hidden.** The M7C
+  `verify` command fingerprints the whole `configs/` tree, so adding the new
+  M7D configuration changes that tree-level fingerprint. The difference is
+  exactly one added file: all 360 files recorded in the M7C run remain
+  byte-identical, all 31 M7C pinned inputs still match their recorded SHA-256
+  values, and all M7C output artifacts are unchanged. No M7C code or artifact
+  was modified to silence the check, and M7D re-verifies the M7C configuration,
+  tables, metadata and report directly by content instead.
+- **Null, mixed and negative results have defined meanings.** A null contrast
+  means no detected matched difference on this roster and these corruptions;
+  it is not equivalence, universal robustness or font-population homogeneity,
+  because no equivalence margin was predeclared. A mixed result is a valid
+  conditional finding, reported per family and severity rather than averaged
+  into a universal ranking. A negative result is a conditional descriptive
+  result and does not establish CAPTCHA insecurity or a causal font effect.
+
 Milestone M7C findings (synthetic image similarity only — **not** human
 readability or solvability):
 
@@ -1388,8 +1530,9 @@ or solvability):
   reversals occurred, and clean-vs-clean comparisons were exactly perfect.
 
 Not implemented (planned): the CNN comparison, the broader M5 error taxonomy,
-notebooks, the Streamlit dashboard, deployment, and any human-solvability or
-production-CAPTCHA claims.
+notebooks, the Streamlit dashboard, deployment, the M7D benchmark itself (only
+its design is specified), and any human-solvability or production-CAPTCHA
+claims.
 The conventional model's performance is a synthetic image-similarity result, not
 a readability estimate.
 

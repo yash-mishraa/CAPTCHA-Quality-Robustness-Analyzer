@@ -1,0 +1,444 @@
+# Milestone M7D evaluation-design and dataset-expansion plan.
+#
+# This is a read-only research-planning milestone. It does not generate a
+# dataset, render images, train, refit, recalibrate, select or tune a model,
+# change predictions, or modify any frozen benchmark artifact. Every proposed
+# dataset, benchmark, endpoint and success criterion is planned, not executed.
+#
+# The selected direction is A: a broader unseen-font benchmark with a matched
+# text-case control. The matching control addresses the unmatched
+# familiar-versus-held-out comparison identified by M7C; it does not turn the
+# roster of ten typefaces into a random sample of a font population.
+#
+# Scope: synthetic SSIM against an exact source-specific clean reference.
+# Nothing in this plan measures human readability, CAPTCHA solve rates,
+# security or production robustness.
+
+[run]
+name = "evaluation-design-plan"
+version = "v0.1.0"
+seed = 20261111
+output_reports = "reports/evaluation_design_plan_v0_1_0"
+
+[plan]
+milestone = "M7D"
+chosen_direction = "A"
+status = "planned_not_executed"
+primary_question = "How does the frozen M5C champion's synthetic SSIM error vary across a pre-specified broader roster of held-out fonts when text case and corruption realisations are matched?"
+n_text_cases = 30
+rows_per_source = 21
+primary_rows_per_source = 19
+diagnostic_rows_per_source = 2
+dataset_version = "matched-font-v0.1.0"
+dataset_output = "data/processed/matched_font_benchmark_v0.1.0"
+benchmark_report_output = "reports/matched_font_benchmark_v0_1_0"
+renderer = "Pillow ImageDraw + FreeType"
+canvas_width = 192
+canvas_height = 64
+image_mode = "L"
+image_format = "PNG"
+text_lengths = [4, 5, 6]
+text_length_weights = [0.30, 0.40, 0.30]
+primary_scope = "all_primary"
+primary_metric = "rmse"
+source_group = "matched_text_case"
+bootstrap_method = "matched_case_grouped_percentile"
+n_bootstrap = 2000
+confidence_level = 0.95
+near_degenerate_sd = 0.005
+
+# The planned corruption protocol is the frozen M7B protocol, repeated with
+# matched seeds across fonts within a text case. Clean and 0.5 px elastic rows
+# are diagnostic only. The 0.5 px rung remains below the predeclared
+# near-degeneracy margin and cannot support primary ranking claims.
+[[corruptions]]
+family = "clean"
+unit = "identity"
+role = "diagnostic"
+levels = [0.0]
+
+[[corruptions]]
+family = "gaussian_blur"
+unit = "px"
+role = "primary"
+levels = [1.0, 2.0, 3.5, 5.0]
+
+[[corruptions]]
+family = "gaussian_noise"
+unit = "sigma"
+role = "primary"
+levels = [6.0, 12.0, 20.0, 32.0]
+
+[[corruptions]]
+family = "thin_lines"
+unit = "count"
+role = "primary"
+levels = [1.0, 2.0, 4.0, 7.0]
+
+[[corruptions]]
+family = "arc_strokes"
+unit = "count"
+role = "primary"
+levels = [1.0, 2.0, 4.0, 7.0]
+
+[[corruptions]]
+family = "elastic"
+unit = "px"
+role = "primary"
+levels = [1.0, 2.0, 3.0]
+
+[[corruptions]]
+family = "elastic"
+unit = "px"
+role = "diagnostic"
+levels = [0.5]
+
+[precision]
+text_case_counts = [20, 30, 40, 60]
+paired_sd_assumptions = [0.005, 0.010, 0.020]
+font_counts = [6, 8, 10, 12, 16]
+font_sd_assumptions = [0.010, 0.020, 0.030]
+interval_multiplier = 1.96
+
+# Candidate roster selected before any model outcome is inspected. The three
+# familiar fonts are the frozen M3 development fonts. The seven held-out fonts
+# are absent from M3, which is the only font set the champion was ever
+# developed on. Georgia, Monaco and Impact were used once in M7B as an
+# *evaluation* set (never for fitting, calibration or selection), so reusing
+# them keeps three of the seven directly comparable with M7B and adds four
+# genuinely new faces: Verdana, Trebuchet MS, Chalkduster and Luminari. The
+# roster is purposive and spans serif, monospace, sans and display/script
+# typography; it is not a random sample of fonts.
+#
+# Paths and hashes are verified on the current development machine. Presence on
+# this machine is not a guarantee of availability or licensing elsewhere.
+# Dataset generation must fail closed if any required file is missing, changes
+# hash, loses glyph coverage or lacks an approved local-use status. Font files
+# are never redistributed by this project.
+[[planned_fonts]]
+key = "arial"
+role = "familiar"
+family = "Arial"
+stratum = "grotesque_sans"
+path = "/System/Library/Fonts/Supplemental/Arial.ttf"
+sha256 = "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9"
+license_status = "review_required_before_generation"
+rationale = "Frozen M3 familiar sans-serif reference."
+
+[[planned_fonts]]
+key = "courier_new"
+role = "familiar"
+family = "Courier New"
+stratum = "monospace"
+path = "/System/Library/Fonts/Supplemental/Courier New.ttf"
+sha256 = "c886ca3172d8ce9189976992d145ec090500a4ff516ecb9d4df56b1a78336247"
+license_status = "review_required_before_generation"
+rationale = "Frozen M3 familiar monospace reference."
+
+[[planned_fonts]]
+key = "times_new_roman"
+role = "familiar"
+family = "Times New Roman"
+stratum = "serif"
+path = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
+sha256 = "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+license_status = "review_required_before_generation"
+rationale = "Frozen M3 familiar serif reference."
+
+[[planned_fonts]]
+key = "georgia"
+role = "held-out"
+family = "Georgia"
+stratum = "serif"
+path = "/System/Library/Fonts/Supplemental/Georgia.ttf"
+sha256 = "4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218"
+license_status = "review_required_before_generation"
+rationale = "M7B held-out serif with a large x-height and sturdy strokes."
+
+[[planned_fonts]]
+key = "monaco"
+role = "held-out"
+family = "Monaco"
+stratum = "monospace"
+path = "/System/Library/Fonts/Monaco.ttf"
+sha256 = "c6e990f6429fae28eb85321375dd335252f1122aa64c19fec553619a140724ef"
+license_status = "review_required_before_generation"
+rationale = "M7B held-out monospace with wide, even spacing."
+
+[[planned_fonts]]
+key = "impact"
+role = "held-out"
+family = "Impact"
+stratum = "display_sans"
+path = "/System/Library/Fonts/Supplemental/Impact.ttf"
+sha256 = "57e95627fd36fe2740e5ee8a91ff1ae74fb216df9580bd23e30d6772814727be"
+license_status = "review_required_before_generation"
+rationale = "M7B held-out heavy display sans with narrow counters."
+
+[[planned_fonts]]
+key = "verdana"
+role = "held-out"
+family = "Verdana"
+stratum = "humanist_sans"
+path = "/System/Library/Fonts/Supplemental/Verdana.ttf"
+sha256 = "0da8c12f3e15d95585434d2cf294b3113a3e3fc84bf9ba9d64f2ef834ef4bd98"
+license_status = "review_required_before_generation"
+rationale = "Held-out humanist sans with a large x-height and open counters."
+
+[[planned_fonts]]
+key = "trebuchet_ms"
+role = "held-out"
+family = "Trebuchet MS"
+stratum = "humanist_sans"
+path = "/System/Library/Fonts/Supplemental/Trebuchet MS.ttf"
+sha256 = "ff1d49fde63aabd7f4fc7cd0a80ac7cdb1b9540058988fcbb64d7c23639a7386"
+license_status = "review_required_before_generation"
+rationale = "Held-out humanist sans with distinctive letterforms and moderate contrast."
+
+[[planned_fonts]]
+key = "chalkduster"
+role = "held-out"
+family = "Chalkduster"
+stratum = "display_script"
+path = "/System/Library/Fonts/Supplemental/Chalkduster.ttf"
+sha256 = "0e9ed740bfbfcfef1a7f4333cd041771a9a5b67fbe85515e4d241b7213cf6a8d"
+license_status = "review_required_before_generation"
+rationale = "Held-out textured display face used as a high-variation stress condition, not as a representative CAPTCHA font."
+
+[[planned_fonts]]
+key = "luminari"
+role = "held-out"
+family = "Luminari"
+stratum = "display_script"
+path = "/System/Library/Fonts/Supplemental/Luminari.ttf"
+sha256 = "4054fff7b5f8bc63343754c046a89f96006bb5b581ec0c529780c6afb4245095"
+license_status = "review_required_before_generation"
+rationale = "Held-out calligraphic display face used as a high-variation stress condition, not as a representative CAPTCHA font."
+
+[[inputs]]
+key = "m3_config"
+path = "configs/dataset_v0_1_0.toml"
+sha256 = "72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a"
+role = "M3 dataset configuration"
+
+[[inputs]]
+key = "m3_summary"
+path = "data/processed/captcha_quality_v0.1.0/dataset_summary.json"
+sha256 = "3f03e10e94c19de2747b3ae355b32fa044de658cf1bc8ad0e90f8f57e9a96787"
+role = "M3 dataset summary"
+
+[[inputs]]
+key = "m3_sources"
+path = "data/processed/captcha_quality_v0.1.0/sources.csv"
+sha256 = "07d50255cdc82ea77087fc64b398d62db49f96156eea9cf5aee59bc070ab5a37"
+role = "M3 source table"
+
+[[inputs]]
+key = "m3_manifest"
+path = "data/processed/captcha_quality_v0.1.0/manifest.csv"
+sha256 = "a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37"
+role = "M3 manifest"
+
+[[inputs]]
+key = "m5c_config"
+path = "configs/retention_aware_selection_v0_1_0.toml"
+sha256 = "48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb"
+role = "M5C configuration"
+
+[[inputs]]
+key = "m5c_model_card"
+path = "models/retention_aware_selection_v0_1_0/selected_policy_card.json"
+sha256 = "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+role = "M5C champion model card"
+
+[[inputs]]
+key = "m5c_model_artifact"
+path = "models/retention_aware_selection_v0_1_0/selected_policy.joblib"
+sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+role = "M5C champion artifact"
+
+[[inputs]]
+key = "m5c_test_predictions"
+path = "reports/retention_aware_selection_v0_1_0/test_predictions.csv"
+sha256 = "6d286af061bd54e70b7c8fd547d8da7079731c502eb5255d848856edf2dec906"
+role = "M5C test predictions"
+
+[[inputs]]
+key = "m5c_test_slice_metrics"
+path = "reports/retention_aware_selection_v0_1_0/test_slice_metrics.csv"
+sha256 = "1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1"
+role = "M5C test-slice metrics"
+
+[[inputs]]
+key = "m5c_run_metadata"
+path = "reports/retention_aware_selection_v0_1_0/run_metadata.json"
+sha256 = "7f554a5bd25326cc878fa1ea72e1df9a146c7c40487dd9f73ff11c9a63f7bcc5"
+role = "M5C run metadata"
+
+[[inputs]]
+key = "m5c_report"
+path = "reports/retention_aware_selection_v0_1_0/report.md"
+sha256 = "227d9fd57c43d68a5dbe6c26f9afd7e991ee7ce9648287ecb2b71d46a0368fa1"
+role = "M5C report"
+
+[[inputs]]
+key = "m7a_config"
+path = "configs/dataset_adequacy_audit_v0_1_0.toml"
+sha256 = "23f2af7ede523bec7e648043a519e0eca7d352bbd9f15445255a3a304b0364b9"
+role = "M7A configuration"
+
+[[inputs]]
+key = "m7a_next_direction_comparison"
+path = "reports/dataset_adequacy_audit_v0_1_0/next_direction_comparison.csv"
+sha256 = "bf6784737f78a7103fd7eadfb01459f7cded931527a320081242132d3b917f79"
+role = "M7A next-direction comparison"
+
+[[inputs]]
+key = "m7a_claim_evidence"
+path = "reports/dataset_adequacy_audit_v0_1_0/claim_evidence.csv"
+sha256 = "740eb905bec7963e5008c64f3066a99044f7139c60a71d10e3faef215fd7a034"
+role = "M7A claim evidence"
+
+[[inputs]]
+key = "m7a_run_metadata"
+path = "reports/dataset_adequacy_audit_v0_1_0/run_metadata.json"
+sha256 = "add6ce582bb8b5417186059540615955a1dea67933d66ebb91c83afd1cad3ffd"
+role = "M7A run metadata"
+
+[[inputs]]
+key = "m7b_config"
+path = "configs/heldout_font_benchmark_v0_1_0.toml"
+sha256 = "5eb97fc6bc0ed1e7c2b17a9e8cc6f53ab89e529d17496a800e9b6c0b73a041ee"
+role = "M7B configuration"
+
+[[inputs]]
+key = "m7b_summary"
+path = "data/processed/heldout_font_benchmark_v0.1.0/dataset_summary.json"
+sha256 = "8cf5d3281a0353182c81689bb26ba94f29685239e9920f3b4fcd8d229cfae569"
+role = "M7B dataset summary"
+
+[[inputs]]
+key = "m7b_sources"
+path = "data/processed/heldout_font_benchmark_v0.1.0/sources.csv"
+sha256 = "ad50ed063552ed3b00b7562944602e3ed6b58cc17d4785488315140e1f1d3702"
+role = "M7B source table"
+
+[[inputs]]
+key = "m7b_manifest"
+path = "data/processed/heldout_font_benchmark_v0.1.0/manifest.csv"
+sha256 = "e751468e8159d95bf39bda478509e303f95b0177c2b9df3e3212fa8439594bc0"
+role = "M7B manifest"
+
+[[inputs]]
+key = "m7b_predictions"
+path = "reports/heldout_font_benchmark_v0_1_0/predictions.csv"
+sha256 = "660b9e8e816b22f9da4fcfeddc6f01108e23eb2b327bf8e8549fe9014e50312d"
+role = "M7B predictions"
+
+[[inputs]]
+key = "m7b_overall_metrics"
+path = "reports/heldout_font_benchmark_v0_1_0/overall_metrics.csv"
+sha256 = "34ee372a1d58a658902b4c75d2460640a57240ad0930f765879a09228b05dde7"
+role = "M7B overall metrics"
+
+[[inputs]]
+key = "m7b_font_metrics"
+path = "reports/heldout_font_benchmark_v0_1_0/font_metrics.csv"
+sha256 = "ad8933a41e5be1cd93ee6dc5744fe420af22ebc1608493ca4cd8b88dbd644dcd"
+role = "M7B per-font metrics"
+
+[[inputs]]
+key = "m7b_family_metrics"
+path = "reports/heldout_font_benchmark_v0_1_0/family_metrics.csv"
+sha256 = "07cf44445ed494fff13217331d48de71771ac444b7dcf25236886e09e7663caa"
+role = "M7B family metrics"
+
+[[inputs]]
+key = "m7b_uncertainty"
+path = "reports/heldout_font_benchmark_v0_1_0/uncertainty.csv"
+sha256 = "9844962584611d497ff659813f8db4ee94cf2247d465bd3abea27cdabd9f4651"
+role = "M7B grouped uncertainty"
+
+[[inputs]]
+key = "m7b_comparison"
+path = "reports/heldout_font_benchmark_v0_1_0/comparison.csv"
+sha256 = "26f03b95a4c48a94037997f9cbb5565ee6986eb25edee0c9d73f6e52abf0d0e6"
+role = "M7B familiar comparison"
+
+[[inputs]]
+key = "m7b_run_metadata"
+path = "reports/heldout_font_benchmark_v0_1_0/run_metadata.json"
+sha256 = "87e5aa9e60aa95d9b270cfc97e1fc5b7056d6c72a3e6ad34f8a53b08f1c43d46"
+role = "M7B run metadata"
+
+[[inputs]]
+key = "m7b_report"
+path = "reports/heldout_font_benchmark_v0_1_0/report.md"
+sha256 = "78e1866af1e3b99a9c629e5aa76dd8428c9c9c0d9d4a51c857f13a7cdb92c666"
+role = "M7B report"
+
+[[inputs]]
+key = "m7c_config"
+path = "configs/cross_font_analysis_v0_1_0.toml"
+sha256 = "e5a4ae80b079ef8e3a44537bbc9194beef863b460c7ab86d798fadbd874241f0"
+role = "M7C configuration"
+
+[[inputs]]
+key = "m7c_font_metrics"
+path = "reports/cross_font_analysis_v0_1_0/font_metrics.csv"
+sha256 = "3975376b1162d1a391d8d80dbde6bb8016d2a4716f8be2030f32019739226cf1"
+role = "M7C per-font metrics"
+
+[[inputs]]
+key = "m7c_family_metrics"
+path = "reports/cross_font_analysis_v0_1_0/family_metrics.csv"
+sha256 = "1f34c6e1b0f4fc2b1b5d535acd59a0cf3073a5e84bfa3e432bb640f54373ea2f"
+role = "M7C family metrics"
+
+[[inputs]]
+key = "m7c_severity_metrics"
+path = "reports/cross_font_analysis_v0_1_0/severity_metrics.csv"
+sha256 = "d7b0cae1b59591031f08e364ba07c974b4f1c3fae4e18fa4531c1520584bf8f8"
+role = "M7C geometric severity metrics"
+
+[[inputs]]
+key = "m7c_source_metrics"
+path = "reports/cross_font_analysis_v0_1_0/source_metrics.csv"
+sha256 = "bf2f18dc70e5928ce9b491dac0229288fbf8dabbacf495f782d79414f6513936"
+role = "M7C source metrics"
+
+[[inputs]]
+key = "m7c_error_concentration"
+path = "reports/cross_font_analysis_v0_1_0/error_concentration.csv"
+sha256 = "5e0f7cfda33cda192b3a8d26b087a6862ad02d576eb5b38532d562b8f8c88179"
+role = "M7C error concentration"
+
+[[inputs]]
+key = "m7c_uncertainty"
+path = "reports/cross_font_analysis_v0_1_0/uncertainty.csv"
+sha256 = "f9893159ff6f52e3ca2a1594a716328dac6679ff6a6fa52db3c0a37681073600"
+role = "M7C grouped uncertainty"
+
+[[inputs]]
+key = "m7c_benchmark_comparison"
+path = "reports/cross_font_analysis_v0_1_0/benchmark_comparison.csv"
+sha256 = "aa328ee8a2ad5cf7051debf3db8ac08c008dede67d09c5d33c1e7d785926c3f4"
+role = "M7C familiar-versus-held-out comparison"
+
+[[inputs]]
+key = "m7c_claim_evidence"
+path = "reports/cross_font_analysis_v0_1_0/claim_evidence.csv"
+sha256 = "3e4dd2c05da2af15306e733dc0a2e5506cd9d024263950234e232512c3b2abe0"
+role = "M7C claim evidence"
+
+[[inputs]]
+key = "m7c_run_metadata"
+path = "reports/cross_font_analysis_v0_1_0/run_metadata.json"
+sha256 = "f61b800f63ed92a469acc61b82934e91952f4d028d8f7442b4077c94487df496"
+role = "M7C run metadata"
+
+[[inputs]]
+key = "m7c_report"
+path = "reports/cross_font_analysis_v0_1_0/report.md"
+sha256 = "242e2f78db519dea809a7acdddda2b9c9d88a7b295f3de2cdd065d09aea00c8d"
+role = "M7C report"
