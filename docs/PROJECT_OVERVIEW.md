@@ -8,7 +8,8 @@ retention-aware training-objective study, the M6A spatial-aware feature study,
 the M6B spatial resolution study, the M6C local structural feature study, the
 M6D multi-scale structure-tensor study, the M7A dataset-adequacy audit, the
 M7B held-out-font generalisation benchmark, the M7C cross-font evaluation
-analysis and the M7D next-benchmark evaluation-design plan. A reproducible
+analysis, the M7D next-benchmark evaluation-design plan and the M7E font-roster
+licensing and availability audit. A reproducible
 dataset and image-feature pipeline, a leakage-safe
 conventional-ML benchmark, source-isolated zero-shot/adaptation evaluation, a
 replayable elastic-warp pilot, a grouped geometric-robustness benchmark, a
@@ -16,10 +17,13 @@ retention-aware selection study, a retention-aware training-objective study, a
 spatial-aware feature study, a spatial resolution study, a no-reference local
 structural feature study, a no-reference multi-scale structure-tensor study, a
 read-only evaluation audit, a separately versioned unseen-font benchmark, a
-read-only cross-font analysis and a read-only evaluation-design plan exist.
+read-only cross-font analysis, a read-only evaluation-design plan and a
+read-only font-roster licensing and availability audit exist.
 M7D is a **planning** milestone: the dataset, benchmark, endpoints and success
-criteria it specifies are *planned, not executed*. The CNN comparison, full M5
-error taxonomy and dashboard are planned.
+criteria it specifies are *planned, not executed*. M7E is an **audit**
+milestone: it clears nine of the ten proposed typefaces and leaves one
+`review_required`, so the benchmark generation gate is **closed**. The CNN
+comparison, full M5 error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-21
 
 ## 1. Purpose
@@ -311,6 +315,19 @@ the default; a CNN must justify its cost out-of-sample.
   shared directory no longer invalidates M7D while a modified, deleted or
   substituted declared dependency is still detected.
 
+**Implemented for M7E (font-roster licensing and availability audit):**
+
+- A read-only audit of the ten typefaces the M7D plan proposes. It pins the M7D
+  planning configuration, the M7D plan manifest and the M7D font inventory;
+  re-verifies every face against its pinned path, SHA-256 and embedded
+  name/OS-2 metadata; keeps the recorded licence evidence and the eligibility
+  decisions in separate tables; and re-derives each decision from the evidence,
+  rejecting an `eligible` status that the evidence does not support. Nine
+  faces are eligible and one is `review_required`, so the audit gate is
+  partially passed and the benchmark generation gate is closed. It generates no
+  image, text case, dataset row, prediction or model artifact, and it creates
+  nothing at the planned benchmark output paths.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -369,6 +386,7 @@ src/captcha_quality/
 ├── heldout_font_benchmark.py # unseen-font dataset, zero-shot benchmark, CLI (implemented, M7B)
 ├── cross_font_analysis.py # read-only cross-font analysis, CLI (implemented, M7C)
 ├── evaluation_plan.py    # read-only evaluation-design plan, CLI  (implemented, M7D)
+├── font_roster_audit.py # read-only font-roster licensing audit, CLI (implemented, M7E)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -462,6 +480,7 @@ byte-for-byte.
 | M7B | Held-out-font generalisation benchmark of the frozen M5C champion (complete) |
 | M7C | Read-only cross-font evaluation analysis of the frozen M7B and M5C predictions (complete) |
 | M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark (complete as a plan; the benchmark itself is not implemented) |
+| M7E | Font-roster licensing and availability audit for the planned cross-font benchmark (complete as an audit; the benchmark generation gate is closed) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -559,7 +578,14 @@ byte-for-byte.
   verifies all ten planned font files by path, SHA-256 and charset glyph
   coverage, but it deliberately does **not** assert a license: every planned
   font carries `license_status = review_required_before_generation`, and the
-  future generator must fail closed rather than substitute a font.
+  future generator must fail closed rather than substitute a font. M7E audits
+  that question: all ten faces are proprietary rather than open-licensed, nine
+  are eligible for the intended evaluation-only workflow because the workflow
+  distributes only the rendered images and never a font binary, and Luminari
+  remains `review_required` because the macOS product licence is silent on
+  redistributing the rendered output while the Canada Type terms that cover it
+  require a paid licence. The benchmark generation gate is closed until that
+  face has a defensible decision.
 
 ## 7. Implemented today
 
@@ -844,6 +870,27 @@ M7D's own verifier, which had the identical whole-directory weakness; M7D's
 declared membership is the planning configuration, the 38 upstream evidence
 files it pins and the 17 plan artifacts it writes, with expected hashes
 anchored to the committed configuration and cross-checked against the recorded
-run snapshot. These maintenance changes alter verifier logic only. No
-dashboard, deployment or final
+run snapshot. These maintenance changes alter verifier logic only.
+
+Milestone M7E: a read-only licensing and availability audit of the ten
+typefaces the M7D plan proposes. It pins the M7D planning configuration, the
+M7D plan manifest and the M7D font inventory; re-verifies every face against
+its pinned path, SHA-256 and embedded name/OS-2 metadata; records the licence
+evidence and the eligibility decisions in separate tables so each decision is
+re-derived from the evidence on every verification; and rejects an `eligible`
+status that the evidence does not support. All ten faces are available with the
+pinned hash and all ten are proprietary — none is open-licensed. Nine are
+eligible for the intended evaluation-only workflow, because the foundry and
+product licences permit distributing the rendered images and the workflow never
+redistributes a font binary; Luminari is `review_required`, because the macOS
+product licence is silent on redistributing the rendered output while the
+Canada Type terms that do cover it take effect only on payment. The face is
+retained in the roster: it is not removed and no similarly named family is
+substituted. The audit gate is partially passed and the benchmark generation
+gate is closed, and M7D's `no_planned_outputs_created` check is preserved. The
+audit also records a project-level licence risk: Monotype's direct licence
+restricts using rendered glyphs in connection with training artificial-
+intelligence models, which does not apply to the macOS-bundled copies audited
+here but would matter for any future directly licensed copy or for training on
+font-rendered data. No dashboard, deployment or final
 presentation exists yet.

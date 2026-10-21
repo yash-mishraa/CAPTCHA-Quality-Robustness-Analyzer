@@ -1,0 +1,419 @@
+# Milestone M7E font-roster licensing and availability audit.
+#
+# This is a read-only audit of the ten typefaces proposed by the M7D plan for the
+# planned cross-font generalization benchmark. It records availability and licence
+# evidence and derives an eligibility decision for each face. It generates no
+# images, no text cases, no dataset rows, no predictions and no model artifacts, and
+# it does not change the M7D plan, the M5C champion or any historical output.
+#
+# Evidence facts and eligibility decisions are kept in separate tables so that the
+# decisions are re-derived from the recorded evidence on every verification run.
+# Expected hashes are never regenerated from the current tree.
+
+[run]
+name = "font-roster-audit"
+version = "v0.1.0"
+seed = 20261021
+output_reports = "reports/font_roster_audit_v0_1_0"
+
+[audit]
+milestone = "M7E"
+status = "completed"
+scope = "Availability and licence eligibility of the ten typefaces proposed by the M7D plan for the planned matched cross-font benchmark."
+intended_use = "Render synthetic CAPTCHA-style text strings into 192x64 8-bit grayscale PNG images with the frozen renderer, distribute the rendered images and derived tables as a Git-ignored benchmark dataset, and evaluate the frozen M5C champion zero-shot. No model is trained on the new data."
+target = "synthetic SSIM against an exact source-specific clean reference; not human readability, CAPTCHA solvability, security or production robustness"
+font_file_redistribution_required = false
+font_file_redistribution_rationale = "The planned benchmark never copies a font binary into the repository, the dataset or the report. The dataset manifest records the font identifier and the font SHA-256, never the font file, and the repository ignores data/, models/ and reports/. Distribution of the rendered images is therefore the only redistribution the workflow performs."
+out_of_scope = "Font downloading, font conversion, font subsetting, font embedding, model training on font-rendered data, and any redistribution of font binaries are outside this audit and outside the planned benchmark."
+
+[roster]
+source = "configs/evaluation_design_plan_v0_1_0.toml"
+expected_count = 10
+expected_familiar = ["arial", "courier_new", "times_new_roman"]
+expected_held_out = ["georgia", "monaco", "impact", "verdana", "trebuchet_ms", "chalkduster", "luminari"]
+project_statuses = ["m3_development_font", "m7b_held_out_evaluation_font", "new_to_project_evaluation"]
+note = "Georgia, Monaco and Impact were already evaluated in M7B. They remain valid held-out identities because the champion was never fitted, calibrated or selected on them, but they are not fonts that are new to the project evaluation and they do not constitute an independent replication of the M7B three-font result."
+
+[statuses.eligible]
+meaning = "The exact face was verified present with the pinned SHA-256, the recorded licence evidence supports using the font to render the intended output and permits distributing that output, no attribution or notice condition is unresolved, the font file is not redistributed, and the face and version are pinned reproducibly."
+[statuses.ineligible]
+meaning = "The recorded evidence shows a positive prohibition on the intended use, so the face may not be used in the benchmark as specified."
+[statuses.review_required]
+meaning = "The face is available, but the licence position for the intended use is not fully established by the recorded evidence, or a condition such as attribution, a purchase requirement or a notice obligation remains unresolved. Permission is not inferred."
+[statuses.unavailable]
+meaning = "The exact face could not be obtained or verified in the audit environment, so the benchmark cannot be built with it as pinned."
+
+[derivation]
+rule_unavailable = "Derived status is unavailable when the face is not installed with the pinned SHA-256, or when the recorded evidence shows the face cannot be obtained."
+rule_ineligible = "Derived status is ineligible when the recorded evidence states that rendering or redistributing the intended output is prohibited."
+rule_review_required = "Derived status is review_required when any of rendering, output redistribution, font-file redistribution, attribution or reproducible pinning is unverified, when an attribution or notice condition applies, or when the font file would have to be redistributed for the intended workflow."
+rule_eligible = "Derived status is eligible when the face is verified available and pinned, rendering and output redistribution are permitted, the font file is not redistributed, and no attribution or notice condition is unresolved."
+rule_declared = "A declared status of eligible is only accepted when the derived status is eligible. A declared status of ineligible requires a positive prohibition in the evidence. A declared status of unavailable requires the face to be unobtainable. review_required is always accepted as the conservative default."
+
+[[inputs]]
+key = "m7d_config"
+path = "configs/evaluation_design_plan_v0_1_0.toml"
+sha256 = "e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3"
+role = "M7D planning configuration: the proposed font roster, pinned paths and pinned font hashes"
+
+[[inputs]]
+key = "m7d_plan_manifest"
+path = "reports/evaluation_design_plan_v0_1_0/plan_manifest.json"
+sha256 = "7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8"
+role = "M7D machine-readable plan: chosen direction, roster, planned counts and protocol"
+
+[[inputs]]
+key = "m7d_font_inventory"
+path = "reports/evaluation_design_plan_v0_1_0/font_inventory.csv"
+sha256 = "3162b40a1e08f6217b8ae68a3b32c1e8bda79048eca1e675bddf859b561bc57e"
+role = "M7D recorded per-font availability, hash and glyph-coverage record"
+
+[[font_evidence]]
+font_key = "arial"
+family = "Arial"
+face = "Arial Regular"
+version = "Version 5.01.2x"
+postscript_name = "ArialMT"
+copyright_holder = "© 2006 The Monotype Corporation. All Rights Reserved."
+rights_holder = "The Monotype Corporation (licensed to Apple Inc. for macOS)"
+fs_type = 8
+embedding_restrictions = "OS/2 fsType 8 (0x0008): editable embedding permitted; installable embedding prohibited. The benchmark embeds no font in any artifact, so no embedding permission is exercised."
+project_status = "m3_development_font"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Arial as a system font on iOS, macOS and tvOS (Apple Developer system-fonts listing, version 5.01.2x, which matches the installed file's name table version string). The pinned SHA-256 in the M7D configuration is the macOS-bundled build; the Linux 'msttcorefonts' builds are different versions under a different licence, so the pin does not transfer across platforms."
+license_name = "macOS 27 Software License Agreement (product EULA) + Monotype desktop EULA (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://www.apple.com/legal/sla/docs/macOS27.pdf"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Monotype desktop EULA] Use the Font Software on such Workstations to create, edit, view, print and distribute materials, provided that, (a) the materials do not contain the Font Software embedded, and (b) if you create a static graphic image with a representation of a typeface and typographic design or ornament, such static graphic image does not correspond to glyphs or glyph combinations of the Font Software which are individually addressed by software, a website, a hardware device or other means to render such designs and ornaments"
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output. The foundry terms state that use of the trademarks is not required. The copyright notice stays inside the font file, which this workflow does not redistribute."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_authoritative"
+evidence_notes = "The installed copy is governed by the macOS SLA, which contains no artificial-intelligence or machine-learning restriction. Monotype's direct licence does contain one; it would apply only to a copy licensed from Monotype, not to the macOS-bundled copy used here."
+
+[[font_evidence]]
+font_key = "courier_new"
+family = "Courier New"
+face = "Courier New Regular"
+version = "Version 5.00.2x"
+postscript_name = "CourierNewPSMT"
+copyright_holder = "© 2008 The Monotype Corporation. All Rights Reserved."
+rights_holder = "The Monotype Corporation (licensed to Apple Inc. for macOS)"
+fs_type = 8
+embedding_restrictions = "OS/2 fsType 8 (0x0008): editable embedding permitted; installable embedding prohibited. The benchmark embeds no font in any artifact."
+project_status = "m3_development_font"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Courier New as a system font on iOS, macOS, tvOS and watchOS (Apple Developer system-fonts listing, version 5.00.2x, matching the installed file). The pinned SHA-256 is the macOS build and does not transfer to the Linux 'msttcorefonts' builds."
+license_name = "macOS 27 Software License Agreement (product EULA) + Monotype desktop EULA (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://www.apple.com/legal/sla/docs/macOS27.pdf"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Monotype desktop EULA] Use the Font Software on such Workstations to create, edit, view, print and distribute materials, provided that, (a) the materials do not contain the Font Software embedded, and (b) if you create a static graphic image with a representation of a typeface and typographic design or ornament, such static graphic image does not correspond to glyphs or glyph combinations of the Font Software which are individually addressed by software, a website, a hardware device or other means to render such designs and ornaments"
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output; trademark use is optional. The copyright notice stays inside the font file, which is not redistributed."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_authoritative"
+evidence_notes = "The installed copy is governed by the macOS SLA, which contains no artificial-intelligence or machine-learning restriction. Monotype's direct licence does contain one; it would apply only to a copy licensed from Monotype, not to the macOS-bundled copy used here."
+
+[[font_evidence]]
+font_key = "times_new_roman"
+family = "Times New Roman"
+face = "Times New Roman Regular"
+version = "Version 5.01.4x"
+postscript_name = "TimesNewRomanPSMT"
+copyright_holder = "© 2006 The Monotype Corporation. All Rights Reserved."
+rights_holder = "The Monotype Corporation (licensed to Apple Inc. for macOS)"
+fs_type = 8
+embedding_restrictions = "OS/2 fsType 8 (0x0008): editable embedding permitted; installable embedding prohibited. The benchmark embeds no font in any artifact."
+project_status = "m3_development_font"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Times New Roman as a system font on iOS, macOS, tvOS and watchOS (Apple Developer system-fonts listing, version 5.01.4x, matching the installed file). The pinned SHA-256 is the macOS build and does not transfer to the Linux 'msttcorefonts' builds."
+license_name = "macOS 27 Software License Agreement (product EULA) + Monotype desktop EULA (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://www.apple.com/legal/sla/docs/macOS27.pdf"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Monotype desktop EULA] Use the Font Software on such Workstations to create, edit, view, print and distribute materials, provided that, (a) the materials do not contain the Font Software embedded, and (b) if you create a static graphic image with a representation of a typeface and typographic design or ornament, such static graphic image does not correspond to glyphs or glyph combinations of the Font Software which are individually addressed by software, a website, a hardware device or other means to render such designs and ornaments"
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output; trademark use is optional. The copyright notice stays inside the font file, which is not redistributed."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_authoritative"
+evidence_notes = "The installed copy is governed by the macOS SLA, which contains no artificial-intelligence or machine-learning restriction. Monotype's direct licence does contain one; it would apply only to a copy licensed from Monotype, not to the macOS-bundled copy used here."
+
+[[font_evidence]]
+font_key = "georgia"
+family = "Georgia"
+face = "Georgia Regular"
+version = "Version 5.00x-4"
+postscript_name = "Georgia"
+copyright_holder = "© 2006 Microsoft Corporation. All Rights Reserved."
+rights_holder = "Microsoft Corporation (designed by Carter & Cone; licensed to Apple Inc. for macOS)"
+fs_type = 8
+embedding_restrictions = "OS/2 fsType 8 (0x0008): editable embedding permitted; installable embedding prohibited. The benchmark embeds no font in any artifact."
+project_status = "m7b_held_out_evaluation_font"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Georgia as a system font on iOS, macOS and tvOS (Apple Developer system-fonts listing, version 5.00x-4, matching the installed file). The pinned SHA-256 is the macOS build; the Linux 'msttcorefonts' build is a different version under the Core Fonts for the Web end-user licence."
+license_name = "macOS 27 Software License Agreement (product EULA) + Microsoft Typography font redistribution FAQ (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://learn.microsoft.com/en-us/typography/fonts/font-faq"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Microsoft Typography FAQ] Can I make graphic files using the fonts, say a screengrab, advertisement, meme or poster and share, sell or redistribute those graphic files? We view creating graphic files as being essentially the same as printing from an output device. Can I include graphic files (eg. GIFs, PNGs or JPEGs) I create using the fonts in my game or apps, say for a logo or banner? Yes, you can (provided you're using a product that is not specifically licensed for home, student or non-commercial use). The graphic file must be an image of a word, phrase or passage of text. Converting the font to a bitmap font (where each letter is treated individually) is not allowed. Apart from the document embedding rights described previously, you may not redistribute the Windows fonts. You may not copy them to other computers or servers, and you may not convert them to other formats, including bitmap formats, or modify them."
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output. The Microsoft FAQ places no restriction on sharing graphic files made with the font; the font file itself may not be redistributed."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_authoritative"
+evidence_notes = "This face was already evaluated in M7B. It is an evaluation-only held-out identity for the project, not a font newly unseen by the project."
+
+[[font_evidence]]
+font_key = "monaco"
+family = "Monaco"
+face = "Monaco Regular"
+version = "22.0d2e1"
+postscript_name = "Monaco"
+copyright_holder = "© 1990-2008 Apple Inc. © 1990-97 Type Solutions Inc. © 1990-97 The Font Bureau Inc."
+rights_holder = "Apple Inc. (TrueType outline by Kris Holmes and Charles Bigelow)"
+fs_type = 0
+embedding_restrictions = "OS/2 fsType 0 (0x0000): installable embedding permitted. The benchmark embeds no font in any artifact, so no embedding permission is exercised."
+project_status = "m7b_held_out_evaluation_font"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Monaco as a macOS system font and offers it as a downloadable iOS font (Apple Developer system-fonts listing). The installed file reports name-table version 22.0d2e1, which is newer than the 17.0d1e5 currently published in that listing, so the SHA-256 pin rather than the published version string is the authoritative identifier."
+license_name = "macOS 27 Software License Agreement (product EULA; the font file carries no separate licence string)"
+license_scope = "product_licence"
+license_source_url = "https://www.apple.com/legal/sla/docs/macOS27.pdf"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [macOS 27 SLA, important note] IMPORTANT NOTE: To the extent that this software may be used to reproduce, modify, publish or distribute materials, it is licensed to you only for reproduction, modification, publication and distribution of non-copyrighted materials, materials in which you own the copyright, or materials you are authorized or legally permitted to reproduce, modify, publish or distribute."
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output. The macOS licence restricts redistribution of the bundled font files, which this workflow does not do."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_with_supporting"
+evidence_notes = "The rendered-output permission rests on the product licence (section 2E plus the important note on publishing and distributing materials the licensee is authorised to distribute) rather than on an express Apple clause that names redistribution of rendered images. This face was already evaluated in M7B."
+
+[[font_evidence]]
+font_key = "impact"
+family = "Impact"
+face = "Impact Regular"
+version = "Version 5.00x"
+postscript_name = "Impact"
+copyright_holder = "© 2006 The Monotype Corporation. All Rights Reserved."
+rights_holder = "The Monotype Corporation (designed by Geoffrey Lee; licensed to Apple Inc. for macOS)"
+fs_type = 8
+embedding_restrictions = "OS/2 fsType 8 (0x0008): editable embedding permitted; installable embedding prohibited. The benchmark embeds no font in any artifact."
+project_status = "m7b_held_out_evaluation_font"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Impact as a system font on iOS, macOS and tvOS (Apple Developer system-fonts listing, version 5.00x, matching the installed file). The pinned SHA-256 is the macOS build; the Linux 'msttcorefonts' build is a different version under the Core Fonts for the Web end-user licence."
+license_name = "macOS 27 Software License Agreement (product EULA) + Monotype desktop EULA (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://www.apple.com/legal/sla/docs/macOS27.pdf"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Monotype desktop EULA] Use the Font Software on such Workstations to create, edit, view, print and distribute materials, provided that, (a) the materials do not contain the Font Software embedded, and (b) if you create a static graphic image with a representation of a typeface and typographic design or ornament, such static graphic image does not correspond to glyphs or glyph combinations of the Font Software which are individually addressed by software, a website, a hardware device or other means to render such designs and ornaments"
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output; trademark use is optional. The copyright notice stays inside the font file, which is not redistributed."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_authoritative"
+evidence_notes = "The installed copy is governed by the macOS SLA, which contains no artificial-intelligence or machine-learning restriction. Monotype's direct licence does contain one; it would apply only to a copy licensed from Monotype, not to the macOS-bundled copy used here. This face was already evaluated in M7B."
+
+[[font_evidence]]
+font_key = "verdana"
+family = "Verdana"
+face = "Verdana Regular"
+version = "Version 5.01x"
+postscript_name = "Verdana"
+copyright_holder = "© 2006 Microsoft Corporation. All Rights Reserved."
+rights_holder = "Microsoft Corporation (designed by Carter & Cone; licensed to Apple Inc. for macOS)"
+fs_type = 8
+embedding_restrictions = "OS/2 fsType 8 (0x0008): editable embedding permitted; installable embedding prohibited. The benchmark embeds no font in any artifact."
+project_status = "new_to_project_evaluation"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Verdana as a system font on iOS, macOS and tvOS (Apple Developer system-fonts listing, version 5.01x, matching the installed file). The pinned SHA-256 is the macOS build; the Linux 'msttcorefonts' build is a different version under the Core Fonts for the Web end-user licence."
+license_name = "macOS 27 Software License Agreement (product EULA) + Microsoft Typography font redistribution FAQ (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://learn.microsoft.com/en-us/typography/fonts/font-faq"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Microsoft Typography FAQ] Can I make graphic files using the fonts, say a screengrab, advertisement, meme or poster and share, sell or redistribute those graphic files? We view creating graphic files as being essentially the same as printing from an output device. Can I include graphic files (eg. GIFs, PNGs or JPEGs) I create using the fonts in my game or apps, say for a logo or banner? Yes, you can (provided you're using a product that is not specifically licensed for home, student or non-commercial use). The graphic file must be an image of a word, phrase or passage of text. Converting the font to a bitmap font (where each letter is treated individually) is not allowed. Apart from the document embedding rights described previously, you may not redistribute the Windows fonts. You may not copy them to other computers or servers, and you may not convert them to other formats, including bitmap formats, or modify them."
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output. The Microsoft FAQ places no restriction on sharing graphic files made with the font; the font file itself may not be redistributed."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_authoritative"
+evidence_notes = "Genuinely new to the project evaluation: Verdana has never been rendered in M3, M7B or M7C."
+
+[[font_evidence]]
+font_key = "trebuchet_ms"
+family = "Trebuchet MS"
+face = "Trebuchet MS Regular"
+version = "Version 5.00x"
+postscript_name = "TrebuchetMS"
+copyright_holder = "© 2006 Microsoft Corporation. All Rights Reserved."
+rights_holder = "Microsoft Corporation (designed by Vincent Connare; licensed to Apple Inc. for macOS)"
+fs_type = 8
+embedding_restrictions = "OS/2 fsType 8 (0x0008): editable embedding permitted; installable embedding prohibited. The benchmark embeds no font in any artifact."
+project_status = "new_to_project_evaluation"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Trebuchet MS as a system font on iOS, macOS and tvOS (Apple Developer system-fonts listing, version 5.00x, matching the installed file). The pinned SHA-256 is the macOS build; the Linux 'msttcorefonts' build is a different version under the Core Fonts for the Web end-user licence."
+license_name = "macOS 27 Software License Agreement (product EULA) + Microsoft Typography font redistribution FAQ (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://learn.microsoft.com/en-us/typography/fonts/font-faq"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Microsoft Typography FAQ] Can I make graphic files using the fonts, say a screengrab, advertisement, meme or poster and share, sell or redistribute those graphic files? We view creating graphic files as being essentially the same as printing from an output device. Can I include graphic files (eg. GIFs, PNGs or JPEGs) I create using the fonts in my game or apps, say for a logo or banner? Yes, you can (provided you're using a product that is not specifically licensed for home, student or non-commercial use). The graphic file must be an image of a word, phrase or passage of text. Converting the font to a bitmap font (where each letter is treated individually) is not allowed. Apart from the document embedding rights described previously, you may not redistribute the Windows fonts. You may not copy them to other computers or servers, and you may not convert them to other formats, including bitmap formats, or modify them."
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output. The Microsoft FAQ places no restriction on sharing graphic files made with the font; the font file itself may not be redistributed."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_authoritative"
+evidence_notes = "Genuinely new to the project evaluation: Trebuchet MS has never been rendered in M3, M7B or M7C."
+
+[[font_evidence]]
+font_key = "chalkduster"
+family = "Chalkduster"
+face = "Chalkduster Regular"
+version = "22.0d2e1"
+postscript_name = "Chalkduster"
+copyright_holder = "Copyright 2008 Apple Computer, Inc."
+rights_holder = "Apple Inc."
+fs_type = 0
+embedding_restrictions = "OS/2 fsType 0 (0x0000): installable embedding permitted. The benchmark embeds no font in any artifact, so no embedding permission is exercised."
+project_status = "new_to_project_evaluation"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Chalkduster as a system font on iOS and macOS (Apple Developer system-fonts listing). The installed file reports name-table version 22.0d2e1, which is newer than the 13.0d2e1 currently published in that listing, so the SHA-256 pin rather than the published version string is the authoritative identifier."
+license_name = "macOS 27 Software License Agreement (product EULA; the font file carries no separate licence string)"
+license_scope = "product_licence"
+license_source_url = "https://www.apple.com/legal/sla/docs/macOS27.pdf"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [macOS 27 SLA, important note] IMPORTANT NOTE: To the extent that this software may be used to reproduce, modify, publish or distribute materials, it is licensed to you only for reproduction, modification, publication and distribution of non-copyrighted materials, materials in which you own the copyright, or materials you are authorized or legally permitted to reproduce, modify, publish or distribute."
+permits_rendering = "yes"
+permits_output_redistribution = "yes"
+permits_font_file_redistribution = "no"
+attribution_required = "no"
+attribution_terms = "No attribution condition on the rendered output. The macOS licence restricts redistribution of the bundled font files, which this workflow does not do."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_with_supporting"
+evidence_notes = "The rendered-output permission rests on the product licence (section 2E plus the important note on publishing and distributing materials the licensee is authorised to distribute) rather than on an express Apple clause that names redistribution of rendered images."
+
+[[font_evidence]]
+font_key = "luminari"
+family = "Luminari"
+face = "Luminari Regular"
+version = "22.0d2e1"
+postscript_name = "Luminari-Regular"
+copyright_holder = "Copyright © 2008 Philip Bouwsma. Published by Canada Type. All rights reserved."
+rights_holder = "Philip Bouwsma, published by Canada Type (licensed to Apple Inc. for macOS)"
+fs_type = 0
+embedding_restrictions = "OS/2 fsType 0 (0x0000): installable embedding permitted. The benchmark embeds no font in any artifact, so no embedding permission is exercised."
+project_status = "new_to_project_evaluation"
+availability_scope = "apple_platforms"
+availability_evidence = "Apple ships Luminari as a macOS system font and offers it as a downloadable iOS font (Apple Developer system-fonts listing). The installed file reports name-table version 22.0d2e1, which is newer than the 13.0d1e2 currently published in that listing, so the SHA-256 pin rather than the published version string is the authoritative identifier. No general, non-Apple distribution channel for this face was found."
+license_name = "macOS 27 Software License Agreement (product EULA) + CANADA TYPE EULA v4.193 (foundry terms for the design)"
+license_scope = "product_licence_and_foundry_terms"
+license_source_url = "https://canadatype.com/eula/"
+license_retrieved_date = "2026-10-21"
+license_evidence_excerpt = "[macOS 27 SLA, section 2E] E. Fonts. Subject to the terms and conditions of this License, you may use the fonts included with the Apple Software to display and print content while running the Apple Software; however, you may only embed fonts in content if that is permitted by the embedding restrictions accompanying the font in question. These embedding restrictions can be found in the Font Book/Preview/Show Font Info panel. [Foundry terms, Canada Type EULA section 3] Examples of permitted usage under the Desktop & Print License are the installation of the font(s) on a computer operating systems for use within desktop applications such as Adobe InDesign, Microsoft Word, Apple Pages, etc., to create and print documents or make static images in raster digital formats, such as png, jpeg, gif. [Canada Type EULA section 2] The type of license granted to you under this agreement goes into effect upon Canada Type's receipt of full payment of the permissible use fees associated with each type of license. [Canada Type EULA section 8] 8. COPYING OF THE SOFTWARE. One copy of the font software may be made for back-up and archival purposes only."
+permits_rendering = "yes"
+permits_output_redistribution = "unverified"
+permits_font_file_redistribution = "no"
+attribution_required = "unverified"
+attribution_terms = "Unresolved. The macOS product licence grants use of the bundled font to display and print content, but it does not state whether the rendered output may be redistributed. The foundry terms that do cover the rendered output (the Canada Type Desktop & Print licence, which permits static images in png, jpeg and gif formats) only take effect once Canada Type has received full payment, and the EULA requires the licensee to inform anyone with access of the terms."
+reproducible_pin = "yes"
+pin_evidence = "Family, subfamily, PostScript name, name-table version string and the file SHA-256 are pinned; the installed file was verified against the M7D pin."
+evidence_grade = "primary_with_supporting"
+evidence_notes = "The intended use is covered by the Canada Type Desktop & Print licence terms, but those terms are a paid licence and the macOS product licence does not resolve redistribution of the rendered output. The question is therefore recorded as unresolved rather than inferred."
+
+[[eligibility_decision]]
+font_key = "arial"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256. The macOS product licence permits using the bundled font to display and print content, and the foundry terms for the same design expressly permit distributing materials made with the font, provided no font is embedded and no per-glyph bitmap font is produced. The benchmark satisfies both conditions. The font file is not redistributed and no attribution condition applies."
+conditions = "Any re-pinning of this face to a copy licensed directly from Monotype would import Monotype's artificial-intelligence training restriction on rendered glyphs and would require a fresh licence review before any training on font-rendered data."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "courier_new"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256. The macOS product licence permits using the bundled font to display and print content, and the foundry terms for the same design expressly permit distributing materials made with the font, provided no font is embedded and no per-glyph bitmap font is produced. The benchmark satisfies both conditions. The font file is not redistributed and no attribution condition applies."
+conditions = "Any re-pinning of this face to a copy licensed directly from Monotype would import Monotype's artificial-intelligence training restriction on rendered glyphs and would require a fresh licence review before any training on font-rendered data."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "times_new_roman"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256. The macOS product licence permits using the bundled font to display and print content, and the foundry terms for the same design expressly permit distributing materials made with the font, provided no font is embedded and no per-glyph bitmap font is produced. The benchmark satisfies both conditions. The font file is not redistributed and no attribution condition applies."
+conditions = "Any re-pinning of this face to a copy licensed directly from Monotype would import Monotype's artificial-intelligence training restriction on rendered glyphs and would require a fresh licence review before any training on font-rendered data."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "georgia"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256. The macOS product licence permits using the bundled font to display and print content, and the foundry terms state expressly that graphic files made with the font may be shared, sold or redistributed, provided they are images of words or phrases rather than per-glyph bitmap fonts. The benchmark satisfies both conditions. The font file is not redistributed and no attribution condition applies."
+conditions = "This face was already evaluated in M7B; it is an evaluation-only held-out identity for the project, not a font newly unseen by the project."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "monaco"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256, and shipped by Apple as a macOS system font. The macOS product licence permits using the bundled font to display and print content, and its important note extends the licence to publishing and distributing materials the licensee is authorised to distribute. The font file is not redistributed and no attribution condition applies."
+conditions = "The permission for the rendered output rests on the product licence rather than on an express Apple clause that names redistribution of rendered images. This face was already evaluated in M7B."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "impact"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256. The macOS product licence permits using the bundled font to display and print content, and the foundry terms for the same design expressly permit distributing materials made with the font, provided no font is embedded and no per-glyph bitmap font is produced. The benchmark satisfies both conditions. The font file is not redistributed and no attribution condition applies."
+conditions = "Any re-pinning of this face to a copy licensed directly from Monotype would import Monotype's artificial-intelligence training restriction on rendered glyphs. This face was already evaluated in M7B."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "verdana"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256. The macOS product licence permits using the bundled font to display and print content, and the foundry terms state expressly that graphic files made with the font may be shared, sold or redistributed, provided they are images of words or phrases rather than per-glyph bitmap fonts. The benchmark satisfies both conditions. The font file is not redistributed and no attribution condition applies."
+conditions = "Genuinely new to the project evaluation; no prior rendered use exists."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "trebuchet_ms"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256. The macOS product licence permits using the bundled font to display and print content, and the foundry terms state expressly that graphic files made with the font may be shared, sold or redistributed, provided they are images of words or phrases rather than per-glyph bitmap fonts. The benchmark satisfies both conditions. The font file is not redistributed and no attribution condition applies."
+conditions = "Genuinely new to the project evaluation; no prior rendered use exists."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "chalkduster"
+status = "eligible"
+reason = "Available on the audit machine with the M7D-pinned SHA-256, and shipped by Apple as a macOS and iOS system font. The macOS product licence permits using the bundled font to display and print content, and its important note extends the licence to publishing and distributing materials the licensee is authorised to distribute. The font file is not redistributed and no attribution condition applies."
+conditions = "The permission for the rendered output rests on the product licence rather than on an express Apple clause that names redistribution of rendered images."
+unresolved_questions = "None blocking the intended evaluation-only workflow."
+
+[[eligibility_decision]]
+font_key = "luminari"
+status = "review_required"
+reason = "The face is available on the audit machine with the M7D-pinned SHA-256 and is shipped by Apple as a macOS system font, but the licence position for the intended use is not resolved by the recorded evidence. The macOS product licence grants use of the bundled font to display and print content and does not state whether the rendered output may be redistributed. The foundry terms that do cover the rendered output, the Canada Type Desktop & Print licence, permit static images in png, jpeg and gif formats but only take effect once Canada Type has received full payment, and they require the licensee to inform anyone with access of the terms. Whether redistribution of the rendered benchmark images under the macOS-bundled copy needs a purchased Canada Type licence is therefore unresolved, and permission is not inferred."
+conditions = "Must be resolved before the face is used in the benchmark: either a written determination that the macOS product licence covers redistribution of the rendered output, or a purchased Canada Type Desktop & Print licence covering the intended use."
+unresolved_questions = "Does redistribution of rendered synthetic benchmark images made with the macOS-bundled Luminari require a purchased Canada Type licence, and does the inform-others obligation in section 14 of that EULA apply to the distributed images?"

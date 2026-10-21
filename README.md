@@ -5,7 +5,7 @@ CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
 > **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C,
-> M6D, M7A, M7B, M7C and M7D complete — the metric-validation pilot, a reproducible
+> M6D, M7A, M7B, M7C, M7D and M7E complete — the metric-validation pilot, a reproducible
 > dataset/feature pipeline, a leakage-safe conventional-ML benchmark, an
 > occlusion/interference feasibility pilot, a grouped occlusion/interference
 > robustness benchmark, a geometric-distortion feasibility pilot, a grouped
@@ -14,9 +14,12 @@ image quality, and modelling how those distortions affect image degradation.
 > study, a spatial resolution study, a local structural feature study, a
 > multi-scale structure-tensor study, a dataset-adequacy audit, a held-out-font
 > generalisation benchmark, a cross-font evaluation analysis and a next-benchmark
-> evaluation-design plan have been run and logged. M7D is a **planning** milestone:
-> the proposed dataset, benchmark, endpoints and success criteria are *planned,
-> not executed*. The CNN comparison, full M5 error taxonomy and dashboard are
+> evaluation-design plan and a font-roster licensing and availability audit have
+> been run and logged. M7D is a **planning** milestone: the proposed dataset,
+> benchmark, endpoints and success criteria are *planned, not executed*, and
+> M7E is an **audit** milestone: the benchmark generation gate is **closed**
+> until every proposed typeface has a defensible eligibility decision. The CNN
+> comparison, full M5 error taxonomy and dashboard are
 > **not implemented**, and the project does **not** predict human CAPTCHA
 > solvability. See [Current status](#current-status).
 
@@ -188,9 +191,9 @@ M5D retention-aware training-objective study, the M6A spatial-aware feature
 study, the M6B spatial resolution study, the M6C local structural feature study,
 the M6D multi-scale structure-tensor study, the M7A dataset-adequacy and
 evaluation audit, the M7B held-out-font generalisation benchmark, the M7C
-cross-font evaluation analysis and the M7D next-benchmark evaluation-design
-plan. The full M5 error taxonomy and Stage 9 dashboard
-are planned.
+cross-font evaluation analysis, the M7D next-benchmark evaluation-design
+plan and the M7E font-roster licensing and availability audit. The full M5
+error taxonomy and Stage 9 dashboard are planned.
 Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
 result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
@@ -314,6 +317,7 @@ environment files are required at this stage.
 | M7B | Held-out-font generalisation benchmark of the frozen M5C champion | **Complete** — 60 new sources / 1,260 rows from Georgia, Monaco and Impact (absent from M3); zero-shot primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; blur/noise RMSE 0.0959 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; descriptive only |
 | M7C | Cross-font evaluation analysis of the frozen M7B and M5C predictions | **Complete** — read-only, 31 pinned inputs and 13 audited claims (3 supported / 0 suggestive / 10 unsupported); all-primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; per-font all-primary RMSE 0.0852 / 0.0761 / 0.1134; blur/noise RMSE 0.0279 / 0.0346 / 0.1601 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; uncertainty and font differences are descriptive only |
 | M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark | **Complete as a plan** — read-only, 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated, Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic), frozen M5C champion evaluated zero-shot; no dataset, image, model or prediction was produced |
+| M7E | Font-roster licensing and availability audit of the planned cross-font benchmark | **Complete as an audit** — read-only, 3 pinned inputs; all 10 faces available with the M7D-pinned SHA-256 and all proprietary (none open-licensed); 9 eligible, 1 `review_required` (Luminari), 0 ineligible, 0 unavailable; audit gate partially passed, **benchmark generation gate closed**; no image, text case, dataset row, prediction or model artifact produced |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -755,6 +759,34 @@ by path, SHA-256 and charset glyph coverage; licensing is **not** asserted and
 every font is `review_required_before_generation`. See `EXP-0017` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.22.
 
+## Quick start: font-roster licensing and availability audit
+
+M7E is a **read-only audit** of the ten typefaces the M7D plan proposes for the
+planned matched cross-font benchmark. It re-verifies each face against its
+pinned path and SHA-256, records the licence evidence for that face, and
+re-derives an eligibility decision from that evidence. It generates no images,
+no text cases, no dataset rows, no predictions and no model artifacts, and it
+does not change the M7D plan, the M5C champion or any historical output.
+
+```bash
+uv sync --extra dev --extra image
+
+uv run --extra image captcha-font-roster-audit run \
+    --config configs/font_roster_audit_v0_1_0.toml --overwrite
+
+# Replay every deterministic table/report and recheck the declared dependencies
+uv run --extra image captcha-font-roster-audit verify \
+    --config configs/font_roster_audit_v0_1_0.toml
+```
+
+The run writes only to `reports/font_roster_audit_v0_1_0/` (Git-ignored). All
+ten faces are available with the M7D-pinned SHA-256 and all ten are
+proprietary; **nine are eligible** for the intended evaluation-only workflow
+and **Luminari is `review_required`**, so the audit gate is *partially passed*
+and the **benchmark generation gate is closed**. The face is retained in the
+roster: it is not removed and no similarly named family is substituted. See
+`EXP-0018` and [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.23.
+
 ## Current status
 
 Implemented:
@@ -868,10 +900,19 @@ Implemented:
   scenarios, fourteen success criteria, eight stopping rules, a twelve-row
   claim-limit table, a machine-readable plan manifest, output protection and a
   run/verify CLI. It produces no dataset, image, model or prediction.
+- A font-roster licensing and availability audit (`font_roster_audit.py`,
+  `configs/font_roster_audit_v0_1_0.toml`): a versioned protocol with the
+  recorded licence evidence and the eligibility decisions in separate tables,
+  three pinned M7D inputs, live re-verification of every face against its
+  pinned path, SHA-256 and embedded name/OS-2 metadata, an explicit
+  four-status derivation that rejects an unsupported `eligible` decision, a
+  machine-readable audit manifest, an exact output file set, file-exact scoped
+  dependencies and a run/verify CLI. It produces no image, text case, dataset
+  row, prediction or model artifact.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 648 tests in total, all passing, including byte-identical dataset
+- 682 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -921,20 +962,27 @@ Implemented:
   and leakage-control checks, endpoint/sample-size/success-criteria/stopping-rule
   coverage, report-section and non-execution checks, output-path protection,
   deterministic two-run output equality, tamper detection, JSON-safe metadata
-  and CLI run/verify tests, and the M7D scoped protected-dependency contract:
+  and CLI run/verify tests, the M7D scoped protected-dependency contract:
   verification with the declared dependencies intact, unrelated configuration,
   dataset, model and report additions not invalidating M7D, modified and
   deleted planning configurations, modified and deleted declared upstream
   dependencies, modified, deleted and unexpected protected outputs, missing,
   malformed and tampered dependency manifests failing closed, the M7C scoped
-  verifier remaining unaffected, and deterministic repeated verification, and
-  the M7C scoped protected-dependency contract:
+  verifier remaining unaffected, and deterministic repeated verification, the
+  M7C scoped protected-dependency contract:
   verification with the declared dependencies intact, an unrelated
   configuration not invalidating M7C, modified and deleted pinned inputs,
   a deleted declared-but-not-pinned dependency, altered and unexpected M7C
   output artifacts, missing, malformed and tampered dependency manifests
   failing closed, deterministic repeated verification, and M7D remaining
-  unaffected.
+  unaffected, and the M7E font-roster audit: complete and malformed evidence
+  records, missing licence evidence, an unsupported or malformed licence
+  status, an `eligible` decision without adequate evidence, a missing or
+  duplicated roster member, modified and deleted declared evidence, modified
+  and unexpected protected outputs, missing, malformed and tampered dependency
+  manifests failing closed, unrelated configuration, dataset, model and report
+  additions not invalidating the audit, deterministic output and verification,
+  and the M7C and M7D verifiers still passing and still detecting tampering.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -1251,6 +1299,68 @@ readability or solvability):
   only 12 held-out test sources, so all intervals are preliminary and
   descriptive. Interval overlap or non-overlap is not treated as a significance
   test, and no universal threshold was introduced after seeing test results.
+
+Milestone M7E findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **M7E is an audit, not a benchmark.** It pins the M7D planning configuration,
+  the M7D plan manifest and the M7D font inventory, re-verifies every proposed
+  face against its pinned path and SHA-256, reads the family, style, version
+  string, PostScript name, copyright, licence string and OS/2 embedding bits
+  back out of the font file, and re-derives an eligibility decision from the
+  recorded licence evidence. It generated no image, no text case, no dataset
+  row, no prediction and no model artifact, and it did not modify the M7D plan,
+  the M5C champion or any historical output.
+- **All ten faces are available, and all ten are proprietary.** Each face was
+  verified present with the M7D-pinned SHA-256, and each pins family, style,
+  version and file hash, so the exact face that would be rendered is
+  identifiable. **None of the ten is released under an open licence**, so the
+  planned benchmark is reproducible from a pinned Apple environment but not
+  from freely redistributable inputs.
+- **Nine faces are eligible; Luminari is `review_required`.** For the
+  Microsoft designs (Georgia, Verdana, Trebuchet MS) and the Monotype designs
+  (Arial, Courier New, Times New Roman, Impact) the foundry terms expressly
+  permit distributing materials made with the font, provided the material does
+  not embed the font and a static graphic image does not correspond to
+  individually addressed glyphs — both conditions the benchmark satisfies. The
+  Apple-published designs (Monaco, Chalkduster) rest on the macOS product
+  licence, which grants use to display and print content and extends to
+  publishing and distributing materials the licensee is authorised to
+  distribute. Luminari is unresolved: the macOS product licence grants the use
+  that creates the output but is silent on redistributing it, while the Canada
+  Type terms that do cover the rendered output permit static images in png,
+  jpeg and gif formats but only take effect once Canada Type has received full
+  payment. The face is retained in the roster; it is not removed and no
+  similarly named family is substituted.
+- **The font-file boundary is what makes the roster usable.** No licence in
+  the roster permits redistributing a font file, and the workflow never needs
+  to: the dataset manifest records the font identifier and the font SHA-256,
+  never the font file, the repository ignores `data/`, `models/` and
+  `reports/`, and the audit verifies at run time that no font binary exists
+  anywhere in the working tree. Distribution of the rendered images is the
+  only redistribution the workflow performs.
+- **A project-level licence risk was found and recorded.** Monotype's direct
+  licence forbids using the font software, or any rendered glyphs, outlines,
+  kerning data or other visual elements, in connection with developing,
+  training or fine-tuning artificial-intelligence models. The macOS-bundled
+  copies audited here are governed by the macOS Software License Agreement,
+  which contains no such clause, and the planned benchmark is evaluation-only.
+  The finding is still material, because the frozen M3 development data was
+  rendered with three of these faces and the M5C champion was trained on it.
+  Any future move to a directly licensed Monotype copy, or any training on
+  font-rendered data under such a licence, needs a fresh licence review first.
+- **Georgia, Monaco and Impact are not new to the project.** They were already
+  evaluated in M7B. They remain valid held-out identities because the champion
+  was never fitted, calibrated or selected on them, but the roster coverage
+  table keeps the distinction visible so a future result on them is never
+  described as an independent replication of the M7B three-font finding.
+- **The benchmark generation gate is closed.** The audit gate is *partially
+  passed* (nine eligible, one `review_required`, none ineligible or
+  unavailable); benchmark generation is **closed** until every proposed face
+  carries a defensible eligibility decision. Clearing Luminari, or a
+  deliberately and separately versioned roster decision, is a prerequisite.
+  M7D's `no_planned_outputs_created` check is preserved and still passes; the
+  audit created nothing at the planned benchmark output paths.
 
 Milestone M7D findings (synthetic image similarity only — **not** human
 readability or solvability):

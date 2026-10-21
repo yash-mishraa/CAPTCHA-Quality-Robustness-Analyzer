@@ -2419,6 +2419,156 @@ only: it does not alter M7C's metrics, predictions, datasets, protocol, report,
 claim audit or any scientific conclusion, and it does not rewrite or regenerate
 any historical artifact.
 
+### 5.23 M7E font-roster licensing and availability audit
+
+M7E is a **read-only audit** of the ten typefaces the M7D plan proposes for the
+planned matched cross-font benchmark. It re-verifies each face against its
+pinned path and SHA-256, records the licence evidence for that specific face,
+and re-derives an eligibility decision from that evidence. It generates no
+images, no text cases, no dataset rows, no predictions and no model artifacts.
+It does not change the M7D plan, the M5C champion or any historical output, and
+it does not implement the transition of the planned benchmark paths into actual
+outputs.
+
+**Scope frozen.** The planned benchmark design is unchanged: ten typefaces
+(three familiar, seven held-out), 30 matched text cases, 300 sources, 6,300
+rows, 5,700 primary rows, 600 diagnostic rows, the M7B corruption ladder, the
+frozen renderer at 192×64 8-bit grayscale PNG, and zero-shot evaluation of the
+frozen M5C champion. The intended use under audit is to render synthetic text
+strings into PNG images, distribute the rendered images and derived tables as
+a Git-ignored dataset, and evaluate the frozen champion. The target boundary
+is unchanged: synthetic SSIM against an exact source-specific clean reference,
+not human readability, CAPTCHA solvability, security or production robustness.
+
+**Protocol and inputs.** `configs/font_roster_audit_v0_1_0.toml` is the
+versioned protocol. It pins three upstream files by SHA-256 — the M7D planning
+configuration, the M7D machine-readable plan manifest and the M7D font
+inventory — and it keeps *evidence facts* and *eligibility decisions* in two
+separate tables. The evidence table records, for every face, the planned
+family, the exact face and style, the version string, the PostScript name, the
+copyright and rights holder, the OS/2 embedding bits, the availability source
+and scope, the licence name and scope, a source URL, a retrieval date, a
+verbatim evidence excerpt, and explicit answers to four questions: is rendering
+permitted, is redistribution of the rendered output permitted, is
+redistribution of the font file permitted, and does an attribution or notice
+condition apply. The decision table records the status, the reason, the
+conditions and the open questions. Evidence is never silently merged with the
+decision.
+
+**Statuses and derivation.** Four statuses are used, with the exact meanings
+recorded in the protocol. `eligible` means the exact face was verified present
+with the pinned SHA-256, the recorded licence evidence supports rendering the
+intended output and permits distributing that output, no attribution or notice
+condition is unresolved, the font file is not redistributed, and the face and
+version are pinned reproducibly. `ineligible` means the evidence shows a
+positive prohibition. `review_required` means the face is available but the
+licence position for the intended use is not fully established, or a condition
+such as attribution, a purchase requirement or a notice obligation remains
+unresolved. `unavailable` means the face could not be obtained or verified.
+
+The derivation is re-run on every verification. The declared status may be
+*more* restrictive than the derived status, but a declared `eligible` is
+rejected unless the derived status is also `eligible`; a declared `ineligible`
+requires a positive prohibition in the evidence; a declared `unavailable`
+requires the face to be unobtainable. Expected hashes are anchored in the
+committed protocol and the pinned M7D inputs, and are never regenerated from
+the current tree.
+
+**Evidence standard.** Authoritative sources were used wherever the terms
+could be checked: the macOS 27 Software License Agreement (EA2005) section 2E
+and its important note; the Microsoft Typography *Font redistribution FAQ*; the
+Monotype *Font Software For Desktop End User License Agreement*; the *CANADA
+TYPE EULA* v4.193; Apple's published system-font listing; and the licence
+strings, copyright notices, version strings and OS/2 embedding bits embedded
+in the font files themselves. Search results and third-party summaries were
+not accepted as sufficient evidence where the original terms were available.
+Where a source could not be accessed or the terms remain ambiguous, the
+uncertainty is recorded and the face is marked `review_required`; permission is
+not inferred.
+
+**The font-file boundary.** No licence in the roster permits redistributing a
+font file, and the planned workflow does not need to: the dataset manifest
+records the font identifier and the font SHA-256, never the font file; the
+repository ignores `data/`, `models/` and `reports/`; and the audit verifies
+at run time that no font binary exists anywhere in the working tree. The
+audit therefore distinguishes the one redistribution the workflow performs —
+the rendered images — from the one it never performs.
+
+**Result.** Nine of the ten faces are `eligible` for the intended workflow and
+one, Luminari, is `review_required`. The Microsoft designs (Georgia, Verdana,
+Trebuchet MS) and the Monotype designs (Arial, Courier New, Times New Roman,
+Impact) are supported by a foundry source that expressly permits distributing
+materials made with the font, subject to two conditions the benchmark
+satisfies: the material must not embed the font, and a static graphic image
+must not correspond to individually addressed glyphs. The Apple-published
+designs (Monaco, Chalkduster) are supported by the product licence, which
+grants use to display and print content and extends to publishing and
+distributing materials the licensee is authorised to distribute; the evidence
+grade records that this rests on the product licence rather than on an express
+clause naming redistribution of rendered images. Luminari is unresolved: the
+macOS product licence grants the use that creates the output but is silent on
+redistributing it, while the Canada Type terms that do cover the rendered
+output permit static images in png, jpeg and gif formats but only take effect
+once Canada Type has received full payment, and they require the licensee to
+inform anyone with access of the terms. The face is retained in the roster
+with `review_required`; it is not removed and no similarly named family is
+substituted.
+
+**Availability and reproducibility.** Every face was verified present on the
+audit machine with the M7D-pinned SHA-256, and the family, style, version
+string, PostScript name and embedding bits were read back from the font file
+itself. Availability is nonetheless Apple-platform scoped: these are the
+builds Apple ships with its operating systems, and the commonly used
+alternative distribution of the core fonts on Linux ships different versions
+under the older Core Fonts for the Web end-user licence, so the pinned hashes
+do not transfer and a cross-platform re-pin would need a fresh licence review.
+
+**Project-level findings.** No proposed face is released under an open
+licence, so the benchmark is reproducible from a pinned Apple environment but
+not from freely redistributable inputs. Separately, Monotype's direct licence
+contains a restriction on using the font software, or any rendered glyphs,
+outlines, kerning data or other visual elements, in connection with developing,
+training or fine-tuning artificial-intelligence models. The macOS-bundled
+copies audited here are governed by the macOS Software License Agreement,
+which contains no such clause, and the planned benchmark is evaluation-only.
+The finding is nevertheless material, because the frozen M3 development data
+was rendered with three of these faces and the M5C champion was trained on it:
+any future move to a directly licensed Monotype copy, or any training on
+font-rendered data under such a licence, would need a fresh licence review
+first. Finally, Georgia, Monaco and Impact were already evaluated in M7B. They
+remain valid held-out identities because the champion was never fitted,
+calibrated or selected on them, but they are not fonts that are new to the
+project evaluation, and the roster coverage table keeps that distinction
+visible so that a future result on them is never described as an independent
+replication of the M7B three-font finding.
+
+**Gates.** The audit gate is *partially passed*: nine faces are eligible, one is
+review_required, none is ineligible or unavailable. The **benchmark generation
+gate is closed**: every proposed face must carry a defensible eligibility
+decision before the benchmark is generated, and clearing Luminari — by a
+written determination or by a purchased foundry licence — or a deliberately
+separately versioned roster decision is a prerequisite. M7D's
+`no_planned_outputs_created` check is preserved and still passes; the audit
+creates nothing at the planned benchmark output paths.
+
+**Verification and reproducibility.** `captcha-font-roster-audit run` writes
+only to `reports/font_roster_audit_v0_1_0/`; `verify` reloads the pinned
+inputs, recomputes every deterministic table, the audit manifest and the report,
+compares them byte-for-byte, and rechecks the declared dependencies, the font
+hashes and the exact output file set. The dependency fingerprint is
+file-exact over the three declared inputs, so an unrelated configuration,
+dataset, model or report added to a shared directory later does not invalidate
+the audit, while a modified or deleted declared input still fails. Two runs
+from the same clean commit are byte-identical except for the runtime-only
+metadata field. The regression tests in `tests/test_font_roster_audit.py`
+cover a valid evidence record and decision, missing licence evidence, an
+unsupported or malformed licence status, an `eligible` decision without
+adequate evidence, a missing or duplicated roster member, modified and deleted
+declared evidence, modified and unexpected protected outputs, a missing,
+malformed or tampered dependency manifest, unrelated additions to shared
+directories, deterministic output and verification, and the continued
+tamper detection of the M7C and M7D verifiers.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |

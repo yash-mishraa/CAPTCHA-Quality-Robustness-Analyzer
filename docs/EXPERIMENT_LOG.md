@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0017` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0018` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0018` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only font-roster licensing and availability audit of the ten typefaces the M7D plan proposes (no images, text cases, dataset rows, predictions or model artifacts): all ten are available with the M7D-pinned SHA-256 and are proprietary, none is open-licensed; nine are eligible for the intended evaluation-only workflow because the licence permits distributing the rendered images and the workflow never redistributes a font binary; Luminari is `review_required` because the macOS product licence is silent on redistributing the rendered output while the Canada Type terms that cover it require a paid licence, so the audit gate is partially passed and the benchmark generation gate is closed |
 | `EXP-0017` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only evaluation-design plan (no dataset, image, model or prediction produced): 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated and Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic) with the frozen M5C champion evaluated zero-shot; font-level inference stays descriptive because ten purposive fonts are not a font population |
 | `EXP-0016` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only cross-font analysis: all-primary MAE/RMSE/R² 0.0634/0.0930/0.7435; per-font RMSE 0.0852/0.0761/0.1134 with the Georgia–Monaco interval including zero; blur/noise RMSE 0.0279/0.0346/0.1601 versus familiar 0.0233 but a 5.74× font range; geometric aggregate 0.0588 versus 0.0590 while severity RMSE spans 0.0259–0.0829 (3.20×); top-3 source share 0.099 and 48.4 effective sources; 13-claim audit yields 3 supported / 0 suggestive / 10 unsupported |
 | `EXP-0015` | 2026-10-21 | `robustness-analysis` | `completed` | Held-out-font benchmark: the frozen M5C champion reaches primary MAE/RMSE/R² 0.0634/0.0930/0.7435 on 60 Georgia/Monaco/Impact sources; blur/noise RMSE is 0.0959 versus 0.0233 on the familiar-font benchmark (point estimates outside the familiar intervals), geometric aggregate RMSE is similar (0.0588 versus 0.0590), interference is poorly calibrated (RMSE 0.1001, R² -0.1744), and the comparison is descriptive rather than matched |
@@ -101,6 +102,153 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0018 — Font-roster licensing and availability audit for the planned cross-font benchmark
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** For each of the ten typefaces the M7D plan proposes
+  for the planned matched cross-font benchmark, is the exact face actually
+  available, identifiable and legally suitable for the intended workflow, and
+  is that supported by recorded evidence? M7E is a **read-only audit**. It
+  generates no images, no text cases and no dataset rows, creates no
+  predictions and no model artifacts, trains or selects no model, and does not
+  change the M7D plan, the M5C champion or any historical output. The target
+  remains synthetic SSIM against an exact source-specific clean reference; this
+  is not human readability, CAPTCHA solvability, security or production
+  robustness.
+- **Code revision:** base `a3d98d2` (M7D maintenance) plus the M7E
+  implementation, committed as `feat: audit cross-font benchmark eligibility`.
+  The reported run was repeated from the clean commit so provenance records a
+  clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; macOS 27.0.1
+  (arm64). No GPU was used.
+- **Configuration:** `configs/font_roster_audit_v0_1_0.toml`; config sha256
+  `5c8140e4bebb4ede473fdbf6499b476afc73157a595a4a16a16be61805038755`.
+  Seed `20261021`. The protocol pins three upstream files by SHA-256: the M7D
+  planning configuration
+  (`e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3`), the
+  M7D plan manifest
+  (`7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8`) and
+  the M7D font inventory
+  (`3162b40a1e08f6217b8ae68a3b32c1e8bda79048eca1e675bddf859b561bc57e`).
+- **Upstream frozen inputs:** the frozen M7D plan and its recorded per-font
+  availability, hashes and glyph coverage. The M5C champion artifact
+  (`c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`) and
+  card (`9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`)
+  were not touched and were not used.
+- **Dataset:** none created. The audited roster is the ten typefaces in the
+  M7D planning configuration: Arial, Courier New and Times New Roman (M3
+  development fonts) and Georgia, Monaco, Impact, Verdana, Trebuchet MS,
+  Chalkduster and Luminari (held-out). The *planned* dataset would be
+  `matched-font-v0.1.0` at `data/processed/matched_font_benchmark_v0.1.0/`
+  with the benchmark report at `reports/matched_font_benchmark_v0_1_0/`; the
+  audit created nothing at either path, and M7D's `no_planned_outputs_created`
+  check still passes.
+- **Split:** none created.
+- **Seeds:** audit seed `20261021`; no stochastic step exists in the audit.
+- **Runtime:** recorded in `run_metadata.json`; two clean-commit runs differ
+  only in `runtime_seconds`.
+
+**Method.** The run verifies the three pinned inputs by SHA-256, parses the M7D
+roster, and cross-checks it against the M7D font inventory so the audit cannot
+silently cover a different set of faces. For each face it resolves the pinned
+path, verifies the pinned SHA-256, and reads the family, style, version
+string, PostScript name, copyright, licence string and OS/2 embedding bits back
+out of the font file itself. It then re-derives an eligibility decision from
+the recorded licence evidence and checks the declared decision against that
+derivation: an `eligible` decision is rejected unless the derived status is
+also `eligible`; an `ineligible` decision requires a positive prohibition;
+an `unavailable` decision requires an unobtainable face; `review_required` is
+always accepted as the conservative default.
+
+Evidence was gathered from authoritative sources and is recorded with a source
+URL, a retrieval date and a verbatim excerpt for every face: the macOS 27
+Software License Agreement (EA2005) section 2E and its important note, the
+Microsoft Typography *Font redistribution FAQ*, the Monotype *Font Software For
+Desktop End User License Agreement*, the *CANADA TYPE EULA* v4.193, Apple's
+published system-font listing, and the licence metadata embedded in the font
+files. Search snippets and third-party summaries were not accepted where the
+original terms were available.
+
+**Metrics.**
+
+| Metric | Value | Notes |
+| --- | --- | --- |
+| Faces audited | 10 | exactly the M7D roster |
+| Faces available with the pinned SHA-256 | 10 / 10 | path, hash, family, style, version and embedding bits verified live |
+| Eligible | 9 | Arial, Chalkduster, Courier New, Georgia, Impact, Monaco, Times New Roman, Trebuchet MS, Verdana |
+| review_required | 1 | Luminari |
+| ineligible | 0 | no positive prohibition was found |
+| unavailable | 0 | no face is missing |
+| Font binaries in the working tree | 0 | the font-file boundary holds |
+| Audit gate | partially_passed | 9 of 10 faces cleared |
+| Benchmark generation gate | closed | every proposed face needs a defensible decision first |
+
+**Observations.** All ten faces are proprietary: none is released under an
+open licence, so the planned benchmark is reproducible from a pinned Apple
+environment but not from freely redistributable inputs. Nine faces are cleared
+for the intended workflow. The Monotype and Microsoft foundry terms expressly
+permit distributing materials made with the font, subject to two conditions
+that the benchmark satisfies — the material must not embed the font, and a
+static graphic image must not correspond to individually addressed glyphs —
+and both forbid redistributing the font file itself, which the workflow never
+does. The Apple-published designs Monaco and Chalkduster rest on the macOS
+product licence, and the evidence grade records that this is a product-licence
+basis rather than an express foundry clause. Luminari is unresolved: the
+product licence grants the use that creates the output but is silent on
+redistributing it, while the Canada Type terms that do cover the rendered
+output permit static images in png, jpeg and gif formats but only take effect
+once Canada Type has received full payment, and they require the licensee to
+inform anyone with access of the terms. Separately, Monotype's direct licence
+restricts using the font software, or any rendered glyphs, outlines, kerning
+data or other visual elements, in connection with developing, training or
+fine-tuning artificial-intelligence models; the macOS-bundled copies audited
+here are governed by the macOS licence, which has no such clause, and the
+planned benchmark is evaluation-only, but the finding is material because the
+frozen M3 development data was rendered with three of these faces and the M5C
+champion was trained on it. Georgia, Monaco and Impact were already evaluated
+in M7B, so they are recorded as M7B evaluation fonts rather than as faces new
+to the project.
+
+**Conclusion.** The audit establishes a defensible eligibility decision for
+nine of the ten proposed typefaces and an explicit open question for the
+tenth. The benchmark generation gate is therefore **closed**: the Luminari
+licence position must be resolved, or the roster must be changed by a
+deliberate and separately versioned decision, before any benchmark image is
+generated. Nothing in this audit changes the M7D research plan, the frozen
+M5C champion, or any recorded metric, prediction, dataset or report.
+
+**Limitations.** This is an audit of documentary evidence, not a legal opinion,
+and the conclusions depend on the terms retrievable on the recorded retrieval
+dates. For three faces the permission for the rendered output rests on the
+product licence rather than on an express foundry clause naming redistribution
+of rendered images. The audit covers the faces as pinned on the audit machine
+and does not verify the terms of any other version of the same family. It does
+not assess trademark risk and does not clear any face for use in a product, a
+model or a deployment. It says nothing about human readability, CAPTCHA
+solvability, security or production robustness. Finally, the availability
+finding is environment-scoped: the pinned faces are the macOS builds, and the
+core-font packages available on Linux ship different versions under a
+different licence, so a cross-platform re-pin would need its own licence
+review.
+
+**Next step.** Stop for review. If the Luminari question is resolved, or the
+roster is changed by an explicit versioned decision, the next milestone is the
+separately versioned dataset generator and zero-shot benchmark that consumes
+the M7D plan's roster, counts, corruption ladder, manifest fields and
+fail-closed gates. Moving the planned benchmark output paths into existence is
+a separate, explicitly versioned lifecycle change with its own tests and
+provenance; it is not implemented here.
+
+**Artifacts.** Git-ignored report directory
+`reports/font_roster_audit_v0_1_0/` (input manifest, font evidence,
+eligibility table, roster coverage, isolation checks, audit manifest, Markdown
+report and run metadata). The committed config, code, tests and documentation
+are the reproducible protocol.
 
 ---
 
