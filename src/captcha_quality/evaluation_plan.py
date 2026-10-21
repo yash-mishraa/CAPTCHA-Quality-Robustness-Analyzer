@@ -176,6 +176,78 @@ PROTECTED_REPORT_ROOTS: Final[tuple[str, ...]] = (
     "reports/spatial_resolution_study_v0_1_0",
     "reports/structure_tensor_study_v0_1_0",
 )
+
+# ---------------------------------------------------------------------------
+# Scoped protected-dependency membership
+# ---------------------------------------------------------------------------
+# The original M7D contract fingerprinted three *shared, growing* trees
+# (``configs/``, ``data/processed/`` and ``models/``) plus the historical
+# milestone report roots. That made M7D verification depend on the complete
+# future contents of directories M7D never declared as inputs: adding an
+# unrelated milestone configuration (for example the configuration of a later
+# milestone) changed the tree fingerprint and failed M7D verification even
+# though every M7D input, table, manifest and report artifact was
+# byte-identical. The same rule also covered transient, Git-ignored scratch
+# copies that are generated outputs rather than frozen dependencies.
+#
+# M7D's actual dependencies are a *file* set, not a tree: every upstream
+# dependency is individually hash-pinned in the M7D planning configuration,
+# which is itself committed to Git and whose SHA-256 is recorded. The contract
+# below therefore declares members at file level, which is the role-appropriate
+# granularity for this milestone:
+#
+#   * ``config_files``  - the M7D planning configuration itself. Its expected
+#     hash is the SHA-256 recorded when M7D ran, cross-checked against the
+#     recorded asset snapshot and against the recomputed file.
+#   * ``input_files``   - the exact upstream evidence files M7D pins (the M3,
+#     M5C, M7A, M7B and M7C protocols, datasets, predictions, metrics, tables,
+#     metadata and reports). Each must be present and must match the
+#     configuration-pinned hash.
+#   * ``output_files``  - the artifacts M7D itself writes. The file set must be
+#     exact, the sixteen non-manifest artifacts must match their recorded
+#     hashes, and every table, the plan manifest and the report are recomputed
+#     from the pinned inputs and compared.
+#   * ``ignored_paths`` - transient scratch directories and the two
+#     *planned* future benchmark output paths. They are not M7D dependencies,
+#     must not be required to exist, and are excluded so the exclusion is
+#     auditable rather than implicit.
+#
+# Expected hashes are never regenerated from the current tree: they are the
+# hashes committed in the M7D configuration and recorded in the M7D run
+# snapshot, and the two anchors must agree.
+M7D_PROTECTED_DEPENDENCY_MEMBERSHIP_VERSION: Final[str] = "m7d-scoped-dependencies-v1"
+M7D_PLANNING_CONFIG_FILE: Final[str] = "configs/evaluation_design_plan_v0_1_0.toml"
+M7D_IGNORED_PATHS: Final[tuple[str, ...]] = (
+    "data/processed/_m7b_clean_run_1_snapshot",
+    "data/processed/_m7b_clean_run_2",
+    "data/processed/_m7b_probe",
+    "data/processed/_m7b_probe2",
+    "data/processed/_m7b_probe3",
+    "data/processed/_m7b_probe4",
+    "data/processed/repro_a",
+    "data/processed/repro_b",
+    "data/processed/matched_font_benchmark_v0.1.0",
+    "reports/matched_font_benchmark_v0_1_0",
+)
+M7D_OUTPUT_FILES: Final[tuple[str, ...]] = (
+    "claims_and_limits.csv",
+    "direction_assessment.csv",
+    "endpoints.csv",
+    "evidence_snapshot.csv",
+    "font_inventory.csv",
+    "independent_units.csv",
+    "input_manifest.csv",
+    "isolation_checks.csv",
+    "leakage_controls.csv",
+    "plan_manifest.json",
+    "report.md",
+    "research_questions.csv",
+    "run_metadata.json",
+    "sample_size_scenarios.csv",
+    "split_hierarchy.csv",
+    "stopping_rules.csv",
+    "success_criteria.csv",
+)
 M7C_CHAMPION_ARTIFACT_SHA256: Final[str] = (
     "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
 )
@@ -3965,6 +4037,86 @@ def _fingerprint_hash(fingerprint: Mapping[str, str]) -> str:
     return sha256_bytes(canonical_json(fingerprint).encode("utf-8"))
 
 
+@dataclass(frozen=True, slots=True)
+class ProtectedDependencyMembership:
+    """Explicit membership of the frozen dependencies M7D verification protects.
+
+    M7D declares its dependencies at file level because every upstream
+    dependency is individually hash-pinned in the committed M7D planning
+    configuration. Files that merely share a directory with a declared
+    dependency are not M7D dependencies, so adding them does not invalidate
+    M7D verification.
+    """
+
+    version: str
+    config_files: tuple[str, ...]
+    input_files: tuple[str, ...]
+    output_files: tuple[str, ...]
+    ignored_paths: tuple[str, ...]
+
+    @property
+    def members(self) -> tuple[str, ...]:
+        """Every declared file the plan reads."""
+        return self.config_files + self.input_files
+
+
+def protected_dependency_membership(config: PlanConfig) -> ProtectedDependencyMembership:
+    """Return the declared M7D protected-dependency membership."""
+    return ProtectedDependencyMembership(
+        version=M7D_PROTECTED_DEPENDENCY_MEMBERSHIP_VERSION,
+        config_files=(M7D_PLANNING_CONFIG_FILE,),
+        input_files=tuple(pin.path for pin in config.inputs),
+        output_files=M7D_OUTPUT_FILES,
+        ignored_paths=M7D_IGNORED_PATHS,
+    )
+
+
+def _is_ignored_path(path: str, membership: ProtectedDependencyMembership) -> bool:
+    """True when a path is a declared ignored scratch or planned output path."""
+    return any(
+        path == ignored or path.startswith(f"{ignored}/") for ignored in membership.ignored_paths
+    )
+
+
+def _scoped_dependency_fingerprint(
+    membership: ProtectedDependencyMembership,
+) -> dict[str, str]:
+    """Hash exactly the declared M7D dependencies that exist on disk."""
+    fingerprint: dict[str, str] = {}
+    for relative in membership.members:
+        if _is_ignored_path(relative, membership):
+            continue
+        path = Path(relative)
+        if not path.is_file():
+            continue
+        fingerprint[relative] = sha256_file(path)
+    return fingerprint
+
+
+def _scoped_dependency_state(
+    membership: ProtectedDependencyMembership,
+    expected: Mapping[str, str],
+) -> dict[str, list[str]]:
+    """Classify the declared dependencies against their expected hashes.
+
+    ``missing`` covers a declared dependency that no longer exists, ``not_a_file``
+    covers one that was replaced by something that is not a regular file, and
+    ``modified`` covers one whose content hash differs from the expected hash.
+    """
+    missing: list[str] = []
+    not_a_file: list[str] = []
+    modified: list[str] = []
+    for relative in sorted(expected):
+        path = Path(relative)
+        if not path.exists():
+            missing.append(relative)
+        elif not path.is_file():
+            not_a_file.append(relative)
+        elif sha256_file(path) != expected[relative]:
+            modified.append(relative)
+    return {"missing": missing, "not_a_file": not_a_file, "modified": modified}
+
+
 def _output_hashes(output_dir: Path) -> dict[str, str]:
     hashes: dict[str, str] = {}
     for path in sorted(output_dir.iterdir()):
@@ -4013,6 +4165,8 @@ def _build_metadata(
     output_hashes: Mapping[str, str],
     frozen_assets: Mapping[str, str],
     frozen_assets_hash: str,
+    frozen_dependencies: Mapping[str, str] | None = None,
+    frozen_dependencies_hash: str | None = None,
     elapsed_seconds: float,
 ) -> dict[str, Any]:
     config = inputs.config
@@ -4058,6 +4212,9 @@ def _build_metadata(
         },
         "frozen_assets": dict(frozen_assets),
         "frozen_assets_hash": frozen_assets_hash,
+        "frozen_dependencies": dict(frozen_dependencies or {}),
+        "frozen_dependencies_hash": frozen_dependencies_hash,
+        "frozen_dependency_membership": (protected_dependency_membership(config).version),
         "output_hashes": dict(output_hashes),
         "runtime_seconds": round(float(elapsed_seconds), 3),
     }
@@ -4077,7 +4234,8 @@ def run_plan(
         raise PlanError(
             f"output directory already exists: {output_dir}; pass --overwrite to replace it"
         )
-    frozen_before = _protected_fingerprint()
+    membership = protected_dependency_membership(config)
+    dependencies_before = _scoped_dependency_fingerprint(membership)
     inputs = load_inputs(config)
     result = build_plan(inputs)
     checks = build_isolation_checks(inputs, result, result.report)
@@ -4110,15 +4268,18 @@ def run_plan(
     _write_json(result.protocol, output_dir / "plan_manifest.json")
     (output_dir / "report.md").write_text(result.report, encoding="utf-8")
     output_hashes = _output_hashes(output_dir)
-    frozen_after = _protected_fingerprint()
-    if frozen_before != frozen_after:
-        raise PlanError("protected frozen assets changed during the M7D run")
+    dependencies_after = _scoped_dependency_fingerprint(membership)
+    if dependencies_before != dependencies_after:
+        raise PlanError("declared protected dependencies changed during the M7D run")
+    frozen_assets = _protected_fingerprint()
     metadata = _build_metadata(
         inputs,
         result,
         output_hashes=output_hashes,
-        frozen_assets=frozen_after,
-        frozen_assets_hash=_fingerprint_hash(frozen_after),
+        frozen_assets=frozen_assets,
+        frozen_assets_hash=_fingerprint_hash(frozen_assets),
+        frozen_dependencies=dependencies_after,
+        frozen_dependencies_hash=_fingerprint_hash(dependencies_after),
         elapsed_seconds=time.perf_counter() - started,
     )
     _write_json(metadata, output_dir / "run_metadata.json")
@@ -4150,6 +4311,122 @@ def _compare_table(
         checks.append(CheckResult(f"table:{name}", False, f"{type(error).__name__}: {error}"))
     else:
         checks.append(CheckResult(f"table:{name}", True, "replayed table matches"))
+
+
+def _expected_dependency_hashes(
+    config: PlanConfig,
+    metadata: Mapping[str, Any],
+    membership: ProtectedDependencyMembership,
+) -> dict[str, str]:
+    """Return the expected hash of every declared M7D dependency.
+
+    The primary anchor is the committed M7D planning configuration: the
+    upstream input hashes are the configuration-pinned values, and the
+    planning configuration's own expected hash is the value recorded when M7D
+    ran. The hashes are never regenerated from the current tree.
+    """
+    expected = {pin.path: pin.sha256 for pin in config.inputs}
+    recorded_config_hash = str(metadata.get("plan", {}).get("config_sha256", ""))
+    for relative in membership.config_files:
+        expected[relative] = recorded_config_hash
+    return expected
+
+
+def _verify_protected_dependencies(
+    config: PlanConfig,
+    metadata: Mapping[str, Any],
+    output_dir: Path,
+) -> list[CheckResult]:
+    """Verify M7D's declared protected dependencies.
+
+    The contract is scoped to the dependencies M7D actually declares, so an
+    unrelated configuration or dataset added to a shared directory later does
+    not invalidate M7D, while a modified, deleted or substituted declared
+    dependency is still detected. The expected hashes are anchored to the
+    committed M7D configuration and cross-checked against the recorded M7D run
+    snapshot, so a modified manifest fails closed.
+    """
+    checks: list[CheckResult] = []
+    membership = protected_dependency_membership(config)
+    recorded = metadata.get("frozen_assets")
+    if not isinstance(recorded, dict) or not recorded:
+        checks.append(
+            CheckResult(
+                "frozen_dependency_manifest",
+                False,
+                "recorded frozen-asset snapshot is missing or malformed",
+            )
+        )
+        return checks
+    manifest_intact = metadata.get("frozen_assets_hash") == _fingerprint_hash(recorded)
+    checks.append(
+        CheckResult(
+            "frozen_dependency_manifest",
+            manifest_intact,
+            (
+                "recorded frozen-asset snapshot is internally consistent"
+                if manifest_intact
+                else "recorded frozen-asset snapshot does not match its recorded hash"
+            ),
+        )
+    )
+    if not manifest_intact:
+        return checks
+    expected = _expected_dependency_hashes(config, metadata, membership)
+    recorded_subset = {
+        relative: digest for relative, digest in recorded.items() if relative in expected
+    }
+    anchors_agree = recorded_subset == expected
+    checks.append(
+        CheckResult(
+            "frozen_dependency_anchors",
+            anchors_agree,
+            (
+                "the recorded M7D snapshot and the committed configuration agree on "
+                f"{len(expected)} declared dependencies"
+                if anchors_agree
+                else "the recorded M7D snapshot disagrees with the committed configuration"
+            ),
+        )
+    )
+    if not anchors_agree:
+        return checks
+    state = _scoped_dependency_state(membership, expected)
+    failed = {key: value for key, value in state.items() if value}
+    if failed:
+        detail = "; ".join(f"{key}: {value[:5]}" for key, value in sorted(failed.items()))
+        checks.append(
+            CheckResult(
+                "frozen_dependencies",
+                False,
+                f"{len(expected)} declared dependencies checked; {detail}",
+            )
+        )
+    else:
+        checks.append(
+            CheckResult(
+                "frozen_dependencies",
+                True,
+                f"{len(expected)} declared protected dependencies are unchanged",
+            )
+        )
+    actual_output_files = sorted(path.name for path in output_dir.iterdir() if path.is_file())
+    expected_output_files = sorted(membership.output_files)
+    checks.append(
+        CheckResult(
+            "output_file_set",
+            actual_output_files == expected_output_files,
+            (
+                "the M7D plan output file set is exactly as declared"
+                if actual_output_files == expected_output_files
+                else (
+                    f"unexpected output file set: missing {sorted(set(expected_output_files) - set(actual_output_files))}, "
+                    f"unexpected {sorted(set(actual_output_files) - set(expected_output_files))}"
+                )
+            ),
+        )
+    )
+    return checks
 
 
 def verify_plan(
@@ -4248,15 +4525,7 @@ def verify_plan(
             "recorded output hashes match",
         )
     )
-    current_frozen = _protected_fingerprint()
-    checks.append(
-        CheckResult(
-            "frozen_assets",
-            metadata.get("frozen_assets") == current_frozen
-            and metadata.get("frozen_assets_hash") == _fingerprint_hash(current_frozen),
-            "protected frozen assets are unchanged",
-        )
-    )
+    checks.extend(_verify_protected_dependencies(config, metadata, output_dir))
     return VerificationReport(dataset=str(output_dir), checks=tuple(checks))
 
 

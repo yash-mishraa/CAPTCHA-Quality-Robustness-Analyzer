@@ -871,7 +871,7 @@ Implemented:
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 621 tests in total, all passing, including byte-identical dataset
+- 648 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -921,7 +921,14 @@ Implemented:
   and leakage-control checks, endpoint/sample-size/success-criteria/stopping-rule
   coverage, report-section and non-execution checks, output-path protection,
   deterministic two-run output equality, tamper detection, JSON-safe metadata
-  and CLI run/verify tests, and the M7C scoped protected-dependency contract:
+  and CLI run/verify tests, and the M7D scoped protected-dependency contract:
+  verification with the declared dependencies intact, unrelated configuration,
+  dataset, model and report additions not invalidating M7D, modified and
+  deleted planning configurations, modified and deleted declared upstream
+  dependencies, modified, deleted and unexpected protected outputs, missing,
+  malformed and tampered dependency manifests failing closed, the M7C scoped
+  verifier remaining unaffected, and deterministic repeated verification, and
+  the M7C scoped protected-dependency contract:
   verification with the declared dependencies intact, an unrelated
   configuration not invalidating M7C, modified and deleted pinned inputs,
   a deleted declared-but-not-pinned dependency, altered and unexpected M7C
@@ -1332,7 +1339,12 @@ readability or solvability):
   added to a shared directory no longer invalidates M7C while a modified,
   deleted or substituted declared dependency is still detected. That change
   alters verifier logic only — no metric, prediction, dataset, report or
-  scientific conclusion was altered or regenerated.
+  scientific conclusion was altered or regenerated. The same scoping was then
+  applied to M7D's own verifier, which had the identical whole-directory
+  weakness; M7D's declared membership is the planning configuration, the 38
+  upstream evidence files it pins and the 17 plan artifacts it writes, with
+  expected hashes anchored to the committed configuration and cross-checked
+  against the recorded run snapshot.
 - **Null, mixed and negative results have defined meanings.** A null contrast
   means no detected matched difference on this roster and these corruptions;
   it is not equivalence, universal robustness or font-population homogeneity,

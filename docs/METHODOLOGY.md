@@ -2161,9 +2161,12 @@ metadata and report; and the M7C configuration, per-font/family/severity/source
 metrics, error concentration, grouped uncertainty, benchmark comparison, claim
 evidence, run metadata and report. Every path is read-only. The plan refuses to
 write outside the Git-ignored `reports/` tree or into any protected prior
-report directory, and fingerprints 376 protected non-image files under
+report directory, and fingerprinted 376 protected non-image files under
 `configs/`, `data/processed/`, `models/` and the prior report directories before
-and after the run.
+and after the run. That run-time guard has since been scoped to the declared
+protected-dependency membership described in the *Protected-dependency
+contract* paragraph of this section; the recorded 376-file snapshot is
+unchanged.
 
 **Evidence reproduction.** 46 numerical claims are recomputed from the pinned
 frames rather than copied from prior prose: M3 and M7B source/row/split counts,
@@ -2310,13 +2313,93 @@ readability, solve rate, security or production robustness. Matching reduces
 but does not eliminate composition differences, because glyph metrics and ink
 distribution differ by font.
 
-**Verification and reproducibility.** `captcha-evaluation-plan run` writes only
-to `reports/evaluation_design_plan_v0_1_0/`; `verify` reloads the pinned
+**Protected-dependency contract (maintenance, 2026-10-21).** M7D originally
+fingerprinted three *shared, growing* trees — `configs/`, `data/processed/` and
+`models/` — together with the historical milestone report roots, and compared
+that whole-tree fingerprint to the snapshot recorded when M7D ran. That
+directory-level fingerprint was too broad: it made M7D verification depend on
+the complete future contents of directories M7D never declared as inputs, so
+adding an unrelated milestone configuration would fail M7D verification even
+though all 38 of M7D's hash-pinned inputs and every plan table, manifest and
+report artifact were byte-identical. The same rule also covered transient,
+Git-ignored scratch copies that are generated outputs rather than frozen
+dependencies.
+
+M7D's dependencies are a *file* set rather than a tree: every upstream
+dependency is individually hash-pinned in the committed M7D planning
+configuration, and that configuration's own SHA-256 is recorded. The contract
+is therefore scoped at file level
+(`M7D_PROTECTED_DEPENDENCY_MEMBERSHIP_VERSION = "m7d-scoped-dependencies-v1"`),
+which is the role-appropriate granularity for this milestone:
+
+| Membership member | Scope | Semantics |
+| --- | --- | --- |
+| `config_files` | the M7D planning configuration `configs/evaluation_design_plan_v0_1_0.toml` | Must be present and match the SHA-256 recorded when M7D ran; the existing `config_sha256` and `config_hash` checks are unchanged and already verify this exact file rather than the `configs/` directory |
+| `input_files` | the 38 upstream evidence files M7D pins: the M3, M5C, M7A, M7B and M7C protocols, dataset tables, predictions, metrics, evidence tables, metadata and reports | Each must be present and match its configuration-pinned SHA-256 |
+| `output_files` | the 17 artifacts M7D itself writes | The file set must be exact; the sixteen non-manifest artifacts must match their recorded hashes; every table, the plan manifest and the report are recomputed from the pinned inputs and compared |
+| `ignored_paths` | the eight transient scratch directories and the two *planned* future benchmark output paths (`data/processed/matched_font_benchmark_v0.1.0`, `reports/matched_font_benchmark_v0_1_0`) | Not M7D dependencies; not required to exist; excluded so the exclusion is auditable rather than implicit |
+
+The expected hashes are **never regenerated from the current tree**. They come
+from two independent anchors that must agree: the committed M7D planning
+configuration (the 38 configuration-pinned input hashes) and the M7D run-time
+snapshot recorded in `run_metadata.json` (the planning configuration's own
+recorded hash plus the same 38 input hashes). Three checks enforce this:
+`frozen_dependency_manifest` verifies that the recorded snapshot is internally
+consistent with its own recorded hash, `frozen_dependency_anchors` verifies
+that the recorded snapshot and the committed configuration agree on all 39
+declared dependencies, and `frozen_dependencies` verifies that every declared
+dependency is present, is a regular file, and hashes to its expected value.
+A missing, malformed or tampered manifest therefore fails closed, and a
+manifest rewritten to be self-consistent still disagrees with the committed
+configuration. The new `output_file_set` check additionally requires the plan
+directory to contain exactly the declared artifacts, which previously left
+`run_metadata.json` outside the per-file hash check.
+
+The integrity guarantees are preserved. The result-affecting dependencies are
+the 38 configuration-pinned inputs, which live in a Git-tracked file and are
+re-verified byte-for-byte on every run; every table, the plan manifest and the
+report are recomputed from those pins and compared with the recorded
+artifacts; the recorded per-file output hashes, the configuration SHA-256 and
+the configuration identity hash are all still checked; and the plan itself is
+protected by the Git history of its configuration. Files that M7D never read —
+other milestones' model bundles and report outputs, the thirteen other
+configuration files and the transient scratch copies — are no longer part of
+M7D's own fingerprint; they remain protected by their own milestone verifiers
+and by M7C's scoped membership, which is unchanged.
+
+This is a maintenance change to verifier logic only. It does not alter the M7D
+research plan, the proposed dataset size, the font roster, the split design,
+the sample-size rationale, the chosen direction, the success criteria, the
+recorded tables, the plan manifest, the report or any scientific conclusion,
+and it does not rewrite or regenerate any historical artifact. The regression
+tests that protect the new behaviour are in
+`tests/test_evaluation_plan_dependencies.py`: verification passes with the
+declared dependencies intact; an unrelated configuration, dataset root, model
+directory or report directory does not invalidate M7D; a modified or deleted
+planning configuration, a modified or deleted declared upstream dependency and
+a modified or deleted protected output all fail verification; an unexpected
+protected output fails the exact-membership check; a missing, malformed or
+tampered dependency manifest fails closed, including a manifest rewritten to be
+self-consistent; the M7C scoped verifier is unaffected and still detects a
+modified dependency; and repeated M7D verification is deterministic. The tests
+use isolated temporary shadow trees and never mutate the real historical
+artifacts.
+
+One forward-compatibility caveat is unchanged by this maintenance work and is
+recorded here for the next milestone: the M7D isolation check
+`no_planned_outputs_created` asserts that the *planned* future benchmark paths
+`data/processed/matched_font_benchmark_v0.1.0` and
+`reports/matched_font_benchmark_v0_1_0` do not yet exist. That check is part of
+the recorded plan artifact, so it is deliberately left untouched; it will need
+its own versioned treatment when the next benchmark is actually built.
+
+**Verification and reproducibility.** `captcha-evaluation-plan run` writes
+only to `reports/evaluation_design_plan_v0_1_0/`; `verify` reloads the pinned
 inputs, recomputes every deterministic table, the protocol manifest and the
-report, compares them byte-for-byte, and rechecks input, output and
-frozen-asset hashes. Two runs from the same clean commit are byte-identical
-except for the runtime-only metadata field. The committed inputs are the TOML
-configuration, code, tests and documentation.
+report, compares them byte-for-byte, and rechecks the input hashes, the output
+hashes and the scoped protected-dependency membership. Two runs from the same
+clean commit are byte-identical except for the runtime-only metadata field. The
+committed inputs are the TOML configuration, code, tests and documentation.
 
 **Frozen-verifier note.** The M7C `verify` command originally fingerprinted the
 *entire* `configs/` tree, so adding the M7D configuration — a new, separately

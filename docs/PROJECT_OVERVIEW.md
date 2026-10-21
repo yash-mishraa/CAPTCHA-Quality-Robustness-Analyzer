@@ -305,8 +305,11 @@ the default; a CNN must justify its cost out-of-sample.
   manifest and a report. It generates no dataset, image, model or prediction;
   the planned design is 10 fonts × 30 matched text cases = 300 sources and
   6,300 rows, evaluated zero-shot with the frozen M5C champion. It refuses
-  protected output paths and fingerprints 376 protected non-image files before
-  and after the run.
+  protected output paths and fingerprinted 376 protected non-image files before
+  and after the run. A later maintenance change scoped that fingerprint to the
+  dependencies M7D actually declares, so an unrelated configuration added to a
+  shared directory no longer invalidates M7D while a modified, deleted or
+  substituted declared dependency is still detected.
 
 **Planned (not started):**
 
@@ -793,8 +796,10 @@ dashboard, deployment or final presentation exists yet.
 Milestone M7D: a read-only evaluation-design and dataset-expansion plan. It
 pins 38 upstream files, reproduces 46 numerical claims from the frozen
 M3/M5C/M7A/M7B/M7C frames, verifies the ten planned font files by path,
-SHA-256 and charset glyph coverage, fingerprints 376 protected non-image files
-before and after the run, and writes only to a Git-ignored report directory. It
+SHA-256 and charset glyph coverage, fingerprinted 376 protected non-image files
+before and after the run, and writes only to a Git-ignored report directory. A
+later maintenance change scoped that fingerprint to the dependencies M7D
+actually declares, without altering the plan itself. It
 generates no dataset, image, model or prediction; the dataset, benchmark,
 endpoints and success criteria it specifies are *planned, not executed*. Three
 directions are compared. **Direction A (broader unseen fonts) is selected**,
@@ -834,6 +839,11 @@ so adding the new M7D configuration changed that tree-level fingerprint; a
 maintenance change has since scoped the M7C protected-dependency fingerprint to
 the dependencies M7C actually declares, so the difference is exactly one added
 file, and all 360 files recorded in the M7C run plus all 31
-M7C pinned inputs remain byte-identical. That maintenance change alters
-verifier logic only. No dashboard, deployment or final
+M7C pinned inputs remain byte-identical. The same scoping was then applied to
+M7D's own verifier, which had the identical whole-directory weakness; M7D's
+declared membership is the planning configuration, the 38 upstream evidence
+files it pins and the 17 plan artifacts it writes, with expected hashes
+anchored to the committed configuration and cross-checked against the recorded
+run snapshot. These maintenance changes alter verifier logic only. No
+dashboard, deployment or final
 presentation exists yet.
