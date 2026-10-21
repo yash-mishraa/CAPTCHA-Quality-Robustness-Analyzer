@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0015` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0016` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0016` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only cross-font analysis: all-primary MAE/RMSE/R² 0.0634/0.0930/0.7435; per-font RMSE 0.0852/0.0761/0.1134 with the Georgia–Monaco interval including zero; blur/noise RMSE 0.0279/0.0346/0.1601 versus familiar 0.0233 but a 5.74× font range; geometric aggregate 0.0588 versus 0.0590 while severity RMSE spans 0.0259–0.0829 (3.20×); top-3 source share 0.099 and 48.4 effective sources; 13-claim audit yields 3 supported / 0 suggestive / 10 unsupported |
 | `EXP-0015` | 2026-10-21 | `robustness-analysis` | `completed` | Held-out-font benchmark: the frozen M5C champion reaches primary MAE/RMSE/R² 0.0634/0.0930/0.7435 on 60 Georgia/Monaco/Impact sources; blur/noise RMSE is 0.0959 versus 0.0233 on the familiar-font benchmark (point estimates outside the familiar intervals), geometric aggregate RMSE is similar (0.0588 versus 0.0590), interference is poorly calibrated (RMSE 0.1001, R² -0.1744), and the comparison is descriptive rather than matched |
 | `EXP-0014` | 2026-10-21 | `robustness-analysis` | `completed` | Dataset/evaluation audit: the benchmark supports within-renderer SSIM claims and the M5C champion comparison, but not unseen-font, unseen-renderer, real-world, human-readability or broad-generalisation claims; 12 test source groups, a near-degenerate 0.5 px rung and a strongly redundant eight-feature representation bound the evidence, and the recommended next step is explicitly held-out fonts or rendering conditions |
 | `EXP-0013` | 2026-10-21 | `robustness-analysis` | `completed` | Multi-scale structure-tensor features do not improve geometric prediction: the combined candidate is neutral on the geometric aggregate (RMSE +0.0014, interval includes zero) but breaches the clean-reference tolerance, the structure-only candidate is worse on every retention slice, the new features are strongly redundant with each other and with the global eight, and the champion is retained |
@@ -88,6 +89,164 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0016 — Cross-font evaluation analysis of frozen held-out and familiar predictions
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** What does the frozen M7B held-out-font evidence say
+  about per-font performance, corruption families, geometric severity,
+  source-level error concentration, uncertainty and familiar-versus-held-out
+  differences, and which claims does it support? M7C is a read-only analysis. It
+  does not train, refit, recalibrate, select, tune, generate a dataset, change a
+  target, change a split, or write into any prior dataset/model/report
+  directory. The target remains synthetic SSIM against an exact source-specific
+  clean reference; this is not human readability, CAPTCHA solvability, security
+  or production robustness.
+- **Code revision:** base `6631df5` plus the M7C implementation, committed as
+  `feat: analyze cross-font evaluation results`. The reported run was repeated
+  from the clean commit so provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; joblib 1.6.0; Pillow 12.3.0; macOS 27.0.1 (arm64). No GPU was used.
+- **Configuration:** `configs/cross_font_analysis_v0_1_0.toml`; config sha256
+  `e5a4ae80b079ef8e3a44537bbc9194beef863b460c7ab86d798fadbd874241f0`;
+  identity hash
+  `36b81eb89299bf5ae9b7d1923d951c8e6e9a7e9ff05acb95b3b49182b57b000f`.
+  Seed `20261110`; 2,000 source-grouped percentile bootstrap replicates per
+  scope; confidence level 0.95; near-degeneracy margin target SD `< 0.005`;
+  independent unit `source_id`.
+- **Upstream frozen inputs:** 31 files pinned by SHA-256, including M7B
+  predictions
+  `660b9e8e816b22f9da4fcfeddc6f01108e23eb2b327bf8e8549fe9014e50312d`,
+  M7B manifest
+  `e751468e8159d95bf39bda478509e303f95b0177c2b9df3e3212fa8439594bc0`,
+  M7B uncertainty
+  `9844962584611d497ff659813f8db4ee94cf2247d465bd3abea27cdabd9f4651`,
+  M5C familiar predictions
+  `6d286af061bd54e70b7c8fd547d8da7079731c502eb5255d848856edf2dec906`,
+  M5C test metrics
+  `1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1`,
+  M5C uncertainty
+  `8b7606bce32872f89c8defdee42c21c85b3c763a674b3ab1e2d86d0a174145f0`,
+  M5A severity manifest
+  `c63be1088db591181f23fa306f955b3ba16fe80ffb2000c4a5e3db7656fa3806`
+  and M7A uncertainty
+  `c350233fd65c4957c622a3b9b855c2b5e81c1728e9ea399d7b77936a29fd7e5b`.
+  Champion artifact sha256
+  `c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`
+  (`expanded_random_forest`, calibration `none`); card sha256
+  `9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`.
+  The complete list is in the generated `input_manifest.csv`.
+- **Dataset:** frozen M7B `heldout_font_benchmark_v0.1.0`: 60 sources (20 per
+  font), 1,260 rows (1,140 primary, 120 diagnostic), 1,260 distinct images, one
+  `eval` split. Familiar comparison: frozen M5C test predictions from 12 M3
+  test sources.
+- **Split:** M7B one untouched `eval` split with 60 source groups; M5C 12
+  familiar test groups. Font groups are disjoint and unpaired.
+- **Seeds:** M7C seed `20261110`; bootstrap seeds are derived per scope/font
+  with `derive_noise_seed(seed, "m7c_bootstrap", scope, font_id)` and per
+  contrast with separate `m7c_paired` / `m7c_font_difference` /
+  `m7c_benchmark_*` namespaces.
+- **Runtime:** recorded in `run_metadata.json`; two clean-commit runs differ
+  only in `elapsed_seconds`.
+
+**Method.** The run verifies all 31 pinned files and their schemas, then
+reproduces the frozen M7B and M5C metrics from the stored per-row predictions
+and targets. It computes all-primary, per-font, per-family, per-severity and
+per-source MAE/RMSE/R², target statistics, residuals and near-degeneracy flags.
+It runs 2,000 whole-source bootstrap replicates for every declared scope and
+font, preserving all rows of a sampled source. Paired within-source contrasts
+use the same sampled source on both sides for Gaussian noise versus blur, thin
+lines versus arcs, interference versus original blur/noise, geometric versus
+original blur/noise and adjacent geometric severities. Font differences and
+familiar-versus-held-out comparisons are unpaired and descriptive. It builds a
+13-claim evidence table, writes deterministic CSV/JSON/Markdown outputs and
+provides `run` and `verify` commands. It fingerprints 360 protected non-image
+files before and after the run and refuses to write outside the Git-ignored
+report tree or into any prior report directory.
+
+**Metrics.**
+
+| Metric | Value | 95% source-grouped CI | Notes |
+| --- | --- | --- | --- |
+| All-primary MAE / RMSE / R² | 0.063427 / 0.092952 / 0.743537 | MAE [0.059244, 0.067633]; RMSE [0.087121, 0.098730] | 1,140 rows, 60 sources, 1,140 images |
+| Georgia all-primary MAE / RMSE / R² | 0.056859 / 0.085198 / 0.743928 | MAE [0.052435, 0.061945]; RMSE [0.077809, 0.092987] | 20 sources |
+| Monaco all-primary MAE / RMSE / R² | 0.052758 / 0.076126 / 0.799809 | MAE [0.047722, 0.057987]; RMSE [0.069726, 0.082745] | 20 sources |
+| Impact all-primary MAE / RMSE / R² | 0.080664 / 0.113431 / 0.705511 | MAE [0.075569, 0.085411]; RMSE [0.106749, 0.119681] | 20 sources |
+| Original blur/noise RMSE, Georgia / Monaco / Impact | 0.027892 / 0.034646 / 0.160079 | Georgia [0.021698, 0.033616]; Monaco [0.026474, 0.041292]; Impact [0.144685, 0.173375] | familiar M5C RMSE 0.023328 |
+| Interference RMSE, Georgia / Monaco / Impact | 0.123919 / 0.107367 / 0.056379 | descriptive per-font intervals | per-font reversal; Impact R² 0.086387 |
+| Primary geometric RMSE, Georgia / Monaco / Impact | 0.054292 / 0.052548 / 0.068389 | descriptive per-font intervals | familiar 0.059006 |
+| Geometric severity RMSE, 1 / 2 / 3 px | 0.053384 / 0.025868 / 0.082867 | descriptive source-grouped intervals | all-font; target SD 0.011393 / 0.030939 / 0.046608 |
+| All-primary top-1 / top-3 source share | 0.034765 / 0.099141 | descriptive | 60 sources; effective sources 48.409 of 60 |
+| Source count for 50% / 80% of SSE | 19 / 38 | descriptive | broad distribution |
+| Claim audit | 3 supported / 0 suggestive / 10 unsupported | not a statistical test | 13 predeclared claims |
+
+Paired RMSE contrasts (all fonts pooled): Gaussian noise minus blur is positive
+by +0.021254 [0.013953, 0.027877]; thin lines minus arcs +0.023165 [0.015263,
+0.031223]; interference minus original blur/noise +0.004181 [-0.019616,
+0.029927]; geometric primary minus original blur/noise -0.037084 [-0.052294,
+-0.020216]; 2 px minus 1 px -0.027517 [-0.033407, -0.021562]; 3 px minus 2 px
+is positive by +0.057000 [0.046016, 0.067258]; 3 px minus 1 px +0.029483
+[0.018276, 0.041545].
+All-primary RMSE font differences are Georgia-minus-Monaco +0.009072
+[-0.000708, 0.018519], Georgia-minus-Impact -0.028233 [-0.038275, -0.018025]
+and Monaco-minus-Impact -0.037305 [-0.046567, -0.027865]. The familiar
+blur/noise comparison is 0.095923 versus 0.023328, geometric primary is 0.058839
+versus 0.059006, clean is 0.014155 versus 0.002275 and the 0.5 px diagnostic is
+0.038513 versus 0.035917. The 0.5 px diagnostic target SD is 0.003376, below
+the 0.005 margin, so its R² is suppressed.
+
+**Observations.** The frozen champion reproduces the M7B headline metrics. Error
+is not uniform across fonts: Impact is worse on all-primary and especially on
+blur/noise, while Georgia and Monaco are comparatively strong; the Georgia–Monaco
+all-primary interval includes zero, so only the two Impact comparisons clearly
+separate on the observed sources. Blur/noise direction is consistent (all three
+fonts above the familiar point estimate), but the magnitude is very uneven
+(max/min 5.74), so a homogeneity claim is not supported. The geometric aggregate
+is almost identical to the familiar benchmark (0.058839 versus 0.059006), but
+severity RMSE is non-monotonic: 2 px is the strongest rung (0.025868), 1 px is
+0.053384 and 3 px is the weakest (0.082867), a 3.20× range. Error is distributed
+broadly across the 60 sources: the top-3 share is 0.099, the effective source
+count is 48.409 and 19 sources account for 50% of squared error. The paired
+contrasts show clear within-source differences for noise versus blur, thin lines
+versus arcs, geometric versus original blur/noise and adjacent geometric
+severities; the interference-versus-original interval includes zero.
+
+**Conclusion.** The evidence supports three descriptive claims: a per-font
+all-primary difference for at least one pair on the observed sources, a
+blur/noise direction in all three held-out fonts relative to the familiar point
+estimate, and aggregate geometric performance concealing severity-specific
+differences. It does not support arbitrary unseen fonts, unseen
+renderers/resolutions/formats, human readability or solve rates, security or
+production robustness, a causal font effect, geometric equivalence from close
+aggregate RMSE, stable 0.5 px R² or ranking, or font-population generalisation.
+The familiar comparison is unmatched in fonts, source composition/counts and
+partially corruption mix, so it is not a causal effect estimate. No significance
+testing is performed; intervals are descriptive uncertainty summaries.
+
+**Limitations.** Three purposively chosen typefaces are not a random font
+sample; only one renderer, one 192x64 canvas, one grayscale PNG format and the
+existing corruption definitions are represented; the 60 sources are synthetic
+strings; font groups have 20 sources each and are unpaired; the familiar
+benchmark has 12 source groups; the clean target is constant and the 0.5 px rung
+is near-degenerate; and source-grouped intervals do not represent human users,
+deployments or a font population. A difference interval that excludes zero is
+not proof of a causal effect, and the results do not justify a CNN or a
+production claim.
+
+**Next step.** Stop for review. A future version could add held-out renderers,
+resolutions, image formats or a designed font sample, but that is a separate
+milestone and is not justified by this result alone.
+
+**Artifacts.** Git-ignored report directory
+`reports/cross_font_analysis_v0_1_0/` (input manifest, per-font/family/severity/
+source tables, concentration, uncertainty, paired and font-difference tables,
+benchmark comparison, claim evidence, isolation checks, protocol, Markdown
+report and run metadata). The committed config, code, tests and documentation
+are the reproducible protocol.
 
 ---
 

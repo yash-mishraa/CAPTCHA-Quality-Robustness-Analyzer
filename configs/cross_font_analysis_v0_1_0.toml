@@ -1,0 +1,278 @@
+# Milestone M7C cross-font evaluation analysis.
+#
+# M7C is a read-only analysis of the frozen M7B held-out-font predictions and
+# the frozen M5C familiar-font predictions. It does not generate a dataset,
+# train, refit, recalibrate, select or tune a model, change a target, change a
+# split, or write into any prior dataset/model/report directory.
+#
+# The independent unit is a source group. Every bootstrap replicate resamples
+# whole source groups and keeps all rows belonging to a sampled source together.
+# The three held-out fonts are a purposive sample, not a sample of font
+# identities. Font-level differences are descriptive for the observed sources
+# and do not identify a font-population effect.
+#
+# Scope: SSIM against an exact synthetic clean reference. Nothing here measures
+# human readability, CAPTCHA solve rates, security or production robustness.
+
+[run]
+name = "cross-font-analysis"
+version = "v0.1.0"
+seed = 20261110
+n_bootstrap = 2000
+confidence_level = 0.95
+output_reports = "reports/cross_font_analysis_v0_1_0"
+
+[analysis]
+group_column = "source_id"
+independent_unit = "source_id"
+bootstrap_method = "source_grouped_percentile"
+near_degenerate_sd = 0.005
+font_ids = ["georgia", "monaco", "impact"]
+family_order = ["clean", "gaussian_blur", "gaussian_noise", "thin_lines", "arc_strokes", "elastic"]
+primary_scopes = [
+  "all_primary",
+  "original_blur_noise",
+  "gaussian_blur",
+  "gaussian_noise",
+  "interference",
+  "thin_lines",
+  "arc_strokes",
+  "geometric_primary",
+  "geometric_primary_1px",
+  "geometric_primary_2px",
+  "geometric_primary_3px",
+]
+diagnostic_scopes = ["clean_reference", "diagnostic_0_5px"]
+geometric_amplitudes_primary_px = [1.0, 2.0, 3.0]
+geometric_amplitude_diagnostic_px = 0.5
+paired_contrasts = [
+  "gaussian_noise_minus_gaussian_blur",
+  "thin_lines_minus_arc_strokes",
+  "interference_minus_original_blur_noise",
+  "geometric_primary_minus_original_blur_noise",
+  "geometric_2px_minus_1px",
+  "geometric_3px_minus_2px",
+  "geometric_3px_minus_1px",
+]
+font_difference_scopes = [
+  "all_primary",
+  "original_blur_noise",
+  "gaussian_blur",
+  "gaussian_noise",
+  "interference",
+  "thin_lines",
+  "arc_strokes",
+  "geometric_primary",
+  "geometric_primary_1px",
+  "geometric_primary_2px",
+  "geometric_primary_3px",
+  "clean_reference",
+  "diagnostic_0_5px",
+]
+familiar_comparison_scopes = [
+  "original_blur_noise",
+  "gaussian_blur",
+  "gaussian_noise",
+  "geometric_primary",
+  "geometric_primary_1px",
+  "geometric_primary_2px",
+  "geometric_primary_3px",
+  "clean_reference",
+  "diagnostic_0_5px",
+]
+top_k_sources = 3
+# Predeclared classification rules. They are descriptive evidence rules, not
+# significance tests. No threshold is changed after seeing M7C results.
+font_difference_rule = "any_pairwise_primary_rmse_ci_excludes_zero"
+blur_noise_consistency_rule = "all_font_rmse_above_familiar_point"
+geometric_concealment_rule = "severity_rmse_range_ratio_ge_1_5"
+concentration_rule = "top3_share_ge_0_25_and_effective_fraction_le_0_5"
+
+# Every input is read-only and pinned by SHA-256. The paths and hashes were
+# recorded from the clean M7B commit 6631df5. A missing file, changed byte or
+# unknown schema is a hard failure; M7C never falls back to a looser schema.
+[[inputs]]
+key = "m7b_config"
+path = "configs/heldout_font_benchmark_v0_1_0.toml"
+sha256 = "5eb97fc6bc0ed1e7c2b17a9e8cc6f53ab89e529d17496a800e9b6c0b73a041ee"
+role = "M7B frozen protocol"
+
+[[inputs]]
+key = "m7b_manifest"
+path = "data/processed/heldout_font_benchmark_v0.1.0/manifest.csv"
+sha256 = "e751468e8159d95bf39bda478509e303f95b0177c2b9df3e3212fa8439594bc0"
+role = "M7B frozen row metadata and targets"
+
+[[inputs]]
+key = "m7b_sources"
+path = "data/processed/heldout_font_benchmark_v0.1.0/sources.csv"
+sha256 = "ad50ed063552ed3b00b7562944602e3ed6b58cc17d4785488315140e1f1d3702"
+role = "M7B frozen source/font identities"
+
+[[inputs]]
+key = "m7b_features"
+path = "data/processed/heldout_font_benchmark_v0.1.0/features.csv"
+sha256 = "5b0ff62b8d37a8738f0b22026f43497629431833ca02cdab1ad5ddaffb4eb011"
+role = "M7B frozen feature table (identity only)"
+
+[[inputs]]
+key = "m7b_summary"
+path = "data/processed/heldout_font_benchmark_v0.1.0/dataset_summary.json"
+sha256 = "8cf5d3281a0353182c81689bb26ba94f29685239e9920f3b4fcd8d229cfae569"
+role = "M7B frozen dataset summary"
+
+[[inputs]]
+key = "m7b_predictions"
+path = "reports/heldout_font_benchmark_v0_1_0/predictions.csv"
+sha256 = "660b9e8e816b22f9da4fcfeddc6f01108e23eb2b327bf8e8549fe9014e50312d"
+role = "M7B frozen per-row predictions and targets"
+
+[[inputs]]
+key = "m7b_overall_metrics"
+path = "reports/heldout_font_benchmark_v0_1_0/overall_metrics.csv"
+sha256 = "34ee372a1d58a658902b4c75d2460640a57240ad0930f765879a09228b05dde7"
+role = "M7B frozen overall metrics"
+
+[[inputs]]
+key = "m7b_font_metrics"
+path = "reports/heldout_font_benchmark_v0_1_0/font_metrics.csv"
+sha256 = "ad8933a41e5be1cd93ee6dc5744fe420af22ebc1608493ca4cd8b88dbd644dcd"
+role = "M7B frozen per-font metrics"
+
+[[inputs]]
+key = "m7b_family_metrics"
+path = "reports/heldout_font_benchmark_v0_1_0/family_metrics.csv"
+sha256 = "07cf44445ed494fff13217331d48de71771ac444b7dcf25236886e09e7663caa"
+role = "M7B frozen family/severity metrics"
+
+[[inputs]]
+key = "m7b_source_metrics"
+path = "reports/heldout_font_benchmark_v0_1_0/source_metrics.csv"
+sha256 = "c38946725c86a48f231764e3daad66e612624ab579f6b006c367d3598a5ebdaa"
+role = "M7B frozen source metrics"
+
+[[inputs]]
+key = "m7b_uncertainty"
+path = "reports/heldout_font_benchmark_v0_1_0/uncertainty.csv"
+sha256 = "9844962584611d497ff659813f8db4ee94cf2247d465bd3abea27cdabd9f4651"
+role = "M7B frozen source-grouped intervals"
+
+[[inputs]]
+key = "m7b_comparison"
+path = "reports/heldout_font_benchmark_v0_1_0/comparison.csv"
+sha256 = "26f03b95a4c48a94037997f9cbb5565ee6986eb25edee0c9d73f6e52abf0d0e6"
+role = "M7B frozen familiar-benchmark comparison"
+
+[[inputs]]
+key = "m7b_target_distributions"
+path = "reports/heldout_font_benchmark_v0_1_0/target_distributions.csv"
+sha256 = "1dadb71edbc93f529cc3d6b2ba5aea046e0989fc1c0ce0a6e189fd991ac3d135"
+role = "M7B frozen target distributions"
+
+[[inputs]]
+key = "m7b_dataset_composition"
+path = "reports/heldout_font_benchmark_v0_1_0/dataset_composition.csv"
+sha256 = "fa16e04bec728e8926c206b51b4f19fec59add9e5bc05f748a17bc72309e2204"
+role = "M7B frozen dataset composition"
+
+[[inputs]]
+key = "m7b_isolation_checks"
+path = "reports/heldout_font_benchmark_v0_1_0/isolation_checks.csv"
+sha256 = "a6876be65d3c1defb93477be2b76788e65fbc621bc52250ef346eb45005e0f0b"
+role = "M7B frozen isolation checks"
+
+[[inputs]]
+key = "m7b_run_metadata"
+path = "reports/heldout_font_benchmark_v0_1_0/run_metadata.json"
+sha256 = "87e5aa9e60aa95d9b270cfc97e1fc5b7056d6c72a3e6ad34f8a53b08f1c43d46"
+role = "M7B frozen provenance and model identity"
+
+[[inputs]]
+key = "m7b_report"
+path = "reports/heldout_font_benchmark_v0_1_0/report.md"
+sha256 = "78e1866af1e3b99a9c629e5aa76dd8428c9c9c0d9d4a51c857f13a7cdb92c666"
+role = "M7B frozen readable report"
+
+[[inputs]]
+key = "m5c_config"
+path = "configs/retention_aware_selection_v0_1_0.toml"
+sha256 = "48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb"
+role = "M5C frozen protocol"
+
+[[inputs]]
+key = "m5c_test_predictions"
+path = "reports/retention_aware_selection_v0_1_0/test_predictions.csv"
+sha256 = "6d286af061bd54e70b7c8fd547d8da7079731c502eb5255d848856edf2dec906"
+role = "M5C frozen familiar-font predictions"
+
+[[inputs]]
+key = "m5c_test_slice_metrics"
+path = "reports/retention_aware_selection_v0_1_0/test_slice_metrics.csv"
+sha256 = "1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1"
+role = "M5C frozen familiar-font metrics"
+
+[[inputs]]
+key = "m5c_uncertainty"
+path = "reports/retention_aware_selection_v0_1_0/uncertainty.csv"
+sha256 = "8b7606bce32872f89c8defdee42c21c85b3c763a674b3ab1e2d86d0a174145f0"
+role = "M5C frozen source-grouped intervals"
+
+[[inputs]]
+key = "m5c_paired_uncertainty"
+path = "reports/retention_aware_selection_v0_1_0/paired_uncertainty.csv"
+sha256 = "3efa191957d16c980a4dd28153ad3c9547d7feb0d49f6b8275b0b54b713f33f2"
+role = "M5C frozen paired interval convention"
+
+[[inputs]]
+key = "m5c_run_metadata"
+path = "reports/retention_aware_selection_v0_1_0/run_metadata.json"
+sha256 = "7f554a5bd25326cc878fa1ea72e1df9a146c7c40487dd9f73ff11c9a63f7bcc5"
+role = "M5C frozen provenance and model identity"
+
+[[inputs]]
+key = "m5c_report"
+path = "reports/retention_aware_selection_v0_1_0/report.md"
+sha256 = "227d9fd57c43d68a5dbe6c26f9afd7e991ee7ce9648287ecb2b71d46a0368fa1"
+role = "M5C frozen readable report"
+
+[[inputs]]
+key = "m5c_model_card"
+path = "models/retention_aware_selection_v0_1_0/selected_policy_card.json"
+sha256 = "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+role = "M5C frozen champion card"
+
+[[inputs]]
+key = "m5c_model_artifact"
+path = "models/retention_aware_selection_v0_1_0/selected_policy.joblib"
+sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+role = "M5C frozen champion artifact (identity only)"
+
+[[inputs]]
+key = "m5a_config"
+path = "configs/geometric_distortion_pilot_v0_1_0.toml"
+sha256 = "00b8c5caad610fb4aaf159bb8c99e329ad217aeff6450e7cd3e566387e9f0a97"
+role = "M5A geometric amplitude protocol"
+
+[[inputs]]
+key = "m5a_manifest"
+path = "data/processed/geometric_distortion_pilot_v0.1.0/manifest.csv"
+sha256 = "c63be1088db591181f23fa306f955b3ba16fe80ffb2000c4a5e3db7656fa3806"
+role = "M5A severity-to-amplitude mapping"
+
+[[inputs]]
+key = "m7a_config"
+path = "configs/dataset_adequacy_audit_v0_1_0.toml"
+sha256 = "23f2af7ede523bec7e648043a519e0eca7d352bbd9f15445255a3a304b0364b9"
+role = "M7A frozen audit protocol"
+
+[[inputs]]
+key = "m7a_uncertainty"
+path = "reports/dataset_adequacy_audit_v0_1_0/uncertainty.csv"
+sha256 = "c350233fd65c4957c622a3b9b855c2b5e81c1728e9ea399d7b77936a29fd7e5b"
+role = "M7A source-grouped bootstrap convention"
+
+[[inputs]]
+key = "m7a_error_concentration"
+path = "reports/dataset_adequacy_audit_v0_1_0/error_concentration.csv"
+sha256 = "7a62c6c3bf958109ef63676b0d5694047011b9ecf8f7ec3cee42b9f49f155912"
+role = "M7A error-concentration convention"
