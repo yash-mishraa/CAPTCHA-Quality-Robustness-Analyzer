@@ -1,0 +1,192 @@
+# Milestone M7B held-out font generalisation benchmark.
+#
+# This is a separate, versioned evaluation dataset and a frozen zero-shot
+# evaluation of the M5C champion. It does not retrain, recalibrate or select a
+# model. The held-out condition is the typeface: Georgia, Monaco and Impact are
+# absent from the M3 development dataset, whose fonts are Arial, Courier New and
+# Times New Roman.
+#
+# The renderer, canvas, grayscale/PNG pipeline, corruption definitions and target
+# definition are kept the same as the frozen benchmark so that the font is the
+# deliberately varied condition. All sources are in one untouched evaluation
+# split; no held-out-font row is used for fitting or selection.
+#
+# Scope: SSIM against the exact source-specific clean reference. Nothing here
+# measures human readability, CAPTCHA solvability, security or real-world
+# robustness.
+
+[run]
+name = "heldout-font-generalization"
+version = "v0.1.0"
+seed = 20261109
+n_bootstrap = 2000
+output_dataset = "data/processed/heldout_font_benchmark_v0.1.0"
+output_reports = "reports/heldout_font_benchmark_v0_1_0"
+
+[schema]
+feature_set_version = "v1"
+feature_names = [
+  "intensity_mean",
+  "intensity_std",
+  "contrast_rms",
+  "ink_fraction",
+  "laplacian_variance",
+  "edge_density",
+  "histogram_entropy",
+  "noise_sigma_immerkaer",
+]
+target = "ssim_target"
+split_names = ["eval"]
+
+[dataset]
+name = "heldout-font-generalization"
+version = "heldout-fonts-v0.1.0"
+sources_per_font = 20
+text_lengths = [4, 5, 6]
+text_length_weights = [0.3, 0.4, 0.3]
+charset = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+
+[render]
+canvas_width = 192
+canvas_height = 64
+fit_fraction = 0.86
+vertical_padding = 0.10
+jitter_fraction = 0.05
+spacing_jitter_fraction = 0.03
+placement_jitter_fraction = 0.02
+background_mode = "flat_random"
+background_min = 240
+background_max = 255
+center_ink = true
+strict_bounds = true
+
+# Fonts were selected before any M7B generation or evaluation. They are
+# distinct typographic families and are not the three M3 development fonts:
+#   georgia  - proportional serif with sturdier strokes than Times New Roman
+#   monaco   - monospaced humanist sans, unlike Courier New's slab monospace
+#   impact   - condensed heavy display sans, with very different stroke weight
+# The exact system font file is pinned by SHA-256; a missing or changed file is
+# a hard failure, never a silent substitution. Fonts are used locally and are
+# not redistributed by this repository.
+[[fonts]]
+key = "georgia"
+path = "/System/Library/Fonts/Supplemental/Georgia.ttf"
+sha256 = "4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218"
+family = "serif"
+rationale = "Proportional serif with a larger x-height and sturdier stems than Times New Roman."
+
+[[fonts]]
+key = "monaco"
+path = "/System/Library/Fonts/Monaco.ttf"
+sha256 = "c6e990f6429fae28eb85321375dd335252f1122aa64c19fec553619a140724ef"
+family = "monospace"
+rationale = "Monospaced humanist sans with fixed advances and different stroke contrast from Courier New."
+
+[[fonts]]
+key = "impact"
+path = "/System/Library/Fonts/Supplemental/Impact.ttf"
+sha256 = "57e95627fd36fe2740e5ee8a91ff1ae74fb216df9580bd23e30d6772814727be"
+family = "display_sans"
+rationale = "Condensed, very heavy display sans that stresses a substantially different ink distribution."
+
+[corruptions]
+blur_radii_px = [1.0, 2.0, 3.5, 5.0]
+noise_sigmas = [6.0, 12.0, 20.0, 32.0]
+thin_line_stroke_counts = [1, 2, 4, 7]
+arc_stroke_counts = [1, 2, 4, 7]
+stroke_width_px = 1
+stroke_intensity = 0
+line_angle_deg = [-60.0, 60.0]
+arc_sweep_deg = [120.0, 240.0]
+arc_radius_fraction = [0.20, 0.55]
+arc_aspect_ratio = [0.50, 1.50]
+elastic_primary_amplitudes_px = [1.0, 2.0, 3.0]
+elastic_diagnostic_amplitudes_px = [0.5]
+
+[geometry]
+grid_rows = 5
+grid_cols = 13
+smoothing_sigma_px = 2.0
+interpolation = "bilinear"
+border_mode = "edge"
+
+[protocol]
+# A row may belong to more than one descriptive slice. The primary evaluation
+# excludes the constant clean target and the near-degenerate 0.5 px rung.
+primary_scopes = [
+  "original_blur_noise",
+  "gaussian_blur",
+  "gaussian_noise",
+  "interference",
+  "thin_lines",
+  "arc_strokes",
+  "geometric_primary",
+  "all_primary",
+]
+diagnostic_scopes = ["clean_reference", "diagnostic_0_5px"]
+bootstrap_scopes = [
+  "all_primary",
+  "original_blur_noise",
+  "gaussian_blur",
+  "gaussian_noise",
+  "interference",
+  "thin_lines",
+  "arc_strokes",
+  "geometric_primary",
+  "geometric_primary_1px",
+  "geometric_primary_2px",
+  "geometric_primary_3px",
+  "clean_reference",
+  "diagnostic_0_5px",
+]
+per_font_bootstrap_scopes = [
+  "all_primary",
+  "original_blur_noise",
+  "interference",
+  "geometric_primary",
+]
+near_degenerate_sd = 0.005
+min_sources_per_font = 10
+# Predeclared evidence rule. It is descriptive and does not tune the model.
+# "differs" means the held-out-font point estimate is outside the familiar-font
+# point estimate's source-grouped 95% interval; this is not a significance test.
+evidence_rule = "heldout_point_outside_familiar_interval"
+
+[model]
+model_dir = "models/retention_aware_selection_v0_1_0"
+model_stem = "selected_policy"
+artifact_sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+card_sha256 = "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+expected_model_family = "expanded_random_forest"
+expected_calibration = "none"
+
+[reference]
+# Frozen inputs used only to prove isolation and to compare against the familiar
+# benchmark. They are never written by M7B.
+m3_dataset = "data/processed/captcha_quality_v0.1.0"
+m3_config = "configs/dataset_v0_1_0.toml"
+m3_config_sha256 = "72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a"
+m3_sources = "data/processed/captcha_quality_v0.1.0/sources.csv"
+m3_sources_sha256 = "07d50255cdc82ea77087fc64b398d62db49f96156eea9cf5aee59bc070ab5a37"
+m5c_config = "configs/retention_aware_selection_v0_1_0.toml"
+m5c_config_sha256 = "48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb"
+m5c_test_metrics = "reports/retention_aware_selection_v0_1_0/test_slice_metrics.csv"
+m5c_test_metrics_sha256 = "1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1"
+m5c_test_predictions = "reports/retention_aware_selection_v0_1_0/test_predictions.csv"
+m5c_test_predictions_sha256 = "6d286af061bd54e70b7c8fd547d8da7079731c502eb5255d848856edf2dec906"
+m5c_uncertainty = "reports/retention_aware_selection_v0_1_0/uncertainty.csv"
+m5c_uncertainty_sha256 = "8b7606bce32872f89c8defdee42c21c85b3c763a674b3ab1e2d86d0a174145f0"
+
+[expectations]
+n_sources = 60
+sources_per_font = 20
+n_fonts = 3
+rows_per_source = 21
+total_rows = 1260
+clean_rows = 60
+original_blur_rows = 240
+original_noise_rows = 240
+thin_line_rows = 240
+arc_stroke_rows = 240
+elastic_primary_rows = 180
+diagnostic_rows = 120

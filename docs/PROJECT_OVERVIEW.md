@@ -5,14 +5,16 @@ feasibility pilot, the M4B grouped robustness benchmark, the M5A
 geometric-distortion feasibility pilot, the M5B grouped geometric-robustness
 benchmark, the M5C retention-aware selection and calibration study, the M5D
 retention-aware training-objective study, the M6A spatial-aware feature study,
-the M6B spatial resolution study, the M6C local structural feature study and the
-M6D multi-scale structure-tensor study. A reproducible dataset and image-feature
-pipeline, a leakage-safe conventional-ML benchmark, source-isolated
+the M6B spatial resolution study, the M6C local structural feature study, the
+M6D multi-scale structure-tensor study, the M7A dataset-adequacy audit and the
+M7B held-out-font generalisation benchmark. A reproducible dataset and
+image-feature pipeline, a leakage-safe conventional-ML benchmark, source-isolated
 zero-shot/adaptation evaluation, a replayable elastic-warp pilot, a grouped
 geometric-robustness benchmark, a retention-aware selection study, a
 retention-aware training-objective study, a spatial-aware feature study, a
-spatial resolution study, a no-reference local structural feature study and a
-no-reference multi-scale structure-tensor study exist. The CNN comparison, full
+spatial resolution study, a no-reference local structural feature study, a
+no-reference multi-scale structure-tensor study, a read-only evaluation audit
+and a separately versioned unseen-font benchmark exist. The CNN comparison, full
 M5 error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-21
 
@@ -259,6 +261,19 @@ the default; a CNN must justify its cost out-of-sample.
   objective fixed. Training-only redundancy, overfitting-gap and
   grid-resolution diagnostics accompany the predeclared selection rule.
 
+**Implemented for M7B (held-out-font generalisation benchmark):**
+
+- A separate versioned dataset of 60 sources (20 each for Georgia, Monaco and
+  Impact) and 1,260 rows, using fonts absent from M3. It reuses the frozen
+  renderer, corruption ladders, eight-feature extractor and SSIM target, but
+  has no training split and no model fitting. The exact M5C champion is
+  evaluated zero-shot, with source-grouped bootstrap intervals, per-font,
+  per-family and per-severity slices, clean-reference error, target
+  distributions, near-degeneracy flags and an explicitly unmatched comparison
+  with the familiar-font M5C benchmark. A run/evaluate/verify CLI checks font
+  and model hashes, dataset and report hashes, frozen-asset fingerprints and
+  deterministic replay.
+
 **Planned (not started):**
 
 - Classification baseline: macro-F1, balanced accuracy, confusion matrix,
@@ -310,6 +325,8 @@ src/captcha_quality/
 ├── local_structure_study.py    # local structural feature ablation study, CLI (implemented, M6C)
 ├── structure_tensor_features.py # no-reference multi-scale structure tensor (implemented, M6D)
 ├── structure_tensor_study.py    # structure-tensor feature ablation study, CLI (implemented, M6D)
+├── dataset_audit.py    # read-only dataset/evaluation audit, CLI        (implemented, M7A)
+├── heldout_font_benchmark.py # unseen-font dataset, zero-shot benchmark, CLI (implemented, M7B)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -376,6 +393,9 @@ No CNN code exists yet.
 | Local structure config | `configs/local_structure_study_v0_1_0.toml` | seed, frozen M5C/M6A/M6B hashes, model family and hyperparameters, the two declared feature families and parameters, ablation definitions, eligibility tolerances, selection score and weights, bootstrap count, output paths |
 | Local structure models | `models/local_structure_study_v0_1_0/` (Git-ignored) | one bundle per refitted candidate, each with a JSON card: feature names/order and count, local feature-set version, target, seed, validation and test metrics, package versions, artifact SHA-256 |
 | Local structure reports | `reports/local_structure_study_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, the local feature manifest, training-only diagnostics, the no-reference boundary record, `run_metadata.json`, Markdown report |
+| Held-out-font config | `configs/heldout_font_benchmark_v0_1_0.toml` | seed, three pinned held-out font paths/hashes, frozen M3/M5C input hashes, counts, corruption ladders, primary/diagnostic scopes, evidence rule, bootstrap count, output paths |
+| Held-out-font dataset | `data/processed/heldout_font_benchmark_v0.1.0/` (Git-ignored) | separate manifest, sources, features, summary and 1,260 images; one `eval` split; no model artifact |
+| Held-out-font reports | `reports/heldout_font_benchmark_v0_1_0/` (Git-ignored) | overall/per-font/family/source metrics, target distributions, predictions, source-grouped uncertainty, familiar-benchmark comparison, isolation checks, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -393,6 +413,7 @@ byte-for-byte.
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
 | M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; spatial resolution study; local structural feature study; multi-scale structure-tensor study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study, M6A feature study, M6B resolution study, M6C local-structure study and M6D structure-tensor study complete) |
 | M7A | Dataset-adequacy and evaluation audit of the frozen dataset, targets, split, champion and feature studies (complete) |
+| M7B | Held-out-font generalisation benchmark of the frozen M5C champion (complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -467,16 +488,20 @@ byte-for-byte.
   milestone and is not justified by this result alone. These are hypotheses
   consistent with the evidence, not isolated causes.
 - **Small test support:** M4B, M5B, M5C, M5D, M6A, M6B, M6C and M6D have only 12
-  held-out sources. Source-grouped intervals are wide and preliminary; no
-  universal significance threshold was introduced after seeing test results.
-- **Benchmark coverage is condition-specific:** M7A found that all three fonts,
-  the single renderer, the 192x64 resolution and the 8-bit grayscale PNG format
-  are shared across every split. The benchmark supports within-condition
-  synthetic SSIM claims and the M5C champion comparison, but it cannot test
-  unseen-font, unseen-renderer, real-world, human-readability or
-  CAPTCHA-security claims. The 0.5 px geometric rung is near-degenerate (target
-  SD 0.00266) and is diagnostic only. The recommended next step is a future
-  versioned dataset with explicitly held-out fonts or rendering conditions.
+  held-out sources. M7B has 60 source groups but only three held-out fonts.
+  Source-grouped intervals are descriptive; no universal significance threshold
+  was introduced after seeing test results.
+- **Benchmark coverage is condition-specific:** M7A found that all three M3
+  fonts, the single renderer, the 192x64 resolution and the 8-bit grayscale PNG
+  format are shared across every M3 split. M7B supplies a separate
+  Georgia/Monaco/Impact evaluation set and shows that zero-shot blur/noise error
+  is substantially worse there, while aggregate geometric error is similar. It
+  does not test unseen renderers, resolutions or formats, and its three fonts
+  are a purposive sample. The benchmark therefore supports within-condition
+  synthetic SSIM claims, the M5C champion comparison and a descriptive
+  three-font held-out result, but not unseen-renderer, real-world,
+  human-readability or CAPTCHA-security claims. The 0.5 px geometric rungs in
+  both M5A/M5B and M7B are near-degenerate and diagnostic only.
 - **Font licensing:** only redistributable fonts may be used or bundled.
 
 ## 7. Implemented today
@@ -667,3 +692,25 @@ unseen-renderer, real-world, human-readability or broad-generalisation claims.
 The recommended next direction is **B: add explicitly held-out fonts or
 rendering conditions in a future versioned dataset**. No dashboard, deployment
 or final presentation exists yet.
+
+Milestone M7B: a held-out-font generalisation benchmark that implements the M7A
+recommendation as a separate versioned dataset. The dataset uses Georgia, Monaco
+and Impact — fonts absent from M3 — with 20 sources per font, 60 sources total,
+21 rows per source and 1,260 rows in one untouched `eval` split. It reuses the
+frozen renderer, corruption ladders, eight-feature extractor and SSIM target;
+the exact M5C `expanded_random_forest` champion (no calibration) is evaluated
+zero-shot, with no fit, recalibration, feature selection or test-driven choice.
+On 1,140 primary rows the champion reaches MAE 0.0634, RMSE 0.0930 and R²
+0.7435; source-grouped 95% intervals are [0.0592, 0.0678] for MAE and
+[0.0867, 0.0986] for RMSE. Original blur/noise is the clearest regression (RMSE
+0.0959 versus 0.0233 on the familiar M5C test slice; Georgia/Monaco 0.0279 and
+0.0346, Impact 0.1601). Primary geometric RMSE is similar in aggregate (0.0588
+versus 0.0590) but uneven by severity. Thin-line/arc interference is poorly
+calibrated (RMSE 0.1001, R² -0.1744). The clean target is constant, so its MAE
+0.0094 / RMSE 0.0142 are reported with R² undefined; the 0.5 px elastic rung is
+diagnostic only (target SD 0.00338). All 1,260 images are distinct, no font or
+source overlaps M3, and frozen-asset fingerprints are unchanged. The familiar
+comparison differs in font, source count/composition and corruption mix, so it
+is descriptive rather than a matched experiment; the three typefaces are a
+purposive sample, not a font population. No dashboard, deployment or final
+presentation exists yet.

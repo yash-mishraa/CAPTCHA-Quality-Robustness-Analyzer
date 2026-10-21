@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0014` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0015` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0015` | 2026-10-21 | `robustness-analysis` | `completed` | Held-out-font benchmark: the frozen M5C champion reaches primary MAE/RMSE/R² 0.0634/0.0930/0.7435 on 60 Georgia/Monaco/Impact sources; blur/noise RMSE is 0.0959 versus 0.0233 on the familiar-font benchmark (point estimates outside the familiar intervals), geometric aggregate RMSE is similar (0.0588 versus 0.0590), interference is poorly calibrated (RMSE 0.1001, R² -0.1744), and the comparison is descriptive rather than matched |
 | `EXP-0014` | 2026-10-21 | `robustness-analysis` | `completed` | Dataset/evaluation audit: the benchmark supports within-renderer SSIM claims and the M5C champion comparison, but not unseen-font, unseen-renderer, real-world, human-readability or broad-generalisation claims; 12 test source groups, a near-degenerate 0.5 px rung and a strongly redundant eight-feature representation bound the evidence, and the recommended next step is explicitly held-out fonts or rendering conditions |
 | `EXP-0013` | 2026-10-21 | `robustness-analysis` | `completed` | Multi-scale structure-tensor features do not improve geometric prediction: the combined candidate is neutral on the geometric aggregate (RMSE +0.0014, interval includes zero) but breaches the clean-reference tolerance, the structure-only candidate is worse on every retention slice, the new features are strongly redundant with each other and with the global eight, and the champion is retained |
 | `EXP-0012` | 2026-10-21 | `robustness-analysis` | `completed` | Local structural features do not improve geometric prediction: global-plus-local is neutral on the geometric aggregate (RMSE +0.0044, interval includes zero) but regresses clean and original-task retention, local-only is worse everywhere except the 1 px rung, and the local family is strongly redundant with the global one, so the champion is retained |
@@ -87,6 +88,152 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0015 — Held-out-font generalisation of the frozen M5C champion
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** How well does the frozen M5C champion predict SSIM
+  on text rendered in fonts that were absent from model development? M7B
+  implements the M7A recommendation as a separate versioned evaluation dataset.
+  It changes no M3–M7A dataset, target, split, model, report or config. The
+  target remains SSIM against the exact source-specific clean reference; PSNR is
+  diagnostic only. This is synthetic image similarity, not human readability,
+  CAPTCHA solvability, security or production robustness.
+- **Code revision:** base `ae0baba` plus the M7B implementation, committed as
+  `feat: benchmark held-out font generalization`. The reported run was repeated
+  from the clean commit so provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; joblib 1.6.0; Pillow 12.3.0; macOS 27.0.1 (arm64). No GPU was used.
+- **Configuration:** `configs/heldout_font_benchmark_v0_1_0.toml`; config sha256
+  `5eb97fc6bc0ed1e7c2b17a9e8cc6f53ab89e529d17496a800e9b6c0b73a041ee`;
+  identity hash
+  `391642bc5f3d14c43791b8c299c79f275886d6ea387c2dde525c988be7bd100b`;
+  generation hash
+  `21ea470eee5d4b3697af685b939eb3f7fb4306fd887bb42d86811f3f3e95cb29`.
+  Seed `20261109`; 2,000 source-grouped percentile bootstrap replicates per
+  declared scope; confidence level 0.95; near-degeneracy margin target SD
+  `< 0.005`; evidence rule
+  `heldout_point_outside_familiar_interval`.
+- **Upstream frozen inputs:** M3 config sha256
+  `72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a`,
+  M3 sources sha256
+  `07d50255cdc82ea77087fc64b398d62db49f96156eea9cf5aee59bc070ab5a37`;
+  M5C config sha256
+  `48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb`,
+  test metrics sha256
+  `1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1`,
+  test predictions sha256
+  `6d286af061bd54e70b7c8fd547d8da7079731c502eb5255d848856edf2dec906`
+  and uncertainty sha256
+  `8b7606bce32872f89c8defdee42c21c85b3c763a674b3ab1e2d86d0a174145f0`.
+  Champion artifact sha256
+  `c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`
+  (`expanded_random_forest`, calibration `none`); card sha256
+  `9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`.
+- **Held-out fonts:** Georgia
+  (`/System/Library/Fonts/Supplemental/Georgia.ttf`, sha256
+  `4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218`),
+  Monaco (`/System/Library/Fonts/Monaco.ttf`, sha256
+  `c6e990f6429fae28eb85321375dd335252f1122aa64c19fec553619a140724ef`)
+  and Impact (`/System/Library/Fonts/Supplemental/Impact.ttf`, sha256
+  `57e95627fd36fe2740e5ee8a91ff1ae74fb216df9580bd23e30d6772814727be`).
+  None is in M3; font files are local and not redistributed.
+- **Dataset:** `heldout_font_benchmark_v0.1.0`; 60 sources (20 per font), 1,260
+  rows, 1,260 distinct images, one `eval` split, 21 rows per source. Manifest
+  sha256
+  `e751468e8159d95bf39bda478509e303f95b0177c2b9df3e3212fa8439594bc0`;
+  sources sha256
+  `ad50ed063552ed3b00b7562944602e3ed6b58cc17d4785488315140e1f1d3702`;
+  features sha256
+  `5b0ff62b8d37a8738f0b22026f43497629431833ca02cdab1ad5ddaffb4eb011`;
+  summary sha256
+  `8cf5d3281a0353182c81689bb26ba94f29685239e9920f3b4fcd8d229cfae569`.
+- **Split:** one untouched `eval` split; 60 source groups (20 per font); the
+  source is the independent unit and all variants of a source stay together.
+- **Seeds:** dataset seed `20261109`; bootstrap seeds are derived per scope
+  with `derive_noise_seed(seed, "m7b-bootstrap", scope)`.
+- **Runtime:** recorded in `run_metadata.json`; two clean-commit runs differ
+  only in `runtime_seconds`.
+
+**Method.** The run verifies the three pinned fonts, the M3/M5C upstream hashes
+and the champion artifact/card; generates one clean reference plus 20 corrupted
+variants per source (blur, noise, thin lines, arc strokes and elastic 0.5/1/2/3
+px); computes SSIM against each source-specific clean reference and PSNR as a
+diagnostic; extracts the frozen eight features; and evaluates the serialized
+champion without fitting or calibration. It checks that all 1,260 images are
+distinct, no source or font overlaps M3, the dataset contains no model artifact,
+and the protected M3–M7A asset tree is unchanged before and after. It writes
+per-font, per-family, per-severity, per-source and target-distribution tables,
+source-grouped bootstrap intervals, an explicit familiar-font comparison, a
+claim/limitation report and a run/verify CLI.
+
+**Metrics.**
+
+| Metric | Value | 95% source-grouped CI | Notes |
+| --- | --- | --- | --- |
+| All primary MAE / RMSE / R² | 0.06343 / 0.09295 / 0.74354 | MAE [0.05917, 0.06781]; RMSE [0.08668, 0.09860] | 1,140 rows, 60 sources |
+| Clean-reference MAE / RMSE | 0.00940 / 0.01416 | MAE [0.00684, 0.01221]; RMSE [0.01065, 0.01762] | target constant 1.0; R² undefined |
+| Original blur/noise MAE / RMSE / R² | 0.06008 / 0.09592 / 0.76136 | MAE [0.04648, 0.07503]; RMSE [0.07797, 0.11199] | 480 rows; familiar RMSE 0.02333 |
+| Gaussian blur RMSE / R² | 0.08471 / 0.85986 | RMSE [0.06892, 0.10011] | 240 rows |
+| Gaussian noise RMSE / R² | 0.10596 / 0.17960 | RMSE [0.08408, 0.12448] | 240 rows |
+| Interference MAE / RMSE / R² | 0.07273 / 0.10010 / -0.17439 | MAE [0.06346, 0.08205]; RMSE [0.09012, 0.10964] | 480 rows |
+| Thin lines RMSE / R² | 0.11101 / -0.28206 | RMSE [0.09948, 0.12151] | 240 rows |
+| Arc strokes RMSE / R² | 0.08785 / -0.06902 | RMSE [0.07804, 0.09752] | 240 rows |
+| Primary geometric MAE / RMSE / R² | 0.04757 / 0.05884 / 0.26573 | MAE [0.04396, 0.05126]; RMSE [0.05396, 0.06358] | 180 rows; familiar RMSE 0.05901 |
+| 0.5 px elastic MAE / RMSE | 0.03246 / 0.03851 | MAE [0.02704, 0.03790]; RMSE [0.03286, 0.04408] | diagnostic; target SD 0.00338 |
+| Georgia / Monaco / Impact primary RMSE | 0.08520 / 0.07613 / 0.11343 | descriptive per-font intervals | 20 sources each |
+| Georgia / Monaco / Impact blur/noise RMSE | 0.02789 / 0.03465 / 0.16008 | descriptive per-font intervals | Impact R² 0.46247 |
+| Georgia / Monaco / Impact interference RMSE | 0.12392 / 0.10737 / 0.05638 | descriptive per-font intervals | R² -0.55230 / -0.37669 / 0.08639 |
+
+**Observations.** The held-out primary slice is clearly worse than the familiar
+M5C benchmark on the original blur/noise task: RMSE 0.09592 versus 0.02333, and
+both MAE and RMSE point estimates lie outside the familiar-font source-grouped
+intervals. The effect is strongly font-dependent: Georgia and Monaco remain
+comparatively strong on blur/noise, while Impact is much worse (RMSE 0.16008,
+R² 0.46247). Aggregate primary geometric error is similar to the familiar
+benchmark (RMSE 0.05884 versus 0.05901), but the ladder is uneven: the 1 px rung
+has R² -20.96 on very small target variance, the 2 px rung is strong (RMSE
+0.02587, R² 0.30098), and the 3 px rung is worse than the familiar benchmark
+(0.08287 versus 0.07784). Thin-line and arc interference are new
+out-of-distribution slices and are poorly calibrated (combined R² -0.17439);
+thin lines are worse than arcs. Clean-reference error is small in absolute terms
+but nonzero, and is largest for Impact (RMSE 0.02084). All 1,260 images are
+distinct; the 0.5 px elastic target SD is 0.00338, below the 0.005 margin, so it
+is diagnostic only; no font or source overlaps M3; and the frozen-asset
+fingerprints are unchanged.
+
+**Conclusion.** The evidence supports a descriptive statement that zero-shot
+SSIM prediction by the frozen M5C champion is worse on these three unseen fonts,
+most clearly for the original blur/noise task and for interference, while
+aggregate geometric error is similar. It does not estimate a font population,
+identify a causal font property, prove failure on arbitrary fonts, or support
+claims about human readability, CAPTCHA solvability, security or production
+robustness. The familiar comparison is not matched: it differs in font, source
+count, source composition and corruption mix, so the differences are not causal
+effect estimates or significance tests.
+
+**Limitations.** Three purposively chosen typefaces are not a random font
+sample; only one renderer, one 192x64 canvas, one grayscale PNG format and the
+existing corruption definitions are tested; sources are synthetic strings, so
+source-grouped intervals do not represent human users or deployments; the clean
+target is constant and the 0.5 px rung is near-degenerate; and the familiar
+benchmark has only 12 source groups while M7B has 60. The comparison is
+descriptive, and no result here justifies a CNN or a production claim.
+
+**Next step.** Stop for review. A future version could add held-out renderers,
+resolutions or image formats, but that is a separate milestone and is not
+justified by this result alone.
+
+**Artifacts.** Git-ignored dataset
+`data/processed/heldout_font_benchmark_v0.1.0/` and reports
+`reports/heldout_font_benchmark_v0_1_0/` (overall, per-font, family, source,
+target-distribution, uncertainty, comparison, isolation and prediction tables;
+`run_metadata.json`; Markdown report). The committed config, code, tests and
+documentation are the reproducible protocol.
 
 ---
 

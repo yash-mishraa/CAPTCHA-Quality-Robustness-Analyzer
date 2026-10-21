@@ -80,6 +80,7 @@ captcha-resolution-study = "captcha_quality.spatial_resolution_study:main"
 captcha-local-structure-study = "captcha_quality.local_structure_study:main"
 captcha-structure-tensor-study = "captcha_quality.structure_tensor_study:main"
 captcha-dataset-audit = "captcha_quality.dataset_audit:main"
+captcha-heldout-font-benchmark = "captcha_quality.heldout_font_benchmark:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

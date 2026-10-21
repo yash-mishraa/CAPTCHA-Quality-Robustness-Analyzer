@@ -1,9 +1,11 @@
 # Methodology
 
-**Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C and
-M6D complete. The target and dataset are frozen, the conventional benchmark,
-grouped interference benchmark and handcrafted-feature follow-ups are
-implemented, and the CNN comparison and dashboard remain planned.
+**Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C,
+M6D, M7A and M7B complete. The target and M3 dataset are frozen, the
+conventional benchmark, grouped interference/geometric benchmarks,
+handcrafted-feature follow-ups, the read-only dataset audit and the held-out-font
+generalisation benchmark are implemented, and the CNN comparison and dashboard
+remain planned.
 **Last updated:** 2026-10-21
 
 ## 1. Research framing
@@ -38,7 +40,12 @@ Each source starts as a clean rendering of a known string:
 - **Fonts:** logical IDs resolve to documented system paths. A font is either
   available or reported unavailable with its searched paths; it is **never**
   silently substituted. Dataset generation requires every configured font,
-  while the M1 pilot allowed `min_required`.
+  while the M1 pilot allowed `min_required`. The M3 dataset uses Arial, Courier
+  New and Times New Roman. M7B uses a separate, pinned set of fonts that do not
+  appear in M3: Georgia (proportional serif), Monaco (monospaced humanist sans)
+  and Impact (condensed heavy display sans). Font files are verified by SHA-256
+  and glyph rendering before generation; a missing or changed file fails
+  closed.
 - **Layout:** canvas 192x64 grayscale, glyphs rasterised at 4x and downsampled
   with LANCZOS. Per-character vertical jitter is configurable; the dataset adds
   optional per-character spacing jitter and whole-block placement jitter.
@@ -124,6 +131,7 @@ single machine.
 | --- | --- | --- | ---: | --- |
 | `configs/dataset_pilot.toml` | 3 x 3 | 9 | 81 | End-to-end pipeline check under M1-like rendering |
 | `configs/dataset_v0_1_0.toml` | 3 x 20 | 60 | 540 | Reference dataset for M2 diagnostics |
+| `configs/heldout_font_benchmark_v0_1_0.toml` | 3 held-out fonts x 20 | 60 | 1,260 | M7B zero-shot font-generalisation benchmark; one `eval` split |
 
 **Split strategy (fixed before generation).**
 
@@ -146,7 +154,10 @@ single machine.
   of cross-generator generalisation.
 
 The reference dataset splits contain 36/12/12 sources and 324/108/108 samples;
-each split contains all three fonts (12/4/4 sources per font).
+each split contains all three fonts (12/4/4 sources per font). M7B deliberately
+does **not** create a train/validation/test split: its 60 held-out-font sources
+form one untouched `eval` split, because the model is frozen and no selection or
+calibration is permitted. The source group remains the independent unit.
 
 ## 3. Reference-based quality targets
 
@@ -1841,7 +1852,113 @@ verify` reloads the pinned inputs, replays the audit core, compares every table
 and the report text, checks recorded output hashes, rechecks frozen-asset
 fingerprints, and validates the claim and recommendation schemas. Two runs from
 the same clean commit are byte-identical except for the runtime-only
-`runtime_seconds` metadata field.
+`runtime_seconds` metadata field. M7B (§5.20) implements the recommended
+held-out-font direction as a separate versioned evaluation dataset.
+
+### 5.20 M7B held-out-font generalisation benchmark
+
+M7A recommended adding explicitly held-out fonts or rendering conditions. M7B
+implements the font part of that recommendation as a **separate versioned
+evaluation dataset**; it does not modify M3, M5A, the frozen splits, the target,
+the corruption definitions, the feature extractor or the champion. The question
+is narrow: how well does the frozen M5C champion predict SSIM on text rendered
+in fonts that were absent from model development?
+
+**Held-out condition and isolation.** The configured fonts are Georgia
+(proportional serif), Monaco (monospaced humanist sans) and Impact (condensed
+heavy display sans). Their files are pinned by SHA-256, checked for a usable
+glyph set, and rejected if missing or changed. None of the three keys or file
+hashes appears in M3. Source IDs are generated under the M7B generation hash and
+are checked for disjointness from the M3 source IDs. The dataset contains 20
+sources per font and 60 sources total. Every source contributes one clean image,
+four blur levels, four noise levels, four thin-line levels, four arc-stroke
+levels and four elastic levels (0.5, 1, 2 and 3 px), for 21 rows per source and
+1,260 rows total. All rows are in one untouched `eval` split. The source is the
+independent unit; all variants of a source stay together.
+
+**Frozen model and preprocessing.** The primary model is the exact M5C
+`expanded_random_forest` champion with calibration `none`. The artifact SHA-256
+is `c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`
+and the card SHA-256 is
+`9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`. The
+existing eight-feature extractor, feature order, target (`ssim_target`) and
+renderer are reused unchanged. The code loads the serialized estimator, checks
+its feature schema and scikit-learn major/minor compatibility, and never calls
+`fit`, `partial_fit`, a calibrator or a selector. The dataset directory is
+checked to contain no model artifact. The frozen M3–M7A asset tree is
+fingerprinted before and after generation/evaluation and must be unchanged.
+
+**Target and references.** SSIM is computed between every corrupted image and
+the exact source-specific clean reference. Clean references are preserved as
+separate PNG files and hashed; PSNR is recorded as a diagnostic only. The
+0.5 px elastic rung and the constant clean target are diagnostic, not primary.
+R² is suppressed when target SD is below the predeclared 0.005 margin, even if
+it is numerically defined.
+
+**Results.** The primary held-out slice has 1,140 rows and 60 sources. MAE is
+0.0634, RMSE 0.0930 and R² 0.7435; the source-grouped 95% intervals are
+[0.0592, 0.0678] for MAE and [0.0867, 0.0986] for RMSE (2,000 whole-source
+bootstrap replicates, seed `20261109`). The constant clean target has MAE
+0.0094 and RMSE 0.0142, with R² undefined. The 0.5 px diagnostic has target SD
+0.00338 and is near-degenerate.
+
+| Slice | Rows | Sources | Target mean | Target SD | MAE | RMSE | R² |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| All primary | 1,140 | 60 | 0.7778 | 0.1835 | 0.0634 | 0.0930 | 0.7435 |
+| Original blur/noise | 480 | 60 | 0.6439 | 0.1964 | 0.0601 | 0.0959 | 0.7614 |
+| Gaussian blur | 240 | 60 | 0.5657 | 0.2263 | 0.0488 | 0.0847 | 0.8599 |
+| Gaussian noise | 240 | 60 | 0.7221 | 0.1170 | 0.0713 | 0.1060 | 0.1796 |
+| Interference | 480 | 60 | 0.8681 | 0.0924 | 0.0727 | 0.1001 | -0.1744 |
+| Thin lines | 240 | 60 | 0.8573 | 0.0980 | 0.0816 | 0.1110 | -0.2821 |
+| Arc strokes | 240 | 60 | 0.8789 | 0.0850 | 0.0638 | 0.0878 | -0.0690 |
+| Primary geometric | 180 | 60 | 0.8941 | 0.0687 | 0.0476 | 0.0588 | 0.2657 |
+| Clean (diagnostic) | 60 | 60 | 1.0000 | 0.0000 | 0.0094 | 0.0142 | undefined |
+| 0.5 px elastic (diagnostic) | 60 | 60 | 0.9909 | 0.0034 | 0.0325 | 0.0385 | undefined |
+
+The per-font primary results are uneven: Georgia MAE/RMSE/R²
+0.0569/0.0852/0.7439, Monaco 0.0528/0.0761/0.7998 and Impact
+0.0807/0.1134/0.7055. On original blur/noise, Georgia and Monaco are much
+stronger (RMSE 0.0279 and 0.0346) than Impact (0.1601, R² 0.4625). On
+interference, Georgia and Monaco have negative R² (-0.5523 and -0.3767) while
+Impact is less bad (0.0864); this is a per-font reversal, not evidence that
+Impact is generally better. Primary geometric RMSE is similar across fonts
+(0.0543, 0.0525 and 0.0684).
+
+**Comparison with the familiar M5C benchmark.** The familiar benchmark uses 12
+M3 test sources and Arial, Courier New and Times New Roman. M7B uses 60
+held-out sources and three different fonts; M7B also adds thin-line and
+arc-stroke interference. Target distributions are similar for the original
+blur/noise slice (M7B mean 0.6439 / SD 0.1964 versus familiar 0.6560 / 0.1711)
+and geometric primary (0.8941 / 0.0687 versus 0.8965 / 0.0654), but the source
+composition and font condition differ. The comparison is therefore
+**descriptive, not a matched experiment or significance test**. With that
+caveat, original blur/noise RMSE is 0.0959 versus 0.0233 and both MAE and RMSE
+lie outside the familiar-font source-grouped intervals. Geometric primary RMSE
+is 0.0588 versus 0.0590 and lies inside the familiar interval. The 1 px
+geometric rung has R² -20.96 versus -44.10 on the familiar benchmark; both
+values reflect very small target variance and should not be read as a stable
+ranking, and the held-out point estimate is outside the familiar interval only
+because both estimates are unstable.
+
+**Interpretation.** The evidence supports a descriptive statement that
+zero-shot SSIM prediction is worse on these three unseen fonts, most clearly
+for the original blur/noise task and for interference, while aggregate geometric
+error is similar. It does not estimate a font population, identify a causal
+font property, prove that the champion fails on arbitrary fonts, or support
+claims about human readability, CAPTCHA solvability, security or production
+robustness. The three typefaces are a purposive sample, not a random sample.
+The 60 sources give tighter intervals than the 12-source familiar benchmark,
+but the comparison between benchmarks remains unmatched.
+
+**Verification and reproducibility.** `captcha-heldout-font-benchmark run`
+writes only to the Git-ignored dataset and report directories. `verify` reloads
+the dataset, recomputes every image hash, SSIM/PSNR target and feature value,
+replays the frozen champion, rebuilds every table and the report text, checks
+recorded output and dataset hashes, rechecks frozen-asset fingerprints and fails
+if any output, font, model or protected asset differs. Generation is
+byte-reproducible. Two runs from the same clean commit differ only in
+`runtime_seconds`; the committed inputs are the TOML configuration, code, tests
+and documentation.
 
 ## 6. Data leakage risks and controls
 
@@ -1855,8 +1972,8 @@ the same clean commit are byte-identical except for the runtime-only
 | Selecting target definition after seeing test scores | Target leakage through iteration | Freeze target in M1; record any change and re-run everything |
 | Duplicate images from different configs | Hidden overlap | Hash images and manifest records; report duplicates |
 | Clean references duplicated across datasets | Double-counting or accidental clean leakage | Exact sample/image hash comparison; exclude M4A clean rows from expanded fitting and report the clean test slice separately |
-| Font memorisation | Model learns font identity | Font-held-out evaluation slice |
-| Shared rendering condition across splits | A within-condition score is misread as condition generalisation | M7A audits font/renderer/resolution/format coverage and classifies unseen-condition claims as unsupported until a held-out condition exists |
+| Font memorisation | Model learns font identity | M3 held-out-font stress test; M7B evaluates the frozen champion on a separate Georgia/Monaco/Impact dataset whose fonts and source IDs are disjoint from M3 |
+| Shared rendering condition across splits | A within-condition score is misread as condition generalisation | M7A audits font/renderer/resolution/format coverage; M7B supplies one held-out-font probe but does not test unseen renderers, resolutions or formats |
 | Metric code drift | Scores not comparable across runs | Pin metric implementation, log version/config hash |
 
 ## 7. Evaluation strategy
@@ -1871,10 +1988,14 @@ the same clean commit are byte-identical except for the runtime-only
 - Bootstrap intervals resample held-out source groups, not variants, for
   headline metrics.
 - Report the number of independent groups, not just the number of images. M3 and
-  M4B test intervals use 12 groups; held-out-font intervals use 20.
-- The held-out-font experiment removes one font from fitting and validation
+  M4B test intervals use 12 groups; the M3 held-out-font stress test uses 20;
+  M7B uses 60 groups (20 per held-out font).
+- The M3 held-out-font experiment removes one font from fitting and validation
   before selection. It is a stress test, not a replacement for the primary
   split.
+- M7B is a separate, frozen-model evaluation dataset. It has no training split,
+  no validation selection and no calibration; its 60 held-out-font sources form
+  one untouched `eval` split, and every interval resamples whole source groups.
 
 ### 7.2 Regression metrics
 
