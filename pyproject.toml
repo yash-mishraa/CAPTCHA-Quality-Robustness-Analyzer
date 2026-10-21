@@ -77,6 +77,7 @@ captcha-retention-aware = "captcha_quality.retention_aware:main"
 captcha-retention-training = "captcha_quality.retention_aware_training:main"
 captcha-spatial-study = "captcha_quality.spatial_study:main"
 captcha-resolution-study = "captcha_quality.spatial_resolution_study:main"
+captcha-local-structure-study = "captcha_quality.local_structure_study:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0011` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0012` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0012` | 2026-10-21 | `robustness-analysis` | `completed` | Local structural features do not improve geometric prediction: global-plus-local is neutral on the geometric aggregate (RMSE +0.0044, interval includes zero) but regresses clean and original-task retention, local-only is worse everywhere except the 1 px rung, and the local family is strongly redundant with the global one, so the champion is retained |
 | `EXP-0011` | 2026-10-21 | `robustness-analysis` | `completed` | Finer grids do resolve the geometric warp (occupancy/SSIM correlation rises from +0.45 at 2x2 to +0.83 at 8x8) but the model cannot use it: every spatial candidate is ineligible on retention, the geometric gains are within noise, and the retention cost grows monotonically with feature count, so the champion is retained and the blocker is feature relevance, not resolution |
 | `EXP-0010` | 2026-10-20 | `robustness-analysis` | `completed` | Spatial features do not improve geometric prediction: the combined ablation gains only 0.0006 geometric RMSE and regresses the original task, the spatial-only ablation is far worse everywhere, and a grid diagnostic shows why — a 4x2 partition resolves blur 25x better than a 1-3 px warp, so the champion is retained and localization at this resolution is ruled out |
 | `EXP-0009` | 2026-10-20 | `robustness-analysis` | `completed` | Retention-aware training objectives do not beat the M5C champion: the severity-aware scheme is ineligible on a per-severity regression the aggregate score would hide, and the retention-aware scheme is eligible but scores worse, so the champion is retained and the eight global whole-image features are implicated as the binding constraint |
@@ -84,6 +85,218 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0012 — Local structural features: no gain beyond the global eight
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Do local structural features computed from a
+  corrupted image alone improve geometric-distortion SSIM prediction beyond the
+  existing eight global image features, while preserving clean-reference and
+  original-task performance? M6B concluded that the blocker for its regional
+  features was their *relevance*, not the resolution of the partition, and
+  suggested a representation sensitive to local structure rather than regional
+  ink quantity. M6C tests that follow-up directly. This is a synthetic
+  image-similarity benchmark, not a human-readability, CAPTCHA-solvability or
+  security study.
+- **Code revision:** base `32f7b69` plus the M6C implementation, committed as
+  `feat: evaluate local structural features`. The reported run was repeated
+  after the commit so generated provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; scikit-image 0.26.0; joblib 1.6.0; macOS 27.0.1 (arm64). No GPU was
+  used.
+- **Configuration:** `configs/local_structure_study_v0_1_0.toml`; config sha256
+  `8ab83394bc07bcb3f372d71cad669dddab739dd18b0ae151175f4da789f61934`;
+  protocol hash
+  `7c436dc5e179d9efb309bdb2b749ca1fd53fdc29e1bc4963765c7babb615c3d1`.
+  Seed `20261024`; 1000 source-grouped bootstrap replicates.
+- **Upstream frozen inputs:** M5C config sha256
+  `48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb`, M5C
+  protocol hash
+  `048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a`, M5C
+  champion artifact sha256
+  `c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`; M6A
+  config sha256
+  `e72a9e34926573b959959b8e62956cb6070a5c4564c05357d1e1d6b65266e909`, M6A
+  protocol hash
+  `d744248e0ebde54f83a005e05dd1a37bfdaa297a34e8d9f1299514e613e89bc9`,
+  spatial feature set `spatial-v1`; M6B config sha256
+  `9376ecef3e5d66dc7b8a7415f615de28330a02471c0476d4cf231d8ebe01a8a0`, M6B
+  protocol hash
+  `fafd818694cafff51ae5129453592a1793d754bc312248a7f843cb9b5013b152`.
+  The M3 dataset, split and model, the M4A pilot, the M4B benchmark, the M5A
+  pilot, the M5B benchmark, the M5C study, the M5D study, the M6A study and the
+  M6B study are unchanged and re-verified from disk. The M6B regional grids are
+  **not** used by any M6C candidate.
+- **Split:** the frozen M3 source-grouped assignment, reused verbatim through
+  the M5C verified path (assignment sha256
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`):
+  36 train / 12 validation / 12 test sources. Expanded training 432 rows /
+  36 sources; expanded validation 144 rows / 12 sources; primary geometric test
+  36 rows / 12 sources; diagnostic 0.5 px test 12 rows / 12 sources; M3 test
+  108 rows / 12 sources.
+- **Runtime:** 6.6 s in process on the recorded machine (not a benchmark); it
+  varies slightly between runs.
+
+**Method.** Fourteen local features are computed from the corrupted grayscale
+image alone, in two predeclared families. The image is scaled to `[0, 1]` and
+Sobel gradients are computed with scikit-image's normalised 3x3 operator and
+reflected boundaries.
+
+| family | features | definition |
+| --- | ---: | --- |
+| `gradient_magnitude` | 4 | mean, population standard deviation, median and 0.90 quantile of `hypot(gx, gy)` |
+| `gradient_orientation` | 10 | eight equal-width bins over `[0, pi)` of `arctan2(gy, gx)` folded into `[0, pi)`, plus the circular resultant length of the doubled angles (coherence) and the normalised Shannon entropy of the histogram |
+
+Pixels whose gradient magnitude is below `0.10` on the `[0, 1]` scale carry no
+reliable orientation and are excluded from the orientation family. The
+surviving counts are normalised to sum to one. An exactly uniform image has
+zero gradient everywhere, so all magnitude statistics are zero and, because no
+pixel clears the weak-gradient threshold, the orientation histogram, coherence
+and entropy are all zero. An empty strong-gradient set is a defined zero, not a
+division by zero. Every output is finite and deterministic.
+
+The **no-reference boundary** is strict and structural. The extractor signature
+is `extract_local_structure_features(image, spec=None)`: the only required
+input is the corrupted image array, and there is no parameter for a clean
+reference, target, source identifier, family, severity, font, split or path.
+Every run checks the signature and scans the feature module's code for
+forbidden identifiers; tests repeat both checks independently. The clean
+reference is used only by the separate evaluation pipeline that computes the
+SSIM label.
+
+Three candidates are predeclared. The frozen M5C champion is loaded without
+refitting; the local-only and global-plus-local candidates are refitted on the
+same 432 expanded training rows with the same model family, hyperparameters,
+seed and objective (random forest, 300 trees, unlimited depth, leaf size 1,
+seed 798117391). No hyperparameter is tuned, no post-hoc calibration is
+applied and no feature is removed in response to a diagnostic. The M6A/M6B
+retention-aware selection rule is used unchanged, with the same coefficients
+and tolerances, and the frozen champion is the fallback. The 0.5 px rung is
+diagnostic only.
+
+**Validation results by slice (selection evidence).**
+
+| candidate | features | geometric RMSE | clean RMSE | original RMSE | sev 2 RMSE | sev 3 RMSE | sev 4 RMSE | score | eligible | selected |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `global_baseline` | 8 | 0.04925 | 0.00223 | 0.02007 | 0.05254 | 0.02494 | 0.06240 | 0.00000 | yes | **yes** |
+| `local_only` | 14 | 0.05957 | 0.00310 | 0.02850 | 0.05015 | 0.03145 | 0.08451 | 0.05754 | no | no |
+| `global_plus_local` | 22 | 0.05319 | 0.00621 | 0.01945 | 0.04998 | 0.02681 | 0.07260 | 0.02396 | no | no |
+
+Both local candidates are ineligible. `global_plus_local` breaches the 50%
+clean-reference tolerance (0.00621 versus 0.00223). `local_only` breaches the
+10% original-task tolerance (0.02850 versus 0.02007), the 25% severity-3
+tolerance (0.03145 versus 0.02494) and the 25% severity-4 tolerance (0.08451
+versus 0.06240). The per-severity and retention constraints are doing the work
+the aggregate score would not: the aggregate geometric validation RMSE of
+`global_plus_local` is only 0.00394 worse than the champion, but the clean
+slice is nearly three times worse.
+
+**Test results by slice (after selection was frozen).**
+
+| candidate | geometric RMSE | geometric R2 | clean RMSE | original RMSE | M3 overall RMSE | M3 overall R2 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `global_baseline` | 0.05901 | 0.18553 | 0.00228 | 0.02333 | 0.02201 | 0.98716 |
+| `local_only` | 0.06612 | -0.02254 | 0.02021 | 0.03600 | 0.03461 | 0.96824 |
+| `global_plus_local` | 0.06338 | 0.06022 | 0.00931 | 0.03112 | 0.02950 | 0.97692 |
+
+The champion's reference metrics reproduce the pinned M5C values exactly:
+geometric MAE/RMSE/R2 0.04928/0.05901/0.18553, clean RMSE 0.00228, original
+RMSE 0.02333, M3 test RMSE 0.02201/R2 0.98716. No local candidate improves the
+aggregate geometric slice. `global_plus_local` is 0.00438 worse in RMSE and
+`local_only` is 0.00711 worse.
+
+The geometric slice is not uniform across the primary ladder. On test, both
+local candidates improve severity 2 (1 px) and regress severities 3 and 4:
+
+| candidate | sev 2 RMSE | sev 3 RMSE | sev 4 RMSE |
+| --- | ---: | ---: | ---: |
+| `global_baseline` | 0.06187 | 0.02362 | 0.07784 |
+| `local_only` | 0.04277 (-0.01910) | 0.04027 (+0.01665) | 0.09830 (+0.02045) |
+| `global_plus_local` | 0.05355 (-0.00832) | 0.03384 (+0.01022) | 0.08967 (+0.01182) |
+
+The paired severity-2 intervals include zero for both candidates, so the 1 px
+improvement is not clear. The severity-3 and severity-4 regressions exclude
+zero for both candidates.
+
+**Paired source-grouped differences (candidate minus champion, RMSE).**
+
+| slice | `local_only` | `global_plus_local` |
+| --- | --- | --- |
+| geometric primary | +0.00711 [0.00165, 0.01204] | +0.00438 [-0.00015, 0.00891] |
+| clean reference | +0.01794 [0.00376, 0.02911] | +0.00704 [0.00036, 0.01192] |
+| original blur/noise | +0.01267 [0.00741, 0.01831] | +0.00779 [0.00299, 0.01248] |
+| M3 test overall | +0.01260 [0.00713, 0.01805] | +0.00749 [0.00253, 0.01171] |
+
+There are 12 held-out test source groups, so these intervals are preliminary
+and descriptive; no significance claim is made. The pattern is consistent: the
+local family clearly costs retention, and the combined candidate's aggregate
+geometric interval includes zero. It does not demonstrate a geometric gain.
+
+**Training-only diagnostics.** On 432 training rows, none of the 14 local
+features is constant, duplicated or non-finite. The mean absolute pairwise
+correlation among the local features is 0.3925 and the maximum is 0.9926: the
+four gradient-magnitude statistics are largely redundant with one another. In
+the combined candidate the maximum absolute correlation between a local and a
+global feature is 0.8743, so the local family partly re-expresses information
+the global features already carry. Random-forest importance (descriptive, not
+causal) gives the combined candidate a global share of 0.7717 and a local share
+of 0.2283; `histogram_entropy` alone accounts for 0.6303 and `grad_mag_std` for
+0.1521. In the local-only candidate, `grad_mag_median` (0.6421) and
+`grad_mag_std` (0.2508) dominate. The training-to-validation geometric RMSE gap
+is 0.02645 for the champion, 0.03093 for the combined candidate and 0.03799 for
+the local-only candidate, so the larger feature sets overfit more.
+
+**Observations.** The local family is not useless: it improves the 1 px rung on
+test for both candidates, and `global_plus_local` is marginally better than the
+champion on the validation original-task slice (0.01945 versus 0.02007).
+Neither effect survives the predeclared rule. The 1 px gain is within the
+paired interval, and the original-task gain reverses on test. The dominant
+pattern is that the local features trade retention for a small and inconsistent
+geometric effect. The feature-importance and correlation diagnostics explain
+why: the orientation histogram's useful content overlaps the existing
+`histogram_entropy`, and the magnitude statistics overlap `laplacian_variance`
+and `edge_density`.
+
+**Conclusion.** The hypothesis is not supported. Local structural features
+computed from the corrupted image alone do not improve geometric-distortion
+SSIM prediction beyond the eight global features while preserving
+clean-reference and original-task performance. Both local candidates are
+ineligible on validation, and the frozen M5C champion is retained. This is a
+negative result, reported as such; the selection rule was not weakened to force
+a winner. Conventional feature-based ML remains the benchmark champion, and
+the evidence does not justify a CNN.
+
+**Limitations.**
+
+- One synthetic renderer, one 192x64 canvas, three fonts and 12 held-out test
+  source groups. All grouped intervals are preliminary.
+- Only two declared feature families and 14 features were tested. The result
+  does not rule out every possible local representation.
+- The gradient-magnitude statistics are strongly redundant with each other and
+  with the existing global edge/variance features, which limits the
+  information the family can add.
+- The orientation histogram is a global summary of local orientations; it
+  cannot localise a warp or compare a region against its own reference.
+- SSIM is a full-reference structural proxy, not human readability or CAPTCHA
+  solvability. This is not a security evaluation.
+- No CNN, dashboard, deployment, external CAPTCHA dataset or additional
+  corruption family is part of this milestone.
+
+**Next step.** The most defensible follow-up is a representation explicitly
+targeted at local *displacement* rather than local gradient strength or
+orientation, such as a multi-scale structure-tensor anisotropy or local
+autocorrelation family, evaluated under the same no-reference boundary and the
+same predeclared retention-aware rule. If that also fails, the accumulated
+evidence points to a learned representation as the next distinct milestone.
+Starting a CNN is not justified by this result alone.
+
+**Artifacts.** Git-ignored: `reports/local_structure_study_v0_1_0/` (tables,
+diagnostics, report, metadata) and
+`models/local_structure_study_v0_1_0/` (refitted bundles and cards).
 
 ---
 

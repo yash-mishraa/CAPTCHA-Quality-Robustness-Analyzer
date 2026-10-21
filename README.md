@@ -4,16 +4,17 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A and M6B
+> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B and M6C
 > complete — the metric-validation pilot, a reproducible dataset/feature
 > pipeline, a leakage-safe conventional-ML benchmark, an occlusion/interference
 > feasibility pilot, a grouped occlusion/interference robustness benchmark, a
 > geometric-distortion feasibility pilot, a grouped geometric-robustness
 > benchmark, a retention-aware selection and calibration study, a retention-aware
-> training-objective study, a spatial-aware feature study, and a spatial
-> resolution study have been run and logged. The CNN comparison, full M5 error
-> taxonomy and dashboard are **not implemented**, and the project does **not**
-> predict human CAPTCHA solvability. See [Current status](#current-status).
+> training-objective study, a spatial-aware feature study, a spatial resolution
+> study, and a local structural feature study have been run and logged. The CNN
+> comparison, full M5 error taxonomy and dashboard are **not implemented**, and
+> the project does **not** predict human CAPTCHA solvability. See
+> [Current status](#current-status).
 
 ## Overview
 
@@ -92,6 +93,10 @@ fact.
 - A spatial resolution study varying only the grid (2×2, 4×2, 4×4, 8×8) with
   the feature definitions unchanged, plus training-only redundancy and
   overfitting diagnostics (**implemented**).
+- A local structural feature study computing gradient-magnitude and
+  gradient-orientation features from the corrupted image alone, under a
+  structurally enforced no-reference boundary, with three predeclared ablations
+  (**implemented**).
 - A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
@@ -163,7 +168,8 @@ held-out-font stress test and source-isolated interference evaluation), the
 M5A geometric-distortion feasibility pilot, the M5B grouped
 geometric-robustness benchmark, the M5C retention-aware selection study, the
 M5D retention-aware training-objective study, the M6A spatial-aware feature
-study and the M6B spatial resolution study. The full M5 error taxonomy and
+study, the M6B spatial resolution study and the M6C local structural feature
+study. The full M5 error taxonomy and
 Stage 9 dashboard are planned. Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
 result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
@@ -282,7 +288,7 @@ environment files are required at this stage.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
-| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D, M6A and M6B complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. M6B resolution study: finer grids *do* resolve the warp (correlation +0.45 → +0.83) but still produce no demonstrable gain, so the blocker is feature relevance, not resolution. CNN not justified |
+| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D, M6A, M6B and M6C complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. M6B resolution study: finer grids *do* resolve the warp (correlation +0.45 → +0.83) but still produce no demonstrable gain, so the blocker is feature relevance, not resolution. M6C local-structure study: gradient-magnitude and gradient-orientation features do not beat the global eight while preserving retention; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0044, interval includes zero) but regresses clean and original-task slices, and the local family is strongly redundant with the global one. CNN not justified |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -296,8 +302,9 @@ feasibility pilot without training a model; M5B uses the M5A dataset for a
 grouped zero-shot and controlled-adaptation benchmark on the same frozen M3
 source split, M5C adds a retention-aware selection and calibration study on
 those same frames, M5D adds a retention-aware training-objective study, M6A adds
-a spatial-aware feature study, and M6B adds a spatial resolution study. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all eleven recorded
+a spatial-aware feature study, M6B adds a spatial resolution study, and M6C adds
+a local structural feature study under a strict no-reference boundary. See
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all twelve recorded
 experiments.
 
 ## Quick start: dataset pipeline
@@ -552,6 +559,29 @@ The run writes `reports/spatial_resolution_study_v0_1_0/` and
 recorded in `EXP-0011` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.16.
 
+## Quick start: local structural feature study
+
+M6C asks whether local structural features computed from the corrupted image
+alone add information beyond the global eight while preserving clean-reference
+and original-task performance. The extractor accepts one corrupted image and
+nothing else; the no-reference boundary is checked structurally on every run.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-local-structure-study run \
+    --config configs/local_structure_study_v0_1_0.toml
+
+# Verify the written run: boundary, artifact hashes, prediction replay and protocol
+uv run --extra image --extra ml captcha-local-structure-study verify \
+    --config configs/local_structure_study_v0_1_0.toml
+```
+
+The run writes `reports/local_structure_study_v0_1_0/` and
+`models/local_structure_study_v0_1_0/` (both Git-ignored). The results are
+recorded in `EXP-0012` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.17.
+
 ## Current status
 
 Implemented:
@@ -641,7 +671,7 @@ Implemented:
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 449 tests in total, all passing, including byte-identical dataset
+- 488 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -661,7 +691,12 @@ Implemented:
   split-integrity, diagnostic exclusion, selection and serialization tests, and
   the M6B per-resolution feature counts, ordering, region boundaries, uneven
   dimensions, blank and empty regions, determinism, leakage, selection
-  isolation, fallback and deterministic-report tests.
+  isolation, fallback and deterministic-report tests, and the M6C exact local
+  feature schema/order, deterministic extraction, uniform and empty-edge
+  degeneracy, finite/valid ranges, a structural no-reference signature and AST
+  scan, metadata-leakage, split-integrity, 0.5 px exclusion, validation-only
+  selection, champion fallback, model-reload equivalence and deterministic
+  tables/report/model-bundle tests.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -869,6 +904,56 @@ readability or solvability):
   sensitive to local *displacement*, rather than to local ink quantity, can add
   information without diluting the splits that support blur, noise and clean
   references.
+- **Decision.** Conventional feature-based ML remains the benchmark champion
+  and the M5C champion remains the best geometric-robustness policy found so
+  far. The evidence does not justify a CNN, and a new corruption family does
+  not by itself justify one.
+- **Uncertainty.** Every interval resamples whole source groups and there are
+  only 12 held-out test sources, so all intervals are preliminary and
+  descriptive. Interval overlap or non-overlap is not treated as a
+  significance test, and no universal threshold was introduced after seeing
+  test results.
+
+Milestone M6C findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **No local-structure candidate was selected.** The frozen M5C champion is
+  retained. Both local candidates are ineligible on validation: the combined
+  candidate breaches the 50% clean-reference tolerance (validation RMSE 0.00621
+  versus 0.00223), and the local-only candidate breaches the 10% original-task
+  tolerance (0.02850 versus 0.02007), the 25% severity-3 tolerance (0.03145
+  versus 0.02494) and the 25% severity-4 tolerance (0.08451 versus 0.06240).
+- **The combined candidate is neutral on the geometric aggregate, not better.**
+  Its test geometric RMSE is 0.06338 versus 0.05901 for the champion (paired
+  difference +0.00438, preliminary interval [-0.00015, 0.00891]). The local-only
+  candidate is 0.06612 (+0.00711, [0.00165, 0.01204]).
+- **The geometric effect is mixed across the ladder.** Both candidates improve
+  the 1 px rung (RMSE 0.04277 local-only and 0.05355 combined versus 0.06187)
+  and regress the 2 px and 3 px rungs; the 1 px paired intervals include zero,
+  so the only apparent gain is not clear.
+- **Retention clearly degrades.** On test, the clean-reference RMSE is 0.02021
+  (local-only) and 0.00931 (combined) versus 0.00228; the original-task RMSE is
+  0.03600 and 0.03112 versus 0.02333; the M3 overall RMSE is 0.03461 and 0.02950
+  versus 0.02201. The paired clean, original-task and M3 intervals exclude zero
+  for both candidates.
+- **The local family is largely redundant with the global eight.** The maximum
+  absolute pairwise correlation among the local features is 0.9926 (the four
+  magnitude statistics duplicate one another), and the maximum absolute
+  local-versus-global correlation in the combined candidate is 0.8743.
+  Random-forest importance gives the combined candidate a local share of 0.2283,
+  with `histogram_entropy` alone at 0.6303 and `grad_mag_std` at 0.1521.
+- **The no-reference boundary is structural, not cosmetic.** The extractor
+  signature accepts one corrupted image and an optional spec; an AST scan of the
+  feature module confirms no target, reference, source, severity, font, split or
+  path identifier, no dynamic import and no file I/O. Tests repeat both checks
+  independently, and an opaque `sample_id` never changes a feature value.
+- **What this rules in and out.** Local gradient strength and orientation, as
+  declared here, do not add usable information beyond the global summary while
+  preserving retention. The result does not rule out every local
+  representation; it specifically weakens the case for whole-image summaries of
+  a local operator. A representation explicitly sensitive to local
+  *displacement* (for example multi-scale structure-tensor anisotropy or local
+  autocorrelation) is the most defensible next handcrafted question.
 - **Decision.** Conventional feature-based ML remains the benchmark champion
   and the M5C champion remains the best geometric-robustness policy found so
   far. The evidence does not justify a CNN, and a new corruption family does

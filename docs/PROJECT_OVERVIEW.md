@@ -4,15 +4,16 @@
 feasibility pilot, the M4B grouped robustness benchmark, the M5A
 geometric-distortion feasibility pilot, the M5B grouped geometric-robustness
 benchmark, the M5C retention-aware selection and calibration study, the M5D
-retention-aware training-objective study, the M6A spatial-aware feature study
-and the M6B spatial resolution study. A reproducible dataset and image-feature
-pipeline, a leakage-safe conventional-ML benchmark, source-isolated
-zero-shot/adaptation evaluation, a replayable elastic-warp pilot, a grouped
-geometric-robustness benchmark, a retention-aware selection study, a
-retention-aware training-objective study, a spatial-aware feature study and a
-spatial resolution study exist. The CNN comparison, full M5 error taxonomy and
-dashboard are planned.
-**Last updated:** 2026-10-20
+retention-aware training-objective study, the M6A spatial-aware feature study,
+the M6B spatial resolution study and the M6C local structural feature study. A
+reproducible dataset and image-feature pipeline, a leakage-safe conventional-ML
+benchmark, source-isolated zero-shot/adaptation evaluation, a replayable
+elastic-warp pilot, a grouped geometric-robustness benchmark, a retention-aware
+selection study, a retention-aware training-objective study, a spatial-aware
+feature study, a spatial resolution study and a no-reference local structural
+feature study exist. The CNN comparison, full M5 error taxonomy and dashboard
+are planned.
+**Last updated:** 2026-10-21
 
 ## 1. Purpose
 
@@ -304,6 +305,8 @@ src/captcha_quality/
 ├── spatial_features.py # localized grid features, versioned separately (implemented, M6A)
 ├── spatial_study.py    # spatial-aware feature ablation study, CLI (implemented, M6A)
 ├── spatial_resolution_study.py # grid resolution study, CLI (implemented, M6B)
+├── local_structure_features.py # no-reference local structural features (implemented, M6C)
+├── local_structure_study.py    # local structural feature ablation study, CLI (implemented, M6C)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -319,7 +322,11 @@ M5D, all using the same persistence, verification and reporting conventions.
 `spatial_features.py` and `spatial_study.py` implement M6A, keeping the
 localized features in a separate versioned module so the frozen eight-feature
 pipeline cannot be altered, and `spatial_resolution_study.py` implements M6B on
-top of it. No CNN code exists yet.
+top of it. `local_structure_features.py` and `local_structure_study.py`
+implement M6C: the extractor is a pure function of one corrupted image and is
+structurally checked against the no-reference boundary, and the study reuses
+the frozen M5C champion, the M6A/M6B selection rule and the existing validation
+and test frames without modifying them. No CNN code exists yet.
 
 ## 4. Artifact contracts
 
@@ -359,6 +366,9 @@ top of it. No CNN code exists yet.
 | Resolution study config | `configs/spatial_resolution_study_v0_1_0.toml` | seed, frozen M5C/M6A hashes, model family and hyperparameters, the four declared grids, representations, eligibility tolerances, selection score and weights, bootstrap count, output paths |
 | Resolution study models | `models/spatial_resolution_study_v0_1_0/` (Git-ignored) | one bundle per refitted candidate, each with a JSON card: feature names/order and count, resolution, target, seed, validation and test metrics, package versions, artifact SHA-256 |
 | Resolution study reports | `reports/spatial_resolution_study_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, the per-resolution feature manifest, `run_metadata.json`, Markdown report |
+| Local structure config | `configs/local_structure_study_v0_1_0.toml` | seed, frozen M5C/M6A/M6B hashes, model family and hyperparameters, the two declared feature families and parameters, ablation definitions, eligibility tolerances, selection score and weights, bootstrap count, output paths |
+| Local structure models | `models/local_structure_study_v0_1_0/` (Git-ignored) | one bundle per refitted candidate, each with a JSON card: feature names/order and count, local feature-set version, target, seed, validation and test metrics, package versions, artifact SHA-256 |
+| Local structure reports | `reports/local_structure_study_v0_1_0/` (Git-ignored) | validation slice metrics, selection table, test slice metrics, predictions, uncertainty, paired uncertainty, isolation checks, the local feature manifest, training-only diagnostics, the no-reference boundary record, `run_metadata.json`, Markdown report |
 | Metrics | `reports/` + experiment log | model, split, metric, value, CI, slice definition |
 
 Dataset artefacts are Git-ignored; tiny fixtures are generated in tests. The
@@ -374,7 +384,7 @@ byte-for-byte.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
-| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; spatial resolution study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study, M6A feature study and M6B resolution study complete) |
+| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; spatial resolution study; local structural feature study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study, M6A feature study, M6B resolution study and M6C local-structure study complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -431,11 +441,19 @@ byte-for-byte.
   and a finer grid *does* resolve the geometric warp (occupancy/SSIM correlation
   +0.45 to +0.83) without producing a demonstrable prediction gain. The blocker
   is therefore the **relevance** of the spatial features to blur, noise and
-  clean references, not the resolution of the partition. These are hypotheses
-  consistent with the evidence, not isolated causes.
-- **Small test support:** M4B, M5B, M5C, M5D, M6A and M6B have only 12 held-out
-  sources. Source-grouped intervals are wide and preliminary; no universal
-  significance threshold was introduced after seeing test results.
+  clean references, not the resolution of the partition. M6C tested local
+  gradient-magnitude and gradient-orientation features computed from the
+  corrupted image alone and found that they do not beat the global eight while
+  preserving retention: the combined candidate is neutral on the geometric
+  aggregate (paired RMSE +0.0044, interval includes zero) but regresses clean
+  and original-task slices, and the local family is strongly redundant with the
+  global one (maximum local-versus-global |r| 0.874). The evidence now points
+  away from whole-image summaries of a local operator and toward a
+  representation explicitly sensitive to local *displacement*. These are
+  hypotheses consistent with the evidence, not isolated causes.
+- **Small test support:** M4B, M5B, M5C, M5D, M6A, M6B and M6C have only 12
+  held-out sources. Source-grouped intervals are wide and preliminary; no
+  universal significance threshold was introduced after seeing test results.
 - **Font licensing:** only redistributable fonts may be used or bundled.
 
 ## 7. Implemented today
@@ -558,3 +576,28 @@ no constant or duplicated feature at any grid). The blocker is the
 **relevance** of the spatial features to the other corruption families, not
 the resolution of the partition. The M5C champion is retained. No dashboard,
 deployment or final presentation exists yet.
+
+Milestone M6C: a local structural feature study in which fourteen features are
+computed from the corrupted grayscale image alone in two predeclared families —
+gradient-magnitude summaries (mean, standard deviation, median, 0.90 quantile)
+and a gradient-orientation histogram with coherence and entropy. The extractor
+accepts one image and an optional spec and nothing else; every run checks the
+signature and scans the feature module's code for target, reference, metadata
+and path identifiers, and tests repeat both checks independently. **No
+local-structure candidate was selected.** Both local candidates are ineligible
+on validation: the combined candidate breaches the 50% clean-reference
+tolerance, and the local-only candidate breaches the 10% original-task
+tolerance and the 25% severity-3 and severity-4 tolerances. On test, the
+combined candidate is neutral on the geometric aggregate (RMSE 0.06338 versus
+0.05901, paired difference +0.00438 with a preliminary interval that includes
+zero) and the local-only candidate is worse (+0.00711, [0.00165, 0.01204]);
+both regress clean, original-task and M3 retention, and both improve only the
+1 px rung, with an interval that includes zero. Training-only diagnostics show
+why: the four magnitude statistics are almost perfectly redundant with each
+other (max |r| 0.9926) and the local block is strongly correlated with the
+global one (max |r| 0.8743), so the forest gives the local block only 0.2283 of
+the combined importance. The M5C champion is
+retained. The result weakens the case for whole-image summaries of a local
+operator and points to a representation explicitly sensitive to local
+displacement as the next handcrafted question. No dashboard, deployment or
+final presentation exists yet.
