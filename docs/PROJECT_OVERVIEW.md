@@ -5,14 +5,15 @@ feasibility pilot, the M4B grouped robustness benchmark, the M5A
 geometric-distortion feasibility pilot, the M5B grouped geometric-robustness
 benchmark, the M5C retention-aware selection and calibration study, the M5D
 retention-aware training-objective study, the M6A spatial-aware feature study,
-the M6B spatial resolution study and the M6C local structural feature study. A
-reproducible dataset and image-feature pipeline, a leakage-safe conventional-ML
-benchmark, source-isolated zero-shot/adaptation evaluation, a replayable
-elastic-warp pilot, a grouped geometric-robustness benchmark, a retention-aware
-selection study, a retention-aware training-objective study, a spatial-aware
-feature study, a spatial resolution study and a no-reference local structural
-feature study exist. The CNN comparison, full M5 error taxonomy and dashboard
-are planned.
+the M6B spatial resolution study, the M6C local structural feature study and the
+M6D multi-scale structure-tensor study. A reproducible dataset and image-feature
+pipeline, a leakage-safe conventional-ML benchmark, source-isolated
+zero-shot/adaptation evaluation, a replayable elastic-warp pilot, a grouped
+geometric-robustness benchmark, a retention-aware selection study, a
+retention-aware training-objective study, a spatial-aware feature study, a
+spatial resolution study, a no-reference local structural feature study and a
+no-reference multi-scale structure-tensor study exist. The CNN comparison, full
+M5 error taxonomy and dashboard are planned.
 **Last updated:** 2026-10-21
 
 ## 1. Purpose
@@ -307,6 +308,8 @@ src/captcha_quality/
 ├── spatial_resolution_study.py # grid resolution study, CLI (implemented, M6B)
 ├── local_structure_features.py # no-reference local structural features (implemented, M6C)
 ├── local_structure_study.py    # local structural feature ablation study, CLI (implemented, M6C)
+├── structure_tensor_features.py # no-reference multi-scale structure tensor (implemented, M6D)
+├── structure_tensor_study.py    # structure-tensor feature ablation study, CLI (implemented, M6D)
 └── analysis.py         # broader slices, statistics, plots             (planned, M5+)
 ```
 
@@ -326,7 +329,11 @@ top of it. `local_structure_features.py` and `local_structure_study.py`
 implement M6C: the extractor is a pure function of one corrupted image and is
 structurally checked against the no-reference boundary, and the study reuses
 the frozen M5C champion, the M6A/M6B selection rule and the existing validation
-and test frames without modifying them. No CNN code exists yet.
+and test frames without modifying them. `structure_tensor_features.py` and
+`structure_tensor_study.py` implement M6D in the same pattern, adding two
+predeclared Gaussian scales and nine coherence/anisotropy/energy summaries while
+keeping the frozen global schema, split, champion and selection rule unchanged.
+No CNN code exists yet.
 
 ## 4. Artifact contracts
 
@@ -384,7 +391,7 @@ byte-for-byte.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic (complete) |
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
-| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; spatial resolution study; local structural feature study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study, M6A feature study, M6B resolution study and M6C local-structure study complete) |
+| M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; spatial resolution study; local structural feature study; multi-scale structure-tensor study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study, M6A feature study, M6B resolution study, M6C local-structure study and M6D structure-tensor study complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -447,11 +454,18 @@ byte-for-byte.
   preserving retention: the combined candidate is neutral on the geometric
   aggregate (paired RMSE +0.0044, interval includes zero) but regresses clean
   and original-task slices, and the local family is strongly redundant with the
-  global one (maximum local-versus-global |r| 0.874). The evidence now points
-  away from whole-image summaries of a local operator and toward a
-  representation explicitly sensitive to local *displacement*. These are
-  hypotheses consistent with the evidence, not isolated causes.
-- **Small test support:** M4B, M5B, M5C, M5D, M6A, M6B and M6C have only 12
+  global one (maximum local-versus-global |r| 0.874). M6D then tested a
+  multi-scale structure tensor, a representation explicitly sensitive to local
+  gradient geometry, and found that it also fails: the combined candidate is
+  neutral on the geometric aggregate (paired RMSE +0.0014, interval includes
+  zero) but breaches the clean-reference tolerance, the structure-only candidate
+  is worse on every retention slice, and the new features are strongly
+  redundant with each other (max |r| 0.9977) and with the global eight (max |r|
+  0.9387). The evidence now points away from compact handcrafted summaries of
+  local structure and toward a learned representation, but that is a separate
+  milestone and is not justified by this result alone. These are hypotheses
+  consistent with the evidence, not isolated causes.
+- **Small test support:** M4B, M5B, M5C, M5D, M6A, M6B, M6C and M6D have only 12
   held-out sources. Source-grouped intervals are wide and preliminary; no
   universal significance threshold was introduced after seeing test results.
 - **Font licensing:** only redistributable fonts may be used or bundled.
@@ -601,3 +615,26 @@ retained. The result weakens the case for whole-image summaries of a local
 operator and points to a representation explicitly sensitive to local
 displacement as the next handcrafted question. No dashboard, deployment or
 final presentation exists yet.
+
+Milestone M6D: a multi-scale structure-tensor study in which nine features are
+computed from the corrupted grayscale image alone at two predeclared Gaussian
+scales (sigma = 1.0 and 3.0 px). Coherence, anisotropy and tensor energy are
+summarised by mean and 0.90 quantiles, with mean energy reported once at the
+finest scale. The extractor accepts one image and an optional spec and nothing
+else; every run checks the signature and scans the feature module's code for
+target, reference, metadata and path identifiers, and tests repeat both checks
+independently. **No structure-tensor candidate was selected.** The combined
+candidate is ineligible on validation because its clean-reference RMSE 0.00516
+exceeds the champion's 0.00223 by more than the 50% tolerance; the
+structure-only candidate breaches the clean-reference and original-task
+tolerances. On test, the combined candidate is neutral on the geometric
+aggregate (RMSE 0.06036 versus 0.05901, paired difference +0.00135 with a
+preliminary interval that includes zero) but has worse clean, original-task and
+M3 retention; the structure-only candidate is worse on every aggregate slice
+(geometric +0.00631 with an interval that includes zero; clean +0.01594,
+original +0.01546 and M3 +0.01507 with intervals that exclude zero).
+Training-only diagnostics
+show strong redundancy: the maximum absolute pairwise correlation among the new
+features is 0.9977 and the maximum new-versus-global correlation is 0.9387, so
+the forest gives the new block only 0.1362 of the combined importance. The M5C
+champion is retained. No dashboard, deployment or final presentation exists yet.

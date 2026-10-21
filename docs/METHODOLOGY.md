@@ -1,9 +1,10 @@
 # Methodology
 
-**Status:** Milestones 0–3, M4A and M4B complete. The target and dataset are
-frozen, the conventional benchmark and grouped interference benchmark are
+**Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C and
+M6D complete. The target and dataset are frozen, the conventional benchmark,
+grouped interference benchmark and handcrafted-feature follow-ups are
 implemented, and the CNN comparison and dashboard remain planned.
-**Last updated:** 2026-10-20
+**Last updated:** 2026-10-21
 
 ## 1. Research framing
 
@@ -1618,6 +1619,147 @@ predeclared rule; if that also fails, the accumulated evidence points to a
 learned representation as a separate milestone. These results cover one
 synthetic renderer, one canvas size, three fonts and 12 held-out source groups;
 nothing here measures human readability or CAPTCHA solvability.
+
+### 5.18 M6D multi-scale structure-tensor study
+
+M6C pointed to a representation explicitly sensitive to local *displacement*
+rather than local gradient strength or orientation. M6D tests the most direct
+handcrafted candidate: a compact multi-scale structure tensor computed from the
+corrupted image alone. The implementation is `structure_tensor_features.py` and
+`structure_tensor_study.py`, configured by
+`configs/structure_tensor_study_v0_1_0.toml`. It writes only to
+`reports/structure_tensor_study_v0_1_0/` and
+`models/structure_tensor_study_v0_1_0/` (both Git-ignored).
+
+**Feature design.** The image is scaled to `[0, 1]`. Horizontal and vertical
+gradients are computed with scikit-image's fixed 3x3 Sobel operator with
+reflected boundaries; no extra normalisation is applied. The tensor components
+`Jxx = gx*gx`, `Jyy = gy*gy` and `Jxy = gx*gy` are smoothed by a Gaussian with
+the declared scale, reflected boundaries and truncation at four standard
+deviations. At each of exactly two predeclared scales, `sigma = 1.0` and
+`sigma = 3.0` px, the symmetric 2x2 tensor has non-negative eigenvalues
+
+```text
+lambda_1 = (trace + sqrt((Jxx - Jyy)^2 + 4*Jxy^2)) / 2
+lambda_2 = (trace - sqrt((Jxx - Jyy)^2 + 4*Jxy^2)) / 2
+trace    = Jxx + Jyy
+```
+
+with `lambda_2` clipped to `[0, lambda_1]` for round-off. The summaries are:
+
+| statistic | definition | range |
+| --- | --- | --- |
+| coherence | `(lambda_1 - lambda_2) / (lambda_1 + lambda_2 + epsilon)` | `[0, 1]` |
+| anisotropy | `1 - lambda_2 / (lambda_1 + epsilon)` | `[0, 1]` |
+| energy | `lambda_1 + lambda_2` | `[0, inf)` |
+
+`epsilon = 1e-12` is fixed. A zero-energy tensor is an explicit zero, not a
+division by zero. The four summaries per scale are mean coherence, the 0.90
+coherence quantile, mean anisotropy and the 0.90 energy quantile; quantiles use
+NumPy's linear interpolation. Mean tensor energy is reported once as
+`st_energy_mean` at the finest scale, because Gaussian smoothing preserves the
+mean and repeating it at both scales would add a duplicate column. The nine
+features, in fixed order, are `st_s1_coh_mean`, `st_s1_coh_p90`,
+`st_s1_aniso_mean`, `st_s1_energy_p90`, `st_s2_coh_mean`, `st_s2_coh_p90`,
+`st_s2_aniso_mean`, `st_s2_energy_p90` and `st_energy_mean`.
+
+Degenerate inputs are explicit. An exactly uniform image has zero gradient
+everywhere and produces nine defined zeros. A single faint step produces finite,
+bounded summaries. Every output is finite and deterministic, and the extractor
+does not mutate its input. A known sinusoidal grating at vertical, horizontal or
+diagonal orientation yields coherence and anisotropy above 0.99 at both scales;
+the high-energy tail is larger at the finer scale, as expected from smoothing.
+Isotropic noise is less coherent than a grating. These are tests of the declared
+definition, not claims about CAPTCHA images.
+
+**No-reference boundary.** The extractor signature is
+`extract_structure_tensor_features(image, spec=None)`. The only required input is
+the corrupted 2-D `uint8` image array. There is no parameter for, and no code
+path to, the clean reference, the SSIM/PSNR targets, the source identifier, the
+corruption family or severity, the font, the split label, the file path or any
+metadata. The clean reference is used only by the separate evaluation pipeline
+that computes the SSIM label. The boundary is enforced structurally on every
+run:
+
+1. A signature check confirms that the extractor accepts exactly `image` and an
+   optional `spec`, with no `*args`, no `**kwargs` and no other required input.
+2. An AST scan of the feature module's code confirms that no target, reference,
+   source, severity, family, font, split or path identifier appears as a
+   variable, argument, attribute or import.
+3. A schema check confirms the extracted table contains only `sample_id` and the
+   declared image features, and a leakage check confirms no target or metadata
+   column is present.
+
+Tests repeat the signature and AST checks independently, verify that a second
+image cannot be passed positionally, and verify that an opaque `sample_id` never
+changes a feature value. The extractor imports only the shared image-contract
+validator from the repository; it cannot reach the feature, modelling,
+retention or dataset modules, and it uses no dynamic import or file I/O.
+
+**Candidates and selection.** Three candidates are predeclared. The frozen M5C
+champion is loaded without refitting; the structure-only and
+global-plus-structure candidates are refitted on the same 432 expanded training
+rows with the same model family, hyperparameters, seed and objective (random
+forest, 300 trees, unlimited depth, leaf size 1, seed 798117391). No
+hyperparameter is tuned, no post-hoc calibration is applied and no feature is
+removed in response to a diagnostic. The M6A/M6B/M6C retention-aware selection
+rule is used unchanged, with the same coefficients and tolerances, and the
+frozen champion is the fallback. The 0.5 px rung remains diagnostic only and
+never enters fitting, selection or the primary score.
+
+**Validation results.** The aggregate geometric validation RMSE is 0.04925 for
+the champion, 0.04935 for `global_plus_structure` and 0.05189 for
+`structure_only`. Both new candidates are ineligible. `global_plus_structure`
+breaches the 50% clean-reference tolerance (0.00516 versus 0.00223), and
+`structure_only` breaches both the 50% clean-reference tolerance (0.01540 versus
+0.00223) and the 10% original-task tolerance (0.03315 versus 0.02007). The
+per-severity constraints are satisfied by both new candidates on validation.
+The champion is retained.
+
+**Test results.** The champion reproduces the pinned M5C values: geometric RMSE
+0.05901 (R2 0.18553), clean RMSE 0.00228, original-task RMSE 0.02333 and M3
+overall RMSE 0.02201 (R2 0.98716). The combined candidate reaches geometric
+RMSE 0.06036 (R2 0.14780), clean 0.00328, original 0.02526 and M3 0.02384. The
+structure-only candidate reaches geometric 0.06532 (R2 0.00199), clean 0.01822,
+original 0.03879 and M3 0.03707. The aggregate geometric paired differences
+versus the champion are +0.00135 [-0.00390, 0.00575] for the combined candidate
+and +0.00631 [-0.00019, 0.01181] for the structure-only candidate. The combined
+candidate's clean interval includes zero (+0.00101 [-0.00026, 0.00188]), while
+its original-task and M3 intervals also include zero; the structure-only
+candidate's clean, original-task and M3 intervals exclude zero. The combined
+candidate improves severity 2 (paired -0.01894, interval excludes zero) but
+regresses severity 3 (+0.01486, excludes zero) and severity 4 (+0.00937,
+includes zero). There are 12 held-out test source groups, so every interval is
+preliminary and descriptive.
+
+**Diagnostics.** On 432 training rows, none of the nine features is constant,
+duplicated or non-finite. The mean absolute pairwise correlation among the new
+features is 0.6439 and the maximum is 0.9977, between `st_s2_coh_mean` and
+`st_s2_aniso_mean`. The energy summaries are also strongly redundant:
+`st_s1_energy_p90` versus `st_s2_energy_p90` 0.9935, versus `st_energy_mean`
+0.9854, and `st_s2_energy_p90` versus `st_energy_mean` 0.9820. In the combined
+candidate the maximum absolute new-versus-global correlation is 0.9387, between
+`st_s1_coh_mean` and `ink_fraction`. Random-forest importance (descriptive, not
+causal) gives the combined candidate a structure-tensor share of 0.1362, with
+`histogram_entropy` alone at 0.6292. The structure-only candidate is dominated
+by `st_s1_coh_p90` (0.3376), `st_s2_energy_p90` (0.2889) and
+`st_s1_energy_p90` (0.2837). The training-to-validation geometric RMSE gap is
+0.02645 for the champion, 0.02894 for the combined candidate and 0.03166 for the
+structure-only candidate.
+
+**Decision.** The frozen M5C champion is retained. Multi-scale structure-tensor
+features do not improve geometric-distortion SSIM prediction beyond the global
+eight while preserving clean-reference and original-task performance. The
+structure tensor is a different representation from M6C's gradient summaries,
+but it is not a different enough source of information: its coherence,
+anisotropy and energy summaries are strongly redundant with one another and with
+the global edge/ink statistics. Conventional feature-based ML remains the
+benchmark champion. The evidence does not justify a CNN on this result alone.
+The M6A-M6D series now covers coarse regional summaries, finer regional grids,
+whole-image gradient summaries and multi-scale structure-tensor summaries; none
+adds a retention-safe geometric gain. These results cover one synthetic
+renderer, one canvas size, three fonts and 12 held-out source groups; nothing
+here measures human readability or CAPTCHA solvability.
 
 ## 6. Data leakage risks and controls
 

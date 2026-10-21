@@ -4,17 +4,17 @@ A reproducible, end-to-end computer-vision project for generating synthetic
 CAPTCHA-style text images, applying controlled visual distortions, measuring
 image quality, and modelling how those distortions affect image degradation.
 
-> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B and M6C
-> complete — the metric-validation pilot, a reproducible dataset/feature
+> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C and
+> M6D complete — the metric-validation pilot, a reproducible dataset/feature
 > pipeline, a leakage-safe conventional-ML benchmark, an occlusion/interference
 > feasibility pilot, a grouped occlusion/interference robustness benchmark, a
 > geometric-distortion feasibility pilot, a grouped geometric-robustness
 > benchmark, a retention-aware selection and calibration study, a retention-aware
 > training-objective study, a spatial-aware feature study, a spatial resolution
-> study, and a local structural feature study have been run and logged. The CNN
-> comparison, full M5 error taxonomy and dashboard are **not implemented**, and
-> the project does **not** predict human CAPTCHA solvability. See
-> [Current status](#current-status).
+> study, a local structural feature study, and a multi-scale structure-tensor
+> study have been run and logged. The CNN comparison, full M5 error taxonomy and
+> dashboard are **not implemented**, and the project does **not** predict human
+> CAPTCHA solvability. See [Current status](#current-status).
 
 ## Overview
 
@@ -97,6 +97,10 @@ fact.
   gradient-orientation features from the corrupted image alone, under a
   structurally enforced no-reference boundary, with three predeclared ablations
   (**implemented**).
+- A multi-scale structure-tensor study computing two-scale coherence,
+  anisotropy and tensor-energy summaries from the corrupted image alone, under
+  the same structurally enforced no-reference boundary, with three predeclared
+  ablations (**implemented**).
 - A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
@@ -168,8 +172,8 @@ held-out-font stress test and source-isolated interference evaluation), the
 M5A geometric-distortion feasibility pilot, the M5B grouped
 geometric-robustness benchmark, the M5C retention-aware selection study, the
 M5D retention-aware training-objective study, the M6A spatial-aware feature
-study, the M6B spatial resolution study and the M6C local structural feature
-study. The full M5 error taxonomy and
+study, the M6B spatial resolution study, the M6C local structural feature study
+and the M6D multi-scale structure-tensor study. The full M5 error taxonomy and
 Stage 9 dashboard are planned. Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
 result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
@@ -288,7 +292,7 @@ environment files are required at this stage.
 | M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
-| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D, M6A, M6B and M6C complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. M6B resolution study: finer grids *do* resolve the warp (correlation +0.45 → +0.83) but still produce no demonstrable gain, so the blocker is feature relevance, not resolution. M6C local-structure study: gradient-magnitude and gradient-orientation features do not beat the global eight while preserving retention; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0044, interval includes zero) but regresses clean and original-task slices, and the local family is strongly redundant with the global one. CNN not justified |
+| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D, M6A, M6B, M6C and M6D complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. M6B resolution study: finer grids *do* resolve the warp (correlation +0.45 → +0.83) but still produce no demonstrable gain, so the blocker is feature relevance, not resolution. M6C local-structure study: gradient-magnitude and gradient-orientation features do not beat the global eight while preserving retention; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0044, interval includes zero) but regresses clean and original-task slices, and the local family is strongly redundant with the global one. M6D structure-tensor study: two-scale coherence/anisotropy/energy features also fail; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0014, interval includes zero) but breaches the clean-reference tolerance, and the new features are strongly redundant with each other and with the global eight. CNN not justified |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -302,9 +306,10 @@ feasibility pilot without training a model; M5B uses the M5A dataset for a
 grouped zero-shot and controlled-adaptation benchmark on the same frozen M3
 source split, M5C adds a retention-aware selection and calibration study on
 those same frames, M5D adds a retention-aware training-objective study, M6A adds
-a spatial-aware feature study, M6B adds a spatial resolution study, and M6C adds
-a local structural feature study under a strict no-reference boundary. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all twelve recorded
+a spatial-aware feature study, M6B adds a spatial resolution study, M6C adds
+a local structural feature study under a strict no-reference boundary, and M6D
+adds a multi-scale structure-tensor study under the same boundary. See
+[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all thirteen recorded
 experiments.
 
 ## Quick start: dataset pipeline
@@ -582,6 +587,30 @@ The run writes `reports/local_structure_study_v0_1_0/` and
 recorded in `EXP-0012` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.17.
 
+## Quick start: multi-scale structure-tensor study
+
+M6D asks whether compact multi-scale structure-tensor features computed from the
+corrupted image alone add information beyond the global eight while preserving
+clean-reference and original-task performance. The extractor accepts one
+corrupted image and nothing else; the no-reference boundary is checked
+structurally on every run.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-structure-tensor-study run \
+    --config configs/structure_tensor_study_v0_1_0.toml
+
+# Verify the written run: boundary, artifact hashes, prediction replay and protocol
+uv run --extra image --extra ml captcha-structure-tensor-study verify \
+    --config configs/structure_tensor_study_v0_1_0.toml
+```
+
+The run writes `reports/structure_tensor_study_v0_1_0/` and
+`models/structure_tensor_study_v0_1_0/` (both Git-ignored). The results are
+recorded in `EXP-0013` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.18.
+
 ## Current status
 
 Implemented:
@@ -696,7 +725,13 @@ Implemented:
   degeneracy, finite/valid ranges, a structural no-reference signature and AST
   scan, metadata-leakage, split-integrity, 0.5 px exclusion, validation-only
   selection, champion fallback, model-reload equivalence and deterministic
-  tables/report/model-bundle tests.
+  tables/report/model-bundle tests, and the M6D exact structure-tensor
+  schema/order, two-scale manifest, known-orientation and isotropic-noise
+  behaviour, blank/uniform and near-zero-energy degeneracy, finite/valid ranges,
+  structural no-reference signature and AST scan, metadata-leakage,
+  split-integrity, 0.5 px exclusion, validation-only selection, champion
+  fallback, model-reload equivalence and deterministic tables/report/model-bundle
+  tests.
 
 Milestone 5A findings (synthetic image similarity only — **not** human
 readability or solvability):
@@ -963,6 +998,56 @@ readability or solvability):
   descriptive. Interval overlap or non-overlap is not treated as a
   significance test, and no universal threshold was introduced after seeing
   test results.
+
+Milestone M6D findings (synthetic image similarity only — **not** human
+readability or solvability):
+
+- **No structure-tensor candidate was selected.** The frozen M5C champion is
+  retained. The combined candidate is ineligible on validation because its
+  clean-reference RMSE 0.00516 exceeds the champion's 0.00223 by more than the
+  50% tolerance; the structure-only candidate breaches the clean-reference
+  tolerance (0.01540 versus 0.00223) and the original-task tolerance (0.03315
+  versus 0.02007).
+- **The combined candidate is neutral on the geometric aggregate, not better.**
+  Its test geometric RMSE is 0.06036 versus 0.05901 for the champion (paired
+  difference +0.00135, preliminary interval [-0.00390, 0.00575]). The
+  structure-only candidate is 0.06532 (+0.00631, [-0.00019, 0.01181]).
+- **The geometric effect is mixed across the ladder.** The combined candidate
+  improves the 1 px rung (RMSE 0.04293 versus 0.06187, paired -0.01894
+  [-0.03022, -0.00620]), regresses the 2 px rung (0.03848 versus 0.02362,
+  +0.01486 [0.00749, 0.02226]) and the 3 px rung (0.08721 versus 0.07784,
+  +0.00937 [-0.00268, 0.01907], interval includes zero).
+- **Retention is worse.** On test, the combined candidate's clean-reference RMSE
+  is 0.00328 versus 0.00228, original-task RMSE 0.02526 versus 0.02333 and M3
+  overall RMSE 0.02384 versus 0.02201. The structure-only candidate is worse on
+  every aggregate slice: clean 0.01822, original 0.03879 and M3 0.03707, with
+  paired intervals that exclude zero.
+- **The new family is strongly redundant.** The maximum absolute pairwise
+  correlation among the nine new features is 0.9977 (`st_s2_coh_mean` versus
+  `st_s2_aniso_mean`); the energy summaries are also nearly interchangeable
+  across scales (0.9820-0.9935). The maximum new-versus-global correlation is
+  0.9387 (`st_s1_coh_mean` versus `ink_fraction`). Random-forest importance
+  gives the combined candidate a structure-tensor share of 0.1362, with
+  `histogram_entropy` alone at 0.6292.
+- **The no-reference boundary is structural, not cosmetic.** The extractor
+  signature accepts one corrupted image and an optional spec; an AST scan of the
+  feature module confirms no target, reference, source, severity, font, split or
+  path identifier, no dynamic import and no file I/O. Tests repeat both checks
+  independently, and an opaque `sample_id` never changes a feature value.
+- **What this rules in and out.** Two-scale structure-tensor coherence,
+  anisotropy and energy summaries do not add usable information beyond the
+  global eight while preserving retention. The M6A-M6D series now covers coarse
+  regional summaries, finer regional grids, whole-image gradient summaries and
+  multi-scale structure-tensor summaries; none adds a retention-safe geometric
+  gain. A learned representation is the remaining distinct family, but it is a
+  separate milestone and is not justified by this result alone.
+- **Decision.** Conventional feature-based ML remains the benchmark champion
+  and the M5C champion remains the best geometric-robustness policy found so
+  far. The evidence does not justify a CNN on this result alone.
+- **Uncertainty.** Every interval resamples whole source groups and there are
+  only 12 held-out test sources, so all intervals are preliminary and
+  descriptive. Interval overlap or non-overlap is not treated as a significance
+  test, and no universal threshold was introduced after seeing test results.
 
 Milestone 4B findings (synthetic image similarity only — **not** human
 readability or solvability):

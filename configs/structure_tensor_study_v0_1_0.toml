@@ -1,0 +1,201 @@
+# Milestone M6D multi-scale structure-tensor study.
+#
+# This file is separate from the frozen Milestone 2 dataset, the Milestone 3
+# benchmark, the M4A/M4B occlusion-interference work, the M5A geometric pilot,
+# the M5B grouped geometric-robustness benchmark, the M5C retention-aware
+# selection study, the M5D retention-aware training study, the M6A
+# spatial-aware feature study, the M6B spatial resolution study and the M6C
+# local-structure study. It pins the exact inputs and declares the structure-
+# tensor feature definitions, the three candidate representations, the model
+# settings, and the eligibility constraints and selection score before any
+# test-source prediction is made.
+#
+# Scope: synthetic image similarity (SSIM against the clean reference), not
+# human readability, CAPTCHA solvability, security or real-world generalisation.
+
+[run]
+name = "structure-tensor-study"
+version = "v0.1.0"
+seed = 20261107
+n_bootstrap = 1000
+output_reports = "reports/structure_tensor_study_v0_1_0"
+output_models = "models/structure_tensor_study_v0_1_0"
+
+[schema]
+# The frozen global feature schema is unchanged and is recorded here so the
+# study can prove the global pipeline was not altered.
+global_feature_set_version = "v1"
+global_feature_names = [
+  "intensity_mean",
+  "intensity_std",
+  "contrast_rms",
+  "ink_fraction",
+  "laplacian_variance",
+  "edge_density",
+  "histogram_entropy",
+  "noise_sigma_immerkaer",
+]
+target = "ssim_target"
+split_names = ["train", "val", "test"]
+
+# The upstream M5C study is the frozen input. M6D reuses its pinned M3/M5A
+# hashes, its source-grouped split and its verified frames verbatim by loading
+# the M5C configuration, so every milestone operates on identical data. The M5C
+# champion bundle is the primary baseline and is loaded without refitting.
+[m5c]
+config = "configs/retention_aware_selection_v0_1_0.toml"
+config_sha256 = "48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb"
+protocol_hash = "048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a"
+champion_dir = "models/retention_aware_selection_v0_1_0"
+champion_stem = "selected_policy"
+champion_artifact_sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+
+# Prior spatial milestones are pinned and re-verified, and their feature
+# definitions are reused unchanged. M6D does not include the M6A/M6B regional
+# grids or the M6C gradient summaries in any candidate: those results are
+# historical evidence, not a reason to keep expanding the feature vector.
+[m6a]
+config = "configs/spatial_feature_study_v0_1_0.toml"
+config_sha256 = "e72a9e34926573b959959b8e62956cb6070a5c4564c05357d1e1d6b65266e909"
+protocol_hash = "d744248e0ebde54f83a005e05dd1a37bfdaa297a34e8d9f1299514e613e89bc9"
+feature_set_version = "spatial-v1"
+
+[m6b]
+config = "configs/spatial_resolution_study_v0_1_0.toml"
+config_sha256 = "9376ecef3e5d66dc7b8a7415f615de28330a02471c0476d4cf231d8ebe01a8a0"
+protocol_hash = "fafd818694cafff51ae5129453592a1793d754bc312248a7f843cb9b5013b152"
+
+# The immediately preceding study is pinned as historical context. M6D does
+# not reuse its 14 gradient-summary features in any primary representation.
+[m6c]
+config = "configs/local_structure_study_v0_1_0.toml"
+config_sha256 = "8ab83394bc07bcb3f372d71cad669dddab739dd18b0ae151175f4da789f61934"
+protocol_hash = "7c436dc5e179d9efb309bdb2b749ca1fd53fdc29e1bc4963765c7babb615c3d1"
+
+# The model family is fixed to the M5C champion's random forest, with the same
+# settings the M6A, M6B and M6C protocols used, so that the only thing differing
+# between the refitted candidates is the input representation. No hyperparameter
+# is changed to accommodate an individual feature set. These settings are
+# verified at run time against the M5B grid specification.
+[model]
+family = "random_forest"
+n_estimators = 300
+max_depth = 0
+min_samples_leaf = 1
+seed = 798117391
+
+# Severity protocol, carried forward unchanged from M5B through M6C. The 0.5 px
+# rung stays diagnostic only: it never enters fitting, selection or the primary
+# score.
+[protocol]
+primary_amplitudes_px = [1.0, 2.0, 3.0]
+diagnostic_amplitudes_px = [0.5]
+primary_severities = [2, 3, 4]
+diagnostic_severities = [1]
+
+# ---------------------------------------------------------------------------
+# Multi-scale structure-tensor features.
+#
+# Every feature is computed from the corrupted grayscale image alone. The
+# extractor has no parameter for, and no code path to, the clean reference, the
+# SSIM/PSNR targets, the source identifier, the corruption family or severity,
+# the font, the split label or the file path. The clean reference is used only
+# by the separate evaluation pipeline that computes the SSIM label.
+#
+# The image is scaled to [0, 1]. Horizontal and vertical gradients are computed
+# with scikit-image's fixed 3x3 Sobel operator (edge weights [-1, 0, 1],
+# smoothing [1, 2, 1]) and reflected boundaries; no additional normalisation is
+# applied. The tensor components Jxx = gx*gx, Jyy = gy*gy and Jxy = gx*gy are
+# smoothed by a Gaussian with the declared scale, reflected boundaries and
+# truncation at four standard deviations.
+#
+# The symmetric 2x2 tensor has non-negative eigenvalues
+#
+#   lambda_1 = (trace + sqrt((Jxx - Jyy)^2 + 4*Jxy^2)) / 2
+#   lambda_2 = (trace - sqrt((Jxx - Jyy)^2 + 4*Jxy^2)) / 2
+#
+# with trace = Jxx + Jyy and lambda_2 clipped to zero for round-off. Coherence
+# is (lambda_1 - lambda_2) / (lambda_1 + lambda_2 + epsilon), in [0, 1].
+# Anisotropy is 1 - lambda_2 / (lambda_1 + epsilon), in [0, 1]. Tensor energy
+# is lambda_1 + lambda_2, non-negative and unbounded above in squared gradient
+# units. A zero-energy tensor is an explicit zero, not a division by zero.
+#
+# Four summaries are reported at each of exactly two smoothing scales: mean
+# coherence, the 0.90 coherence quantile, mean anisotropy and the 0.90 energy
+# quantile. Mean tensor energy is reported once as st_energy_mean at the finest
+# scale, because Gaussian smoothing preserves the mean and repeating it at both
+# scales would add a duplicate column rather than a multi-scale measurement.
+# The nine resulting features, in fixed order, are:
+#
+#   st_s1_coh_mean, st_s1_coh_p90, st_s1_aniso_mean, st_s1_energy_p90,
+#   st_s2_coh_mean, st_s2_coh_p90, st_s2_aniso_mean, st_s2_energy_p90,
+#   st_energy_mean
+#
+# The quantile method is NumPy's default linear interpolation. The manifest
+# records the same names, scales, statistics and quantiles.
+# ---------------------------------------------------------------------------
+[features]
+scales = [1.0, 3.0]
+coherence_quantile = 0.90
+energy_quantile = 0.90
+epsilon = 1e-12
+gaussian_truncate = 4.0
+gradient_operator = "sobel_3x3"
+smoothing_kernel = "gaussian"
+boundary = "reflect"
+
+# The three predeclared ablations. `global_baseline` is the frozen M5C
+# champion, loaded without refitting. `structure_only` and
+# `global_plus_structure` are refitted on the same expanded training rows with
+# the same model family, settings and seed as the champion.
+[ablations]
+names = ["global_baseline", "structure_only", "global_plus_structure"]
+feature_sets.global_baseline = "global"
+feature_sets.structure_only = "structure"
+feature_sets.global_plus_structure = "combined"
+refit.global_baseline = false
+refit.structure_only = true
+refit.global_plus_structure = true
+
+# ---------------------------------------------------------------------------
+# Validation-only selection.
+#
+# The rule is the M6A/M6B/M6C rule unchanged, with the same coefficients and the
+# same tolerances, so the studies are directly comparable. The champion is the
+# reference: rmse_ref is the champion's validation RMSE on the same slice. A
+# candidate qualifies only if every retention constraint holds on validation:
+#
+#   clean RMSE     <= champion clean RMSE    * (1 + tolerance_clean)
+#   original RMSE  <= champion original RMSE * (1 + tolerance_original)
+#   each primary geometric severity s:
+#       RMSE_s      <= champion RMSE_s       * (1 + tolerance_severity)
+#
+# The per-severity constraint is what stops an aggregate geometric gain from
+# concealing a severe regression on a single rung.
+#
+# Among the qualifying candidates the score is
+#
+#   score = w_geometric * (rmse_geo   - rmse_geo_ref)
+#         + w_clean     * max(0, rmse_clean - rmse_clean_ref)
+#         + w_original  * max(0, rmse_orig  - rmse_orig_ref)
+#         + w_severity   * sum_s max(0, rmse_s - rmse_s_ref)
+#
+# Lower is better and the champion scores exactly 0. Geometric improvement is
+# rewarded; clean and original-task regressions are charged at twice the rate
+# per SSIM unit, because those slices are the incumbent's defining behaviour,
+# and a per-severity excess is charged again. Ties are broken by lower
+# aggregate geometric RMSE, then by candidate name, so the choice is
+# deterministic. If no candidate qualifies, the frozen M5C champion is kept.
+#
+# The coefficients are round numbers fixed a priori and are identical to the
+# M5D, M6A, M6B and M6C rules; none was chosen by inspecting a test result.
+# ---------------------------------------------------------------------------
+[selection]
+rule = "retention_gated_rmse_delta"
+w_geometric = 1.0
+w_clean = 2.0
+w_original = 2.0
+w_severity = 1.0
+tolerance_clean = 0.50
+tolerance_original = 0.10
+tolerance_severity = 0.25

@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0012` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0013` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0013` | 2026-10-21 | `robustness-analysis` | `completed` | Multi-scale structure-tensor features do not improve geometric prediction: the combined candidate is neutral on the geometric aggregate (RMSE +0.0014, interval includes zero) but breaches the clean-reference tolerance, the structure-only candidate is worse on every retention slice, the new features are strongly redundant with each other and with the global eight, and the champion is retained |
 | `EXP-0012` | 2026-10-21 | `robustness-analysis` | `completed` | Local structural features do not improve geometric prediction: global-plus-local is neutral on the geometric aggregate (RMSE +0.0044, interval includes zero) but regresses clean and original-task retention, local-only is worse everywhere except the 1 px rung, and the local family is strongly redundant with the global one, so the champion is retained |
 | `EXP-0011` | 2026-10-21 | `robustness-analysis` | `completed` | Finer grids do resolve the geometric warp (occupancy/SSIM correlation rises from +0.45 at 2x2 to +0.83 at 8x8) but the model cannot use it: every spatial candidate is ineligible on retention, the geometric gains are within noise, and the retention cost grows monotonically with feature count, so the champion is retained and the blocker is feature relevance, not resolution |
 | `EXP-0010` | 2026-10-20 | `robustness-analysis` | `completed` | Spatial features do not improve geometric prediction: the combined ablation gains only 0.0006 geometric RMSE and regresses the original task, the spatial-only ablation is far worse everywhere, and a grid diagnostic shows why — a 4x2 partition resolves blur 25x better than a 1-3 px warp, so the champion is retained and localization at this resolution is ruled out |
@@ -85,6 +86,266 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0013 — Multi-scale structure-tensor features: no gain beyond the global eight
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Do compact multi-scale structure-tensor features
+  computed from the corrupted image alone improve geometric-distortion SSIM
+  prediction beyond the existing eight global image features while preserving
+  clean-reference and original-task performance? M6C found that whole-image
+  gradient-magnitude and orientation summaries did not qualify under the
+  retention rule and pointed to a representation explicitly sensitive to local
+  *displacement*. M6D tests that handcrafted follow-up directly. This is a
+  synthetic image-similarity benchmark, not a human-readability,
+  CAPTCHA-solvability or security study.
+- **Code revision:** base `715f7b0` plus the M6D implementation, committed as
+  `feat: evaluate multi-scale structure tensor features`. The reported run was
+  repeated after the commit so generated provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; scikit-image 0.26.0; joblib 1.6.0; macOS 27.0.1 (arm64). No GPU was
+  used.
+- **Configuration:** `configs/structure_tensor_study_v0_1_0.toml`; config
+  sha256
+  `1cab9a9eef6b9585fc2047051f43d5092389010d11b810b72257140aa5797134`;
+  protocol hash
+  `219330344062f0be31994a0fba315d035eaa0c4b7c5272d770a4dec3630db8bb`.
+  Seed `20261107`; 1000 source-grouped bootstrap replicates.
+- **Upstream frozen inputs:** M5C config sha256
+  `48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb`, M5C
+  protocol hash
+  `048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a`, M5C
+  champion artifact sha256
+  `c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`; M6A
+  config sha256
+  `e72a9e34926573b959959b8e62956cb6070a5c4564c05357d1e1d6b65266e909`, M6A
+  protocol hash
+  `d744248e0ebde54f83a005e05dd1a37bfdaa297a34e8d9f1299514e613e89bc9`,
+  spatial feature set `spatial-v1`; M6B config sha256
+  `9376ecef3e5d66dc7b8a7415f615de28330a02471c0476d4cf231d8ebe01a8a0`, M6B
+  protocol hash
+  `fafd818694cafff51ae5129453592a1793d754bc312248a7f843cb9b5013b152`; M6C
+  config sha256
+  `8ab83394bc07bcb3f372d71cad669dddab739dd18b0ae151175f4da789f61934`, M6C
+  protocol hash
+  `7c436dc5e179d9efb309bdb2b749ca1fd53fdc29e1bc4963765c7babb615c3d1`.
+  The M3 dataset, split and model, the M4A pilot, the M4B benchmark, the M5A
+  pilot, the M5B benchmark, the M5C study, the M5D study, the M6A study, the M6B
+  study and the M6C study are unchanged and re-verified from disk. The M6C
+  gradient summaries are **not** used by any M6D candidate.
+- **Split:** the frozen M3 source-grouped assignment, reused verbatim through
+  the M5C verified path (assignment sha256
+  `70c07d171d2e2b3032db86ce8c2942f1ca5dd1c3c01bbcd30a0fac0d7dda7232`):
+  36 train / 12 validation / 12 test sources. Expanded training 432 rows /
+  36 sources; expanded validation 144 rows / 12 sources; primary geometric test
+  36 rows / 12 sources; diagnostic 0.5 px test 12 rows / 12 sources; M3 test
+  108 rows / 12 sources.
+- **Runtime:** 6.98 s in process on the recorded machine (not a benchmark); it
+  varies slightly between runs.
+
+**Method.** Nine structure-tensor features are computed from the corrupted
+grayscale image alone at exactly two predeclared Gaussian scales,
+`sigma = 1.0` and `sigma = 3.0` px. The image is scaled to `[0, 1]`;
+horizontal and vertical gradients use scikit-image's fixed 3x3 Sobel operator
+with reflected boundaries and no extra normalisation. The tensor components
+`Jxx = gx*gx`, `Jyy = gy*gy` and `Jxy = gx*gy` are smoothed by a Gaussian with
+the declared scale, reflected boundaries and truncation at four standard
+deviations.
+
+The symmetric 2x2 tensor eigenvalues are
+
+```text
+lambda_1 = (trace + sqrt((Jxx - Jyy)^2 + 4*Jxy^2)) / 2
+lambda_2 = (trace - sqrt((Jxx - Jyy)^2 + 4*Jxy^2)) / 2
+trace    = Jxx + Jyy
+```
+
+with `lambda_2` clipped to `[0, lambda_1]` for round-off. Coherence is
+`(lambda_1 - lambda_2) / (lambda_1 + lambda_2 + epsilon)`, in `[0, 1]`.
+Anisotropy is `1 - lambda_2 / (lambda_1 + epsilon)`, in `[0, 1]`. Tensor energy
+is `lambda_1 + lambda_2`, non-negative and unbounded above in squared-gradient
+units. `epsilon = 1e-12` is fixed; a zero-energy tensor is an explicit zero, not
+a division by zero. Quantiles use NumPy's linear interpolation.
+
+Four summaries are reported at each scale: mean coherence, the 0.90 coherence
+quantile, mean anisotropy and the 0.90 energy quantile. Mean tensor energy is
+reported once as `st_energy_mean` at the finest scale, because Gaussian
+smoothing preserves the mean and repeating it at both scales would duplicate a
+column. The nine features, in fixed order, are `st_s1_coh_mean`,
+`st_s1_coh_p90`, `st_s1_aniso_mean`, `st_s1_energy_p90`, `st_s2_coh_mean`,
+`st_s2_coh_p90`, `st_s2_aniso_mean`, `st_s2_energy_p90` and `st_energy_mean`.
+Every output is finite and deterministic. An exactly uniform image has zero
+gradient everywhere and therefore produces nine defined zeros. A single faint
+step produces finite, bounded summaries.
+
+The **no-reference boundary** is strict and structural. The extractor signature
+is `extract_structure_tensor_features(image, spec=None)`: the only required
+input is the corrupted 2-D `uint8` image array, and there is no parameter for a
+clean reference, target, source identifier, family, severity, font, split or
+path. Every run checks the signature and scans the feature module's code for
+forbidden identifiers; tests repeat both checks independently. The extractor
+imports only the shared image-contract validator from the repository, uses no
+dynamic import and performs no file I/O. The clean reference is used only by the
+separate evaluation pipeline that computes the SSIM label.
+
+Three candidates are predeclared. The frozen M5C champion is loaded without
+refitting; the structure-only and global-plus-structure candidates are refitted
+on the same 432 expanded training rows with the same model family,
+hyperparameters, seed and objective (random forest, 300 trees, unlimited depth,
+leaf size 1, seed 798117391). No hyperparameter is tuned, no post-hoc
+calibration is applied and no feature is removed in response to a diagnostic.
+The M6A/M6B/M6C retention-aware selection rule is used unchanged, with the same
+coefficients and tolerances, and the frozen champion is the fallback. The
+0.5 px rung is diagnostic only.
+
+**Validation results by slice (selection evidence).**
+
+| candidate | features | slice | MAE | RMSE | R2 | mean residual | residual SD |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| `global_baseline` | 8 | geometric primary | 0.04196 | 0.04925 | 0.28670 | +0.00224 | 0.04989 |
+| `global_baseline` | 8 | clean reference | 0.00127 | 0.00223 | n/a | +0.00127 | 0.00192 |
+| `global_baseline` | 8 | original blur/noise | 0.01589 | 0.02007 | 0.98660 | +0.00121 | 0.02014 |
+| `global_baseline` | 8 | overall | 0.02119 | 0.02959 | 0.97701 | +0.00147 | 0.02965 |
+| `structure_only` | 9 | geometric primary | 0.03909 | 0.05189 | 0.20796 | -0.01375 | 0.05075 |
+| `structure_only` | 9 | clean reference | 0.01030 | 0.01540 | n/a | +0.01030 | 0.01196 |
+| `structure_only` | 9 | original blur/noise | 0.02417 | 0.03315 | 0.96344 | -0.00286 | 0.03320 |
+| `structure_only` | 9 | overall | 0.02674 | 0.03776 | 0.96256 | -0.00449 | 0.03762 |
+| `global_plus_structure` | 17 | geometric primary | 0.03913 | 0.04935 | 0.28372 | -0.00667 | 0.04959 |
+| `global_plus_structure` | 17 | clean reference | 0.00240 | 0.00516 | n/a | +0.00240 | 0.00477 |
+| `global_plus_structure` | 17 | original blur/noise | 0.01429 | 0.01904 | 0.98793 | +0.00045 | 0.01914 |
+| `global_plus_structure` | 17 | overall | 0.01951 | 0.02920 | 0.97760 | -0.00117 | 0.02928 |
+
+`global_plus_structure` breaches the 50% clean-reference tolerance (validation
+RMSE 0.00516 versus 0.00223). `structure_only` breaches the 50% clean-reference
+tolerance (0.01540 versus 0.00223) and the 10% original-task tolerance (0.03315
+versus 0.02007). The per-severity constraints are satisfied by both new
+candidates on validation: severity 2 RMSE 0.04687 and 0.04742, severity 3 RMSE
+0.02238 and 0.02852, severity 4 RMSE 0.06789 and 0.07084, all within 25% of the
+champion's 0.05254, 0.02494 and 0.06240. The aggregate geometric validation
+RMSE is 0.04925 for the champion, 0.04935 for the combined candidate and 0.05189
+for the structure-only candidate. The champion is retained.
+
+**Test results by slice (after selection was frozen).**
+
+| candidate | slice | MAE | RMSE | R2 | mean residual | residual SD |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `global_baseline` | geometric primary | 0.04928 | 0.05901 | 0.18553 | -0.00459 | 0.05966 |
+| `global_baseline` | clean reference | 0.00127 | 0.00228 | n/a | +0.00127 | 0.00197 |
+| `global_baseline` | original blur/noise | 0.01741 | 0.02333 | 0.98141 | +0.00479 | 0.02295 |
+| `global_baseline` | M3 test overall | 0.01562 | 0.02201 | 0.98716 | +0.00440 | 0.02166 |
+| `structure_only` | geometric primary | 0.05213 | 0.06532 | 0.00199 | -0.01610 | 0.06420 |
+| `structure_only` | clean reference | 0.01172 | 0.01822 | n/a | +0.01172 | 0.01457 |
+| `structure_only` | original blur/noise | 0.02741 | 0.03879 | 0.94860 | -0.00146 | 0.03897 |
+| `structure_only` | M3 test overall | 0.02566 | 0.03707 | 0.96355 | +0.00000 | 0.03724 |
+| `global_plus_structure` | geometric primary | 0.04969 | 0.06036 | 0.14780 | -0.01225 | 0.05994 |
+| `global_plus_structure` | clean reference | 0.00159 | 0.00328 | n/a | +0.00159 | 0.00300 |
+| `global_plus_structure` | original blur/noise | 0.01704 | 0.02526 | 0.97820 | +0.00228 | 0.02529 |
+| `global_plus_structure` | M3 test overall | 0.01533 | 0.02384 | 0.98492 | +0.00221 | 0.02385 |
+
+The champion's reference metrics reproduce the pinned M5C values exactly:
+geometric MAE/RMSE/R2 0.04928/0.05901/0.18553, clean RMSE 0.00228, original
+RMSE 0.02333, M3 test RMSE 0.02201/R2 0.98716. Neither new candidate improves
+the aggregate geometric slice. `global_plus_structure` is 0.00135 worse in RMSE
+and `structure_only` is 0.00631 worse.
+
+The geometric effect is mixed across the primary ladder:
+
+| candidate | sev 2 RMSE | sev 3 RMSE | sev 4 RMSE |
+| --- | ---: | ---: | ---: |
+| `global_baseline` | 0.06187 | 0.02362 | 0.07784 |
+| `structure_only` | 0.04704 (-0.01483) | 0.04319 (+0.01957) | 0.09339 (+0.01555) |
+| `global_plus_structure` | 0.04293 (-0.01894) | 0.03848 (+0.01486) | 0.08721 (+0.00937) |
+
+The combined candidate's severity-2 improvement and severity-3 regression have
+paired intervals that exclude zero; its severity-4 interval includes zero. The
+structure-only candidate's severity-3 and severity-4 regressions exclude zero,
+while its severity-2 interval includes zero. The aggregate geometric intervals
+include zero for both candidates.
+
+**Paired source-grouped differences (candidate minus champion, RMSE).**
+
+| slice | `structure_only` | `global_plus_structure` |
+| --- | --- | --- |
+| geometric primary | +0.00631 [-0.00019, 0.01181] | +0.00135 [-0.00390, 0.00575] |
+| clean reference | +0.01594 [0.00648, 0.02342] | +0.00101 [-0.00026, 0.00188] |
+| original blur/noise | +0.01546 [0.00398, 0.02553] | +0.00194 [-0.00240, 0.00848] |
+| M3 test overall | +0.01507 [0.00567, 0.02508] | +0.00184 [-0.00219, 0.00821] |
+
+There are 12 held-out test source groups, so these intervals are preliminary and
+descriptive; no significance claim is made. The pattern is that the combined
+candidate is approximately neutral on aggregate geometric error while costing a
+small clean-reference regression that the validation rule already rejected, and
+the structure-only candidate is clearly worse on retention.
+
+**Training-only diagnostics.** On 432 training rows, none of the nine
+structure-tensor features is constant, duplicated or non-finite. The mean
+absolute pairwise correlation among the new features is 0.6439 and the maximum
+is 0.9977, between `st_s2_coh_mean` and `st_s2_aniso_mean`; the energy summaries
+are also strongly redundant (`st_s1_energy_p90` versus `st_s2_energy_p90`
+0.9935, versus `st_energy_mean` 0.9854, and `st_s2_energy_p90` versus
+`st_energy_mean` 0.9820). In the combined candidate the maximum absolute
+correlation between a new feature and a global feature is 0.9387, between
+`st_s1_coh_mean` and `ink_fraction`. Random-forest importance (descriptive, not
+causal) gives the combined candidate a structure-tensor share of 0.1362;
+`histogram_entropy` alone accounts for 0.6292, `ink_fraction` 0.0823,
+`noise_sigma_immerkaer` 0.0751 and `laplacian_variance` 0.0451. The
+structure-only candidate is dominated by `st_s1_coh_p90` (0.3376),
+`st_s2_energy_p90` (0.2889) and `st_s1_energy_p90` (0.2837). The
+training-to-validation geometric RMSE gap is 0.02645 for the champion, 0.02894
+for the combined candidate and 0.03166 for the structure-only candidate, so the
+larger feature sets also overfit more.
+
+**Observations.** The structure tensor is a genuinely different representation
+from the M6C gradient summaries, but it is not a different enough *source of
+information*. Coherence and anisotropy are nearly interchangeable at the coarser
+scale, the energy quantiles are nearly interchangeable across scales, and the
+finest coherence summary is strongly correlated with `ink_fraction`. The
+combined candidate's validation geometric RMSE is essentially unchanged
+(0.04935 versus 0.04925) and its test geometric RMSE is slightly worse
+(+0.00135, interval includes zero), while its clean-reference validation RMSE
+more than doubles. The structure-only candidate is worse on every aggregate
+slice. No candidate qualifies under the predeclared retention rule, and the rule
+was not weakened to force a winner.
+
+**Conclusion.** The hypothesis is not supported. Multi-scale structure-tensor
+features computed from the corrupted image alone do not improve
+geometric-distortion SSIM prediction beyond the eight global features while
+preserving clean-reference and original-task performance. The frozen M5C
+champion is retained. This is a negative result, reported as such. The
+accumulated M6A-M6D evidence now covers coarse regional summaries, finer
+regional grids, whole-image gradient summaries and multi-scale structure-tensor
+summaries; none adds a retention-safe geometric gain. Conventional feature-based
+ML remains the benchmark champion, and the evidence does not justify a CNN on
+this result alone.
+
+**Limitations.**
+
+- One synthetic renderer, one 192x64 canvas, three fonts and 12 held-out test
+  source groups. All grouped intervals are preliminary.
+- Only two Gaussian scales and four summaries per scale were tested. The result
+  does not rule out every possible structure-tensor configuration.
+- The feature set contains near-duplicate columns by construction (coherence and
+  anisotropy at the same scale, energy quantiles across scales). This limits the
+  independent information available to the forest.
+- The features are whole-image summaries of local tensors. They do not register
+  or compare a region against its own clean reference, so they cannot directly
+  measure displacement.
+- SSIM is a full-reference structural proxy, not human readability or CAPTCHA
+  solvability. This is not a security evaluation.
+- No CNN, dashboard, deployment, external CAPTCHA dataset or additional
+  corruption family is part of this milestone.
+
+**Next step.** No follow-up is started in this milestone. M6D is the last
+planned handcrafted-feature study; a learned representation would be a separate
+predeclared milestone and requires review before any test-driven iteration.
+
+**Artifacts.** Git-ignored: `reports/structure_tensor_study_v0_1_0/` (tables,
+diagnostics, report, metadata) and
+`models/structure_tensor_study_v0_1_0/` (refitted bundles and cards).
 
 ---
 
