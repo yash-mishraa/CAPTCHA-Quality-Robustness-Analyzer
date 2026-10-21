@@ -392,6 +392,7 @@ byte-for-byte.
 | M3 | Conventional baselines with grouped evaluation and held-out-font stress test (complete) |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison (M4A pilot and M4B benchmark complete; CNN not started) |
 | M5 | Geometric-distortion feasibility pilot; grouped geometric-robustness benchmark; retention-aware selection and calibration; retention-aware training objectives; spatial-aware feature study; spatial resolution study; local structural feature study; multi-scale structure-tensor study; broader robustness analysis and error taxonomy (M5A pilot, M5B benchmark, M5C selection study, M5D training study, M6A feature study, M6B resolution study, M6C local-structure study and M6D structure-tensor study complete) |
+| M7A | Dataset-adequacy and evaluation audit of the frozen dataset, targets, split, champion and feature studies (complete) |
 | M6 | Dashboard, reproducibility packaging, final report |
 
 ## 6. Key risks and open questions
@@ -468,6 +469,14 @@ byte-for-byte.
 - **Small test support:** M4B, M5B, M5C, M5D, M6A, M6B, M6C and M6D have only 12
   held-out sources. Source-grouped intervals are wide and preliminary; no
   universal significance threshold was introduced after seeing test results.
+- **Benchmark coverage is condition-specific:** M7A found that all three fonts,
+  the single renderer, the 192x64 resolution and the 8-bit grayscale PNG format
+  are shared across every split. The benchmark supports within-condition
+  synthetic SSIM claims and the M5C champion comparison, but it cannot test
+  unseen-font, unseen-renderer, real-world, human-readability or
+  CAPTCHA-security claims. The 0.5 px geometric rung is near-degenerate (target
+  SD 0.00266) and is diagnostic only. The recommended next step is a future
+  versioned dataset with explicitly held-out fonts or rendering conditions.
 - **Font licensing:** only redistributable fonts may be used or bundled.
 
 ## 7. Implemented today
@@ -638,3 +647,23 @@ show strong redundancy: the maximum absolute pairwise correlation among the new
 features is 0.9977 and the maximum new-versus-global correlation is 0.9387, so
 the forest gives the new block only 0.1362 of the combined importance. The M5C
 champion is retained. No dashboard, deployment or final presentation exists yet.
+
+Milestone M7A: a read-only dataset-adequacy and evaluation audit of the frozen
+M3/M5A data, target definitions, source-grouped split, M5C champion and
+M6A–M6D feature studies. The audit verifies 24 pinned inputs, replays the
+champion's stored test predictions, fingerprints 1766 protected files before
+and after the run, and writes only to a Git-ignored report directory. It found
+60 sources with a 36/12/12 split, 540 M3 rows and 480 M5A rows; M5A has only
+360 distinct images because identity and zero-field controls are exact clean
+duplicates. The champion reproduces M3 test RMSE 0.02201 / R² 0.98716, clean
+RMSE 0.00227, original-task RMSE 0.02333 and primary geometric RMSE 0.05901 /
+R² 0.18553. Geometric error is concentrated (top source 17.7%, top three
+42.7%), the 0.5 px diagnostic is near-degenerate (target SD 0.00266), and the
+eight features are strongly redundant (max training |r| 0.991). The claim audit
+classifies 3 claims as supported, 2 as suggestive and 7 as unsupported. In
+particular, all three fonts and the single renderer/resolution/format are
+shared across every split, so the benchmark cannot support unseen-font,
+unseen-renderer, real-world, human-readability or broad-generalisation claims.
+The recommended next direction is **B: add explicitly held-out fonts or
+rendering conditions in a future versioned dataset**. No dashboard, deployment
+or final presentation exists yet.

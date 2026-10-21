@@ -1761,6 +1761,88 @@ adds a retention-safe geometric gain. These results cover one synthetic
 renderer, one canvas size, three fonts and 12 held-out source groups; nothing
 here measures human readability or CAPTCHA solvability.
 
+### 5.19 M7A dataset-adequacy and evaluation audit
+
+M7A is a **read-only audit** of the frozen synthetic dataset, target
+definitions, source-grouped split, M5C champion and M6A–M6D feature studies. It
+does not generate images, train or recalibrate a model, change a target, change
+a split, add a corruption family or select a new champion. Its purpose is to
+establish what the existing benchmark can and cannot support before any further
+modelling.
+
+**Pinned inputs and isolation.** `configs/dataset_adequacy_audit_v0_1_0.toml`
+pins 24 upstream files by SHA-256, including the M3/M5A configs and manifests,
+the M5B protocol and split assignment, the M5C champion artifact/card and
+prediction/metric/selection tables, and the M3 held-out-font comparison. The
+audit loads the frames through the existing M5B/M5C verified path, replays the
+champion's stored test predictions from the serialized model, and checks the
+stored test-slice metrics against that replay. It fingerprints the protected
+asset tree before and after the run and refuses to write into any frozen path.
+The independent unit is `source_id`; image variants are correlated and are
+never treated as independent observations.
+
+**Dataset composition.** The audit reports, per source and split, the number of
+M3 and M5A rows, distinct images, clean references, blur/noise severities,
+control types, elastic variants, font, text length, resolution, pixel format,
+renderer and clean-image hash. It accounts for every row in M3, M5A, the
+expanded training/validation frames and the evaluation scopes. It verifies
+source disjointness, M3/M5A source identity, shared font sets, clean-reference
+hash equality, exact control relationships and the declared split counts. The
+key facts are 60 sources, 36/12/12 split, 540 M3 rows, 480 M5A rows, three shared
+fonts, one renderer, one 192x64 resolution and one 8-bit grayscale PNG format.
+M5A has 360 distinct images because identity and zero-field controls are exact
+clean duplicates and the minimal control is near-clean.
+
+**Target distributions.** For clean, original, each original severity, primary
+geometric severities 2–4 and the 0.5 px diagnostic, the audit reports counts,
+min/max/mean/SD, 5/25/50/75/95 quantiles, variance, between-source variance,
+mean within-source variance, a descriptive between-variance share and a
+near-degeneracy flag. The predeclared near-degeneracy margin is target SD
+`< 0.005`, inherited from M5A. The clean target is constant at 1.0, so its
+variance is zero and R² is undefined. The 0.5 px diagnostic has SD 0.00266 and
+is reported as diagnostic only.
+
+**Residuals and influence.** The audit reports per-source MAE/RMSE, mean and SD
+of residuals, per-source/per-severity RMSE where the slice supports it,
+per-font residuals, squared-error contribution and concentration (top-1, top-k,
+HHI, effective source count), and descriptive leave-one-source-out RMSE/MAE
+changes. No model is refit during these calculations, so they are influence
+measures on the frozen predictions, not new generalisation estimates.
+
+**Uncertainty.** For every declared scope, the audit runs 2000 source-grouped
+percentile bootstrap replicates with seed `20261108` (scope-specific derived
+seeds). Each replicate resamples whole source groups with replacement and keeps
+all variants of a sampled source together. The tables record the method, seed,
+replicate count, confidence level, number of groups, number of rows and a
+12-group caveat. Intervals are descriptive and unstable with so few groups; no
+significance test is performed.
+
+**Feature diagnostics.** On the 432 expanded training rows from 36 sources, the
+audit reports constants, exact duplicates, scales and distributions, Pearson and
+Spearman correlations, frozen-model impurity importance, condition number, VIF
+and family/severity feature means. These diagnostics are descriptive only. No
+feature is removed, added or redesigned from test outcomes. The strongest
+training-only correlation is |r| 0.991 between `intensity_std` and
+`contrast_rms`; `histogram_entropy` has the largest impurity importance
+(0.633), which is not a causal claim.
+
+**Claim table and direction comparison.** Twelve claims are classified as
+`supported`, `suggestive` or `unsupported` against the frozen benchmark. Three
+are supported, two suggestive and seven unsupported. The audit compares four
+predeclared next directions on hypothesis, scientific value, data needs,
+implementation needs, leakage/generalisation risk, success measurement and
+whether current data can answer the question, and recommends exactly one
+without executing it. M7A recommends **B: add explicitly held-out fonts or
+rendering conditions in a future versioned dataset**.
+
+**Verification.** `captcha-dataset-audit run` writes only to the Git-ignored
+`reports/dataset_adequacy_audit_v0_1_0/` directory. `captcha-dataset-audit
+verify` reloads the pinned inputs, replays the audit core, compares every table
+and the report text, checks recorded output hashes, rechecks frozen-asset
+fingerprints, and validates the claim and recommendation schemas. Two runs from
+the same clean commit are byte-identical except for the runtime-only
+`runtime_seconds` metadata field.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |
@@ -1774,6 +1856,7 @@ here measures human readability or CAPTCHA solvability.
 | Duplicate images from different configs | Hidden overlap | Hash images and manifest records; report duplicates |
 | Clean references duplicated across datasets | Double-counting or accidental clean leakage | Exact sample/image hash comparison; exclude M4A clean rows from expanded fitting and report the clean test slice separately |
 | Font memorisation | Model learns font identity | Font-held-out evaluation slice |
+| Shared rendering condition across splits | A within-condition score is misread as condition generalisation | M7A audits font/renderer/resolution/format coverage and classifies unseen-condition claims as unsupported until a held-out condition exists |
 | Metric code drift | Scores not comparable across runs | Pin metric implementation, log version/config hash |
 
 ## 7. Evaluation strategy

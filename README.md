@@ -101,6 +101,11 @@ fact.
   anisotropy and tensor-energy summaries from the corrupted image alone, under
   the same structurally enforced no-reference boundary, with three predeclared
   ablations (**implemented**).
+- A read-only dataset-adequacy and evaluation audit that verifies the frozen
+  inputs, replays the champion, quantifies source-grouped uncertainty, audits
+  training-only feature redundancy, classifies claims against the current
+  evidence and recommends one next direction without executing it
+  (**implemented**).
 - A CNN comparison (**planned**).
 - A Streamlit dashboard for exploring results (**planned**).
 
@@ -172,9 +177,10 @@ held-out-font stress test and source-isolated interference evaluation), the
 M5A geometric-distortion feasibility pilot, the M5B grouped
 geometric-robustness benchmark, the M5C retention-aware selection study, the
 M5D retention-aware training-objective study, the M6A spatial-aware feature
-study, the M6B spatial resolution study, the M6C local structural feature study
-and the M6D multi-scale structure-tensor study. The full M5 error taxonomy and
-Stage 9 dashboard are planned. Each implemented stage
+study, the M6B spatial resolution study, the M6C local structural feature study,
+the M6D multi-scale structure-tensor study and the M7A dataset-adequacy and
+evaluation audit. The full M5 error taxonomy and Stage 9 dashboard are planned.
+Each implemented stage
 writes artifacts with an explicit schema and a recorded configuration hash, so a
 result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
 which makes repeated runs byte-comparable.
@@ -293,6 +299,7 @@ environment files are required at this stage.
 | M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
 | M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
 | M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D, M6A, M6B, M6C and M6D complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. M6B resolution study: finer grids *do* resolve the warp (correlation +0.45 → +0.83) but still produce no demonstrable gain, so the blocker is feature relevance, not resolution. M6C local-structure study: gradient-magnitude and gradient-orientation features do not beat the global eight while preserving retention; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0044, interval includes zero) but regresses clean and original-task slices, and the local family is strongly redundant with the global one. M6D structure-tensor study: two-scale coherence/anisotropy/energy features also fail; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0014, interval includes zero) but breaches the clean-reference tolerance, and the new features are strongly redundant with each other and with the global eight. CNN not justified |
+| M7A | Dataset-adequacy and evaluation audit of the frozen dataset, targets, split, champion and feature studies | **Complete** — 60 sources, 12 independent test groups, 3 supported / 2 suggestive / 7 unsupported claims; recommended next direction is explicitly held-out fonts or rendering conditions |
 | M6 | Streamlit dashboard, reproducibility package, final report | Planned |
 
 Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
@@ -611,6 +618,39 @@ The run writes `reports/structure_tensor_study_v0_1_0/` and
 recorded in `EXP-0013` and
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.18.
 
+## Quick start: dataset-adequacy and evaluation audit
+
+M7A is a read-only audit of the frozen dataset, targets, source-grouped split,
+M5C champion and M6A–M6D feature studies. It does not train, recalibrate,
+regenerate or replace anything. It verifies 24 pinned inputs, replays the
+champion's stored test predictions, quantifies source-grouped uncertainty,
+reports training-only feature redundancy, classifies claims against the current
+evidence and recommends one next direction without executing it.
+
+```bash
+uv sync --extra dev --extra image --extra ml
+
+uv run --extra image --extra ml captcha-dataset-audit run \
+    --config configs/dataset_adequacy_audit_v0_1_0.toml
+
+# Verify the written run: input pins, prediction replay, output hashes,
+# frozen-asset fingerprints, claim schema and recommendation
+uv run --extra image --extra ml captcha-dataset-audit verify \
+    --config configs/dataset_adequacy_audit_v0_1_0.toml
+```
+
+The run writes only to `reports/dataset_adequacy_audit_v0_1_0/` (Git-ignored).
+The headline finding is that the benchmark supports within-condition synthetic
+SSIM claims and the M5C champion comparison, but not unseen-font,
+unseen-renderer, real-world, human-readability or broad-generalisation claims.
+All three fonts and the single renderer/resolution/format are shared across
+splits, only 12 test source groups are independent, the 0.5 px rung is
+near-degenerate (target SD 0.00266), and the eight features are strongly
+redundant (max training |r| 0.991). The recommended next direction is **B: add
+explicitly held-out fonts or rendering conditions in a future versioned
+dataset**. See `EXP-0014` and
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.19.
+
 ## Current status
 
 Implemented:
@@ -697,10 +737,15 @@ Implemented:
   `configs/spatial_resolution_study_v0_1_0.toml`): four predeclared grid
   resolutions in two representations with the feature definitions unchanged,
   training-only redundancy and overfitting diagnostics, and a run/verify CLI.
+- A dataset-adequacy and evaluation audit (`dataset_audit.py`,
+  `configs/dataset_adequacy_audit_v0_1_0.toml`): 24 pinned upstream inputs,
+  frozen-asset fingerprints, champion prediction replay, source-grouped
+  bootstrap, target-distribution and feature-redundancy diagnostics, a
+  claim-to-evidence table, a four-direction comparison, and a run/verify CLI.
 - Model persistence (`joblib` + JSON cards) with a `verify-model` command that
   rejects mismatched feature schemas, targets, dataset/split hashes, artifact
   hashes and incompatible scikit-learn major/minor versions.
-- 488 tests in total, all passing, including byte-identical dataset
+- 548 tests in total, all passing, including byte-identical dataset
   regeneration, tamper detection, split isolation, feature edge cases,
   train-only preprocessing, validation-only selection, grouped bootstrap,
   held-out-font isolation, persistence checks, interference determinism and
@@ -731,6 +776,12 @@ Implemented:
   structural no-reference signature and AST scan, metadata-leakage,
   split-integrity, 0.5 px exclusion, validation-only selection, champion
   fallback, model-reload equivalence and deterministic tables/report/model-bundle
+  tests, and the M7A config/schema validation, pinned-input tamper detection,
+  dataset/split/source-isolation accounting, target-slice and near-degeneracy
+  checks, per-source aggregation, leave-one-source-out arithmetic, grouped
+  bootstrap determinism, training-only feature diagnostics, claim schema,
+  single-direction recommendation, frozen-asset immutability, deterministic
+  two-run output equality, output-hash tamper detection and CLI run/verify
   tests.
 
 Milestone 5A findings (synthetic image similarity only — **not** human

@@ -1,0 +1,142 @@
+# Milestone M7A dataset-adequacy and evaluation audit.
+#
+# This is a read-only audit of the frozen Milestone 2 dataset, the M5A
+# geometric-distortion pilot, the M5B grouped benchmark, the M5C champion and
+# the M6A-M6D feature studies. It does not generate a dataset, train or
+# recalibrate a model, change a target, change a split or add a corruption
+# family. Every input below is pinned by SHA-256 and re-verified before any
+# table is written.
+#
+# Scope: synthetic image similarity (SSIM against the exact clean reference).
+# Nothing in this audit measures human readability, CAPTCHA solvability,
+# security or real-world generalisation.
+
+[run]
+name = "dataset-adequacy-audit"
+version = "v0.1.0"
+seed = 20261108
+# Source-grouped bootstrap replicates. This is a descriptive interval, not a
+# significance test; the independent unit is a source group, never an image
+# variant.
+n_bootstrap = 2000
+output_reports = "reports/dataset_adequacy_audit_v0_1_0"
+
+[schema]
+feature_set_version = "v1"
+feature_names = [
+  "intensity_mean",
+  "intensity_std",
+  "contrast_rms",
+  "ink_fraction",
+  "laplacian_variance",
+  "edge_density",
+  "histogram_entropy",
+  "noise_sigma_immerkaer",
+]
+target = "ssim_target"
+split_names = ["train", "val", "test"]
+claim_schema_version = "v1"
+allowed_classifications = ["supported", "suggestive", "unsupported"]
+
+# Frozen upstream inputs. The M5C configuration is the authoritative pin for
+# the M3/M5A datasets, the source-grouped split and the champion; the audit
+# re-loads it through the existing verified path rather than reconstructing it.
+[inputs.m3]
+dataset = "data/processed/captcha_quality_v0.1.0"
+config = "configs/dataset_v0_1_0.toml"
+config_sha256 = "72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a"
+manifest_sha256 = "a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37"
+sources_sha256 = "07d50255cdc82ea77087fc64b398d62db49f96156eea9cf5aee59bc070ab5a37"
+features_sha256 = "d3715e7975cf41c41e49fa2338ca4e961a7a59981318be19149c78e89804d798"
+ground_truth_sha256 = "7a09a01a802f104b86cf69ce686a176c1cf3c98b6369c7e4578d870e4f768eea"
+summary_sha256 = "3f03e10e94c19de2747b3ae355b32fa044de658cf1bc8ad0e90f8f57e9a96787"
+
+[inputs.m5a]
+dataset = "data/processed/geometric_distortion_pilot_v0.1.0"
+config = "configs/geometric_distortion_pilot_v0_1_0.toml"
+config_sha256 = "00b8c5caad610fb4aaf159bb8c99e329ad217aeff6450e7cd3e566387e9f0a97"
+manifest_sha256 = "c63be1088db591181f23fa306f955b3ba16fe80ffb2000c4a5e3db7656fa3806"
+sources_sha256 = "b565aed1f3d84d7d9c2685e8145868208d77c24b831a1f8c205778e2196a7ed0"
+features_sha256 = "cb82ae60d8749f21d9d5f6dd324cd075e907544aa54bcdb62bbcab988472bb65"
+summary_sha256 = "abaa11f1e20a3ffe65758a8144f71530045474dbd1984f5c67b88edf41989f2f"
+
+[inputs.m5c]
+config = "configs/retention_aware_selection_v0_1_0.toml"
+config_sha256 = "48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb"
+protocol_hash = "048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a"
+champion_dir = "models/retention_aware_selection_v0_1_0"
+champion_stem = "selected_policy"
+champion_artifact_sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+champion_card_sha256 = "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+predictions = "reports/retention_aware_selection_v0_1_0/test_predictions.csv"
+predictions_sha256 = "6d286af061bd54e70b7c8fd547d8da7079731c502eb5255d848856edf2dec906"
+test_metrics = "reports/retention_aware_selection_v0_1_0/test_slice_metrics.csv"
+test_metrics_sha256 = "1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1"
+selection_table = "reports/retention_aware_selection_v0_1_0/selection_table.csv"
+selection_table_sha256 = "8d18f66333323721191eda35b494f20291fccc90766a18bb2dedfe1af68331cf"
+run_metadata = "reports/retention_aware_selection_v0_1_0/run_metadata.json"
+run_metadata_sha256 = "7f554a5bd25326cc878fa1ea72e1df9a146c7c40487dd9f73ff11c9a63f7bcc5"
+
+[inputs.m5b]
+config = "configs/geometric_robustness_benchmark_v0_1_0.toml"
+config_sha256 = "fe5c66614cee83c72a80c20b807202deadd8a604e045f7432795a8abe706ddb1"
+data_accounting = "reports/geometric_robustness_benchmark_v0_1_0/data_accounting.csv"
+data_accounting_sha256 = "8aa4fa451bf431cfe6d2964baad3a47da1f50ab444393097af5e966e064bb3af"
+split_assignment = "reports/geometric_robustness_benchmark_v0_1_0/split_assignment.csv"
+split_assignment_sha256 = "8c4fe405c1613a7fcd92ea306588b736bc134cdcb68ee92e1628f4dfd80adbf1"
+
+# The M3 held-out-font experiment is a separate model and is used only as
+# contextual evidence about unseen-font transfer, never as a champion result.
+[inputs.m3_benchmark]
+config = "configs/benchmark_v0_1_0.toml"
+config_sha256 = "bea99c4b5ec94bc603c381c2d70366a1a0f411c67c94f61c05df64639e92ac57"
+heldout_font_metrics = "reports/benchmark_v0_1_0/heldout_font_metrics.csv"
+heldout_font_metrics_sha256 = "7a1a32debc03bba503fcef52636692b7a1368bc331f86ebc7b129b7bd751401d"
+model_comparison = "reports/benchmark_v0_1_0/model_comparison.csv"
+model_comparison_sha256 = "1f539604f6d3646af7f24cbda615718c466968fa5834a32ba4e26ef54ecac1c5"
+
+[audit]
+group_column = "source_id"
+bootstrap_method = "source_grouped_percentile"
+confidence_level = 0.95
+# A slice whose target standard deviation is below this margin is reported as
+# near-degenerate. The value is the M5A pilot's predeclared minimum-variation
+# margin, not a threshold chosen after seeing this audit.
+near_degenerate_sd = 0.005
+redundancy_abs_correlation = 0.90
+top_k_sources = 3
+min_sources_for_interval = 2
+feature_slice_dimensions = ["family", "severity_level"]
+bootstrap_scopes = [
+  "geometric_primary",
+  "geometric_primary_severity_2",
+  "geometric_primary_severity_3",
+  "geometric_primary_severity_4",
+  "clean_reference",
+  "original_blur_noise",
+  "original_blur_noise_gaussian_blur",
+  "original_blur_noise_gaussian_noise",
+  "m3_test_overall",
+  "diagnostic_0_5",
+]
+
+# Counts that the audit must reproduce from the manifests. A mismatch is a
+# failed input check, not something to explain away.
+[expectations]
+m3_sources = [36, 12, 12]
+m3_samples = [324, 108, 108]
+m5a_sources = [36, 12, 12]
+m5a_samples = [288, 96, 96]
+expanded_train_rows = 432
+expanded_val_rows = 144
+primary_test_rows = 36
+diagnostic_test_rows = 12
+m3_test_rows = 108
+n_sources = 60
+n_fonts = 3
+
+# The audit compares all four predeclared next directions and recommends
+# exactly one. The recommendation is not executed in this milestone.
+[recommendation]
+selected_direction = "B"
+directions = ["A", "B", "C", "D"]

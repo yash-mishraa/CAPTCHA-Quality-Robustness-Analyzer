@@ -1,6 +1,6 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0013` completed. No other experiments have
+**Status:** `EXP-0001` through `EXP-0014` completed. No other experiments have
 been run.
 
 This file is the authoritative record of experiments. An experiment is logged
@@ -33,6 +33,7 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0014` | 2026-10-21 | `robustness-analysis` | `completed` | Dataset/evaluation audit: the benchmark supports within-renderer SSIM claims and the M5C champion comparison, but not unseen-font, unseen-renderer, real-world, human-readability or broad-generalisation claims; 12 test source groups, a near-degenerate 0.5 px rung and a strongly redundant eight-feature representation bound the evidence, and the recommended next step is explicitly held-out fonts or rendering conditions |
 | `EXP-0013` | 2026-10-21 | `robustness-analysis` | `completed` | Multi-scale structure-tensor features do not improve geometric prediction: the combined candidate is neutral on the geometric aggregate (RMSE +0.0014, interval includes zero) but breaches the clean-reference tolerance, the structure-only candidate is worse on every retention slice, the new features are strongly redundant with each other and with the global eight, and the champion is retained |
 | `EXP-0012` | 2026-10-21 | `robustness-analysis` | `completed` | Local structural features do not improve geometric prediction: global-plus-local is neutral on the geometric aggregate (RMSE +0.0044, interval includes zero) but regresses clean and original-task retention, local-only is worse everywhere except the 1 px rung, and the local family is strongly redundant with the global one, so the champion is retained |
 | `EXP-0011` | 2026-10-21 | `robustness-analysis` | `completed` | Finer grids do resolve the geometric warp (occupancy/SSIM correlation rises from +0.45 at 2x2 to +0.83 at 8x8) but the model cannot use it: every spatial candidate is ineligible on retention, the geometric gains are within noise, and the retention cost grows monotonically with feature count, so the champion is retained and the blocker is feature relevance, not resolution |
@@ -86,6 +87,205 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0014 — Dataset-adequacy and evaluation audit: what the frozen benchmark can and cannot support
+
+- **Date:** 2026-10-21
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** Does the frozen synthetic dataset and evaluation
+  design support the claims made for the M5C champion? Where do champion errors
+  concentrate, which target slices are informative, and which conclusions
+  require additional independent data? M7A is a read-only audit, not a new model
+  or dataset. It changes no target, split, corruption parameter, feature or
+  champion. The target is SSIM against the exact clean reference; nothing here
+  measures human readability, CAPTCHA solvability, security or production
+  robustness.
+- **Code revision:** base `c2bfb40` plus the M7A implementation, committed as
+  `feat: audit dataset adequacy and evaluation`. The reported run was repeated
+  from the clean commit so provenance records a clean revision.
+- **Environment:** CPython 3.13.16; NumPy 2.5.4; pandas 3.0.6; scikit-learn
+  1.9.1; joblib 1.6.0; macOS 27.0.1 (arm64). No GPU was used.
+- **Configuration:** `configs/dataset_adequacy_audit_v0_1_0.toml`; config sha256
+  `23f2af7ede523bec7e648043a519e0eca7d352bbd9f15445255a3a304b0364b9`;
+  identity hash
+  `6a1a7989cccd24dab9cc1365a5d308d53da29e31df2a20bbb8bd30639e705a48`.
+  Seed `20261108`; 2000 source-grouped percentile bootstrap replicates per
+  declared scope; confidence level 0.95.
+- **Upstream frozen inputs:** M3 config sha256
+  `72a945af829b2b61a8f748f1712b5231254f0ef480591f10ea595d69a9ff812a`,
+  manifest sha256
+  `a6a2cb8654eb51055e11e4aec6dbc94c2a59a6fdf8ba6b4946135bffc8b4cf37`;
+  M5A config sha256
+  `00b8c5caad610fb4aaf159bb8c99e329ad217aeff6450e7cd3e566387e9f0a97`,
+  manifest sha256
+  `c63be1088db591181f23fa306f955b3ba16fe80ffb2000c4a5e3db7656fa3806`;
+  M5B config sha256
+  `fe5c66614cee83c72a80c20b807202deadd8a604e045f7432795a8abe706ddb1`,
+  protocol hash
+  `77e41dd5de84e0bf8751c38a49b510735095f86edc8b00f6c19a6d8fde0d13ce`;
+  M5C config sha256
+  `48f3f148121537ea53a685bda961f01e758e5ac196b89b9e0181587d545086eb`,
+  protocol hash
+  `048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a`;
+  M5C champion artifact sha256
+  `c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0`
+  (`expanded_random_forest`, no calibration).
+- **Dataset:** frozen M3 `captcha_quality_v0.1.0` (540 rows / 60 sources) and
+  M5A `geometric_distortion_pilot_v0.1.0` (480 rows / 60 sources). M5A is
+  derived from the same sources, not an independent sample. M3 has 540 distinct
+  image files; M5A has 480 rows but 360 distinct images because identity and
+  zero-field controls are exact clean duplicates and the minimal control is
+  near-clean.
+- **Split:** frozen source-grouped `train/val/test` = 36/12/12 sources. M3 rows
+  are 324/108/108; M5A rows are 288/96/96. Expanded fitting uses 432 train and
+  144 validation rows. Primary geometric test is 36 rows; the 0.5 px diagnostic
+  is 12 rows; the M3 test is 108 rows. The independent unit is the **12 test
+  source groups**, not the 36 primary rows or 108 M3 rows.
+- **Seeds:** audit seed `20261108`; bootstrap seeds are derived per scope from
+  that seed with `derive_noise_seed(seed, "dataset_audit_bootstrap", scope)`.
+- **Runtime:** 2.77 s wall-clock for the full audit with pixel-level image
+  verification; the two clean-commit runs differed only in
+  `runtime_seconds`.
+
+**Method.** The audit pins 24 upstream files by SHA-256, loads the frozen M3 and
+M5A frames through the existing M5B/M5C verified path, and replays the champion's
+stored test predictions from the serialized model. It verifies that stored
+test-slice metrics match the replay. It then builds:
+
+1. source-level inventory and long-form composition tables, including fonts,
+   text lengths, resolution, pixel format, renderer, corruption families,
+   severities and derived variants;
+2. split accounting for M3, M5A, expanded fitting and evaluation scopes;
+3. target distributions for clean, original, every original severity, primary
+   geometric severities 2–4 and the 0.5 px diagnostic, with quantiles,
+   variance and a descriptive between/within-source decomposition;
+4. per-source and per-severity champion residuals, per-font residuals, squared
+   error concentration and descriptive leave-one-source-out influence;
+5. source-grouped percentile bootstrap intervals that keep every variant of a
+   sampled source together;
+6. training-only feature diagnostics (constants, duplicates, correlations,
+   scales, frozen-model impurity importance, VIF/condition number and
+   family/severity means); and
+7. a claim-to-evidence table and a comparison of four predeclared next
+   directions.
+
+No model was refit, no calibration was fitted, no feature was selected and no
+test target entered a training-only diagnostic. The audit writes only to the
+Git-ignored `reports/dataset_adequacy_audit_v0_1_0/` directory. It verifies 1766
+frozen-asset fingerprints before and after the run and refuses to write into any
+frozen path.
+
+**Metrics.**
+
+| Metric | Value | Notes |
+| --- | --- | --- |
+| M3 test MAE / RMSE / R² | 0.01562 / 0.02201 / 0.98716 | 108 rows, 12 sources |
+| Clean-reference RMSE | 0.00227 | target constant at 1.0; R² undefined |
+| Original blur/noise RMSE | 0.02333 | 96 rows, 12 sources |
+| Primary geometric RMSE / R² | 0.05901 / 0.18553 | 36 rows, 12 sources |
+| Geometric severity 2 / 3 / 4 R² | -44.10 / 0.21288 / -2.74628 | low target variance at the mildest and hardest rungs |
+| 0.5 px diagnostic RMSE / R² | 0.03592 / -197.41 | target SD 0.00266 below the 0.005 margin |
+| Geometric top-1 source SSE share | 0.17667 | descriptive concentration |
+| Geometric top-3 source SSE share | 0.42704 | descriptive concentration |
+| Maximum training feature \|r\| | 0.99106 | `intensity_std` vs `contrast_rms` |
+| Maximum VIF / condition number | 518.5 / 62.15 | redundancy warning, not a selection rule |
+| Top frozen-model importance | 0.63345 (`histogram_entropy`) | impurity importance, descriptive |
+| Claims | 3 supported, 2 suggestive, 7 unsupported | predeclared schema |
+| Recommended direction | **B** | add explicitly held-out fonts or rendering conditions |
+
+The target-distribution table includes counts, min/max/mean/SD, 5/25/50/75/95
+quantiles, variance, between-source variance, mean within-source variance and
+the descriptive between-variance share for every declared slice. The clean
+target variance is exactly zero. The 0.5 px diagnostic is flagged
+near-degenerate by the predeclared 0.005 SD margin. The primary geometric
+between-source share is about 0.113, so most of its variance is within source;
+this is why source-level ranking is unstable even when aggregate RMSE is
+reported.
+
+**Observations.** The dataset has 60 sources, but only 12 test sources and one
+renderer, one resolution (192x64), one pixel format (8-bit grayscale PNG) and
+three fonts. Every font appears in every split, so the champion is never
+evaluated on an unseen font. M5A's elastic variants are derived from the same
+clean references as M3; identity and zero-field controls are exact clean
+duplicates. The audit therefore treats source groups, not image variants, as
+independent observations.
+
+The champion reproduces the pinned M5C test values. Its M3 blur/noise and
+clean-reference performance is strong, but the primary geometric slice is
+weak and uneven. The top geometric source contributes 17.7% of squared error
+and the top three contribute 42.7%. Leave-one-source-out RMSE changes are
+small and descriptive; no model was refit and no new generalisation estimate is
+claimed. The 0.5 px diagnostic has near-zero target variance, so its very
+negative R² is a denominator artefact rather than evidence of a stable
+predictive failure.
+
+The eight global features are strongly redundant on the 432 training rows:
+`intensity_std` and `contrast_rms` have |r| 0.991, `laplacian_variance` and
+`noise_sigma_immerkaer` have |r| 0.956, and two pairs cross the predeclared
+0.90 redundancy threshold. `histogram_entropy` dominates impurity importance
+(0.633), but correlated features share importance and the ranking is not causal.
+Feature means also differ by family and severity, so global scales are not
+stationary across the corruption mix.
+
+**Claim audit.** The current benchmark supports three claims: (C01) the champion
+predicts SSIM on the current synthetic blur/noise benchmark; (C08) the M5C
+champion improves geometric RMSE versus frozen M3 without a material clean or
+original-task regression on this benchmark; and (C10) geometric error is
+unevenly concentrated across the 12 test sources. Two claims are suggestive:
+(C02) the champion predicts 1–3 px elastic SSIM and (C03) it generalises to
+unseen source images from the same rendering setup; both are weakened by low
+aggregate R², negative severity R² and only 12 groups. Seven claims are
+unsupported: unseen fonts, unseen renderers/resolutions/formats, real-world
+CAPTCHA quality, human readability/solve rate/security, uniform feature
+adequacy across primary severities, stable 0.5 px R² and broad generalisation
+beyond the synthetic distribution.
+
+**Conclusion.** The benchmark is adequate for a **condition-specific**
+synthetic SSIM evaluation and for the M5C within-benchmark champion comparison.
+It is not adequate for unseen-font, unseen-renderer, real-world, human-outcome
+or broad-generalisation claims. The binding limitations are condition coverage
+and 12 independent test groups, not the absence of a more complex model. The
+recommended next direction is **B: add explicitly held-out fonts or rendering
+conditions in a future versioned dataset**. It directly tests the largest
+unsupported claim, preserves the target and champion, and can be evaluated
+zero-shot with source-grouped intervals. Direction A would improve precision
+but not condition generalisation; C changes the research question; D risks
+overfitting the same 12 test groups without a concrete missing representation.
+No direction is executed in M7A.
+
+**Limitations.**
+
+- Only 12 independent test source groups; bootstrap intervals are wide and
+  descriptive, not significance tests.
+- All fonts, the renderer, the resolution and the pixel format are shared
+  across splits. There is no unseen-condition test.
+- The target is synthetic SSIM against a known clean reference, not a human
+  readability, solve-rate or security outcome.
+- The 0.5 px rung is near-degenerate and must remain diagnostic only.
+- Feature importance is impurity-based and descriptive; correlated features
+  share importance and the ranking is not causal.
+- Leave-one-source-out results are descriptive influence measures, not refitted
+  generalisation estimates.
+- The audit reuses frozen artifacts and cannot repair upstream limitations such
+  as the single renderer or the small source count.
+
+**Next step.** Design a future versioned dataset with at least one explicitly
+held-out font and/or a second rendering condition, predeclare the zero-shot
+evaluation and source-grouped intervals, and keep the target definition
+unchanged. Do not run it as part of M7A.
+
+**Artifacts.** Git-ignored:
+`reports/dataset_adequacy_audit_v0_1_0/report.md`, `run_metadata.json`, and 20
+CSV tables including `dataset_inventory.csv`, `dataset_composition.csv`,
+`split_accounting.csv`, `target_distributions.csv`, `test_slice_metrics.csv`,
+`source_metrics.csv`, `source_severity_metrics.csv`,
+`leave_one_source_out.csv`, `error_concentration.csv`, `uncertainty.csv`,
+`feature_summary.csv`, `feature_correlations.csv`, `feature_importance.csv`,
+`claim_evidence.csv`, `next_direction_comparison.csv` and
+`isolation_checks.csv`.
 
 ---
 
