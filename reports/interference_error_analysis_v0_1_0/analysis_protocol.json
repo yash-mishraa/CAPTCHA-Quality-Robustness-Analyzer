@@ -1,0 +1,368 @@
+{
+  "analysis": {
+    "command": "python -m captcha_quality.interference_error_analysis run --config configs/interference_error_analysis_v0_1_0.toml",
+    "config_identity": {
+      "analysis": {
+        "bootstrap_method": "source-grouped percentile bootstrap; whole source groups resampled with replacement",
+        "feature_association_method": "Spearman rank correlation",
+        "feature_association_rule": "descriptive rank association only; no feature selection or causal interpretation",
+        "font_contrast_rule": "paired by text case: one font's source MAE minus the mean source MAE of the other nine fonts on the same case",
+        "group_column": "source_id",
+        "independent_unit": "source group (one font rendered with one committed text case)",
+        "large_error_rule": "|ssim_target - prediction| >= 0.20 in absolute SSIM units; predeclared exploratory threshold",
+        "large_error_threshold": 0.2,
+        "multiple_comparison_method": "Benjamini-Hochberg q-values; exploratory, not source-clustered inferential tests",
+        "near_degenerate_sd": 0.005,
+        "source_characteristic_rule": "descriptive source-level Spearman association; font and case composition remain confounded"
+      },
+      "inputs": [
+        {
+          "key": "predictions",
+          "path": "reports/matched_font_benchmark_v0_1_0/predictions.csv",
+          "role": "frozen M8C predictions, targets and benchmark labels",
+          "rows": 6300,
+          "sha256": "e6c1f1ba83bbb05c18fed8a9b0dd1c87014a6f6c3667475971b2834dfedd4dd4"
+        },
+        {
+          "key": "manifest",
+          "path": "data/processed/matched_font_benchmark_v0.1.0/manifest.csv",
+          "role": "frozen M8C sample, source, corruption and protocol manifest",
+          "rows": 6300,
+          "sha256": "35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743"
+        },
+        {
+          "key": "features",
+          "path": "data/processed/matched_font_benchmark_v0.1.0/features.csv",
+          "role": "existing frozen eight-feature table; no feature is added",
+          "rows": 6300,
+          "sha256": "fa2d79c85d682b26545dc2c4e3ec5ece2a41d85aea7e1ea1070f7256ff8519bb"
+        },
+        {
+          "key": "sources",
+          "path": "data/processed/matched_font_benchmark_v0.1.0/sources.csv",
+          "role": "frozen source groups, font/case/background metadata and clean-image hashes",
+          "rows": 300,
+          "sha256": "a6f721f8e849d44750a3aaeaec74cc1bd93a8122e243985173904b40116d5010"
+        },
+        {
+          "key": "source_cases",
+          "path": "data/processed/matched_font_benchmark_v0.1.0/source_cases.csv",
+          "role": "frozen source-case lineage and split metadata",
+          "rows": 300,
+          "sha256": "5e34d6a826b5f4444675113c0030a138ace02d3369f085a6e197613bacf01b88"
+        },
+        {
+          "key": "ground_truth",
+          "path": "data/processed/matched_font_benchmark_v0.1.0/ground_truth.csv",
+          "role": "local integrity-pinned text lineage; only source_id, case_id and font_id are read, never text",
+          "rows": 300,
+          "sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd"
+        },
+        {
+          "key": "run_metadata",
+          "path": "reports/matched_font_benchmark_v0_1_0/run_metadata.json",
+          "role": "frozen M8C inference and model provenance metadata",
+          "rows": 0,
+          "sha256": "930ce8d8767a3e52919e5736ff8a9dfe4b74b008c54e2cc2107fd221d0944ebd"
+        },
+        {
+          "key": "model_artifact",
+          "path": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+          "role": "frozen M5C champion artifact; hash-checked only, never loaded",
+          "rows": 0,
+          "sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+        },
+        {
+          "key": "model_card",
+          "path": "models/retention_aware_selection_v0_1_0/selected_policy_card.json",
+          "role": "frozen M5C champion model card; metadata only",
+          "rows": 0,
+          "sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+        },
+        {
+          "key": "m8e_config",
+          "path": "configs/benchmark_integrity_v0_1_0.toml",
+          "role": "M8E integrity contract; hash-checked and executed read-only, never modified",
+          "rows": 0,
+          "sha256": "0b018004f41c2373fce2463eff78e11763ed53fd96f4436d1584ecd3e03707df"
+        }
+      ],
+      "run": {
+        "confidence_level": 0.95,
+        "n_bootstrap": 2000,
+        "name": "interference-error-analysis",
+        "output_reports": "/Users/yashmishra14/Personal projects/CAPTCHA Quality & Robustness Analyzer/reports/interference_error_analysis_v0_1_0",
+        "seed": 20261022,
+        "version": "v0.1.0"
+      }
+    },
+    "config_path": "configs/interference_error_analysis_v0_1_0.toml",
+    "config_sha256": "2db5abf5237e3d247d3a358338cd07351a0b001c758632ef0ae8cbde4effd480",
+    "git_revision": "37bc86dba3cac8d7cfe2d9e84d83da300974866f",
+    "git_revision_short": "37bc86d",
+    "name": "interference-error-analysis",
+    "package_version": "0.1.0",
+    "packages": {
+      "captcha-quality-analyzer": "0.1.0",
+      "captcha_quality_package": "0.1.0",
+      "numpy": "2.5.4",
+      "pandas": "3.0.6",
+      "scipy": "1.18.1"
+    },
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "python_version": "3.13.16",
+    "version": "v0.1.0",
+    "working_tree_clean_at_start": true
+  },
+  "analysis_decisions": {
+    "bootstrap_method": "source-grouped percentile bootstrap; whole source groups resampled with replacement",
+    "feature_association_method": "Spearman rank correlation",
+    "feature_association_rule": "descriptive rank association only; no feature selection or causal interpretation",
+    "font_contrast_rule": "paired by text case: one font's source MAE minus the mean source MAE of the other nine fonts on the same case",
+    "group_column": "source_id",
+    "independent_unit": "source group (one font rendered with one committed text case)",
+    "large_error_rule": "|ssim_target - prediction| >= 0.20 in absolute SSIM units; predeclared exploratory threshold",
+    "large_error_threshold": 0.2,
+    "multiple_comparison_method": "Benjamini-Hochberg q-values; exploratory, not source-clustered inferential tests",
+    "near_degenerate_sd": 0.005,
+    "source_characteristic_rule": "descriptive source-level Spearman association; font and case composition remain confounded"
+  },
+  "bootstrap": {
+    "confidence_level": 0.95,
+    "independent_unit": "source group (one font rendered with one committed text case)",
+    "method": "source-grouped percentile bootstrap; whole source groups resampled with replacement",
+    "n_bootstrap": 2000,
+    "paired_font_contrast": "paired by text case: one font's source MAE minus the mean source MAE of the other nine fonts on the same case",
+    "percentiles": [
+      2.5,
+      97.5
+    ],
+    "seed": 20261022,
+    "source_group_column": "source_id"
+  },
+  "external_verification": [
+    {
+      "command": "-m captcha_quality.benchmark_integrity verify",
+      "key": "m8e_integrity",
+      "last_line": "verification: PASS",
+      "passed": true,
+      "returncode": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "c1c8bf5aff779ccec76007d7d07e34abbf4702ec119465ba648801009204fce9"
+    },
+    {
+      "command": "-m captcha_quality.benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml --state post-execution",
+      "key": "m8c_lifecycle_post_execution",
+      "last_line": "verification: PASS",
+      "passed": true,
+      "returncode": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "c60ed72828c2aa279d755e8c6de6767893933491fb589aa41cb0ac9108afff72"
+    },
+    {
+      "command": "-m captcha_quality.matched_font_benchmark verify --lifecycle configs/benchmark_lifecycle_v0_2_0.toml --lifecycle-post configs/benchmark_lifecycle_v0_3_0.toml",
+      "key": "m8c_full_replay",
+      "last_line": "verification: PASS",
+      "passed": true,
+      "returncode": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "0c5372a73214d91951496597acffe8215bce5401c045f95ca035d935532aca45"
+    }
+  ],
+  "ground_truth_handling": {
+    "columns_read": [
+      "source_id",
+      "case_id",
+      "font_id"
+    ],
+    "ignored": true,
+    "path": "data/processed/matched_font_benchmark_v0.1.0/ground_truth.csv",
+    "rows": 300,
+    "sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd",
+    "text_loaded": false,
+    "tracked": false
+  },
+  "inputs": [
+    {
+      "expected_rows": 6300,
+      "expected_sha256": "e6c1f1ba83bbb05c18fed8a9b0dd1c87014a6f6c3667475971b2834dfedd4dd4",
+      "key": "predictions",
+      "matches": true,
+      "observed_sha256": "e6c1f1ba83bbb05c18fed8a9b0dd1c87014a6f6c3667475971b2834dfedd4dd4",
+      "path": "reports/matched_font_benchmark_v0_1_0/predictions.csv",
+      "role": "frozen M8C predictions, targets and benchmark labels"
+    },
+    {
+      "expected_rows": 6300,
+      "expected_sha256": "35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743",
+      "key": "manifest",
+      "matches": true,
+      "observed_sha256": "35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743",
+      "path": "data/processed/matched_font_benchmark_v0.1.0/manifest.csv",
+      "role": "frozen M8C sample, source, corruption and protocol manifest"
+    },
+    {
+      "expected_rows": 6300,
+      "expected_sha256": "fa2d79c85d682b26545dc2c4e3ec5ece2a41d85aea7e1ea1070f7256ff8519bb",
+      "key": "features",
+      "matches": true,
+      "observed_sha256": "fa2d79c85d682b26545dc2c4e3ec5ece2a41d85aea7e1ea1070f7256ff8519bb",
+      "path": "data/processed/matched_font_benchmark_v0.1.0/features.csv",
+      "role": "existing frozen eight-feature table; no feature is added"
+    },
+    {
+      "expected_rows": 300,
+      "expected_sha256": "a6f721f8e849d44750a3aaeaec74cc1bd93a8122e243985173904b40116d5010",
+      "key": "sources",
+      "matches": true,
+      "observed_sha256": "a6f721f8e849d44750a3aaeaec74cc1bd93a8122e243985173904b40116d5010",
+      "path": "data/processed/matched_font_benchmark_v0.1.0/sources.csv",
+      "role": "frozen source groups, font/case/background metadata and clean-image hashes"
+    },
+    {
+      "expected_rows": 300,
+      "expected_sha256": "5e34d6a826b5f4444675113c0030a138ace02d3369f085a6e197613bacf01b88",
+      "key": "source_cases",
+      "matches": true,
+      "observed_sha256": "5e34d6a826b5f4444675113c0030a138ace02d3369f085a6e197613bacf01b88",
+      "path": "data/processed/matched_font_benchmark_v0.1.0/source_cases.csv",
+      "role": "frozen source-case lineage and split metadata"
+    },
+    {
+      "expected_rows": 300,
+      "expected_sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd",
+      "key": "ground_truth",
+      "matches": true,
+      "observed_sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd",
+      "path": "data/processed/matched_font_benchmark_v0.1.0/ground_truth.csv",
+      "role": "local integrity-pinned text lineage; only source_id, case_id and font_id are read, never text"
+    },
+    {
+      "expected_rows": 0,
+      "expected_sha256": "930ce8d8767a3e52919e5736ff8a9dfe4b74b008c54e2cc2107fd221d0944ebd",
+      "key": "run_metadata",
+      "matches": true,
+      "observed_sha256": "930ce8d8767a3e52919e5736ff8a9dfe4b74b008c54e2cc2107fd221d0944ebd",
+      "path": "reports/matched_font_benchmark_v0_1_0/run_metadata.json",
+      "role": "frozen M8C inference and model provenance metadata"
+    },
+    {
+      "expected_rows": 0,
+      "expected_sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+      "key": "model_artifact",
+      "matches": true,
+      "observed_sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+      "path": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+      "role": "frozen M5C champion artifact; hash-checked only, never loaded"
+    },
+    {
+      "expected_rows": 0,
+      "expected_sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8",
+      "key": "model_card",
+      "matches": true,
+      "observed_sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8",
+      "path": "models/retention_aware_selection_v0_1_0/selected_policy_card.json",
+      "role": "frozen M5C champion model card; metadata only"
+    },
+    {
+      "expected_rows": 0,
+      "expected_sha256": "0b018004f41c2373fce2463eff78e11763ed53fd96f4436d1584ecd3e03707df",
+      "key": "m8e_config",
+      "matches": true,
+      "observed_sha256": "0b018004f41c2373fce2463eff78e11763ed53fd96f4436d1584ecd3e03707df",
+      "path": "configs/benchmark_integrity_v0_1_0.toml",
+      "role": "M8E integrity contract; hash-checked and executed read-only, never modified"
+    }
+  ],
+  "limitations": [
+    "Synthetic image-similarity analysis only; SSIM is not human readability, solvability, security or production robustness.",
+    "Ten purposive fonts and thirty committed text cases are not a random population sample.",
+    "Font identity is entangled with glyph shape, renderer, case composition and the SSIM target.",
+    "The 0.20 large-error threshold was predeclared for this analysis but earlier reconnaissance had inspected aggregate and severity summaries; threshold-based subgroup proportions are exploratory.",
+    "Feature associations are descriptive rank correlations, not source-clustered inferential tests, and do not identify mechanism.",
+    "The elastic 0.5 px rung is diagnostic and excluded from the primary severity table.",
+    "M3 and M5C metrics are not like-for-like comparisons to M8C."
+  ],
+  "metric_definitions": {
+    "bias": "mean signed residual",
+    "calibration_slope": "ordinary least-squares slope of prediction on target",
+    "large_error": "|residual| >= 0.20 SSIM units; predeclared exploratory threshold",
+    "mae": "mean absolute residual",
+    "psnr": "not analysed; diagnostic only",
+    "r2": "1 - sum(residual^2) / sum((target - target_mean)^2)",
+    "r2_suppression": "R\u00b2 is suppressed when target SD < 0.005 (frozen M8C rule)",
+    "residual": "ssim_target - prediction",
+    "residual_sign": "positive = underprediction; negative = overprediction",
+    "rmse": "population root mean squared residual",
+    "target": "ssim_target",
+    "within_source": "per-source prediction/target SD ratio, slope and rank correlation; medians reported"
+  },
+  "model_context": {
+    "artifact_path": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+    "artifact_sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+    "calibration_performed": false,
+    "feature_change_performed": false,
+    "feature_names": [
+      "intensity_mean",
+      "intensity_std",
+      "contrast_rms",
+      "ink_fraction",
+      "laplacian_variance",
+      "edge_density",
+      "histogram_entropy",
+      "noise_sigma_immerkaer"
+    ],
+    "model_family": "expanded_random_forest",
+    "model_fit_performed": false
+  },
+  "output_files": {
+    "README.md": "22de39a32f23f501789f1a771d2c0c4f70eaa0f527988810ff1313f91de5a7c8",
+    "case_metrics.csv": "f514680cde24dedd0f355880361f43ce1590d487dd67affe30157e437eae8c44",
+    "condition_calibration.csv": "17f040636cf135ae997bd7c369171a01c04725dc31bdf53a7d080bc9b284ed50",
+    "error_concentration.csv": "daa145307818ac8c0723bfcb00ee3baf9e8064e0dbb8609d655ec04179a960e9",
+    "feature_error_associations.csv": "2fb55b862b9c34a3cc025b3e8bef7d7134b8890f3744e31422e600e922b28480",
+    "figures/fig1_condition_error_profile.svg": "f68f3f2c7e6baf7de763093e32add76d3551d912bfba53a49e02a8a078b6ceef",
+    "figures/fig2_interference_severity_calibration.svg": "9aedf367945525fb4ba35285d03b2b65ff85aae097d309673bbcb90e093913cf",
+    "figures/fig3_font_interference_mae.svg": "befb95abb0629479f6eb6f2ff764a3165f6a97f691a8fdb67beb604f775e5999",
+    "figures/fig4_feature_error_associations.svg": "fa7af11a3cc645d8336d2be33b68d914463da75f603400006b2cda3a98745611",
+    "figures/fig5_source_error_concentration.svg": "0e6d37e3a5aea4056e26be69dc85fc239ba9e785334f546dface97c81113dbe3",
+    "font_condition_metrics.csv": "0a64f146a9e9881fb20a21534a52298d60e2112883f15587b70891bb3b773708",
+    "hypotheses_and_followups.md": "36bef0136f72f4e072f2da0d218883723750d7315969c5791037ee5771cbab24",
+    "paired_condition_contrasts.csv": "f3119621d40516f8d7c4a61f9a73908f2115399364e04f532a3ef98bcdbf8173",
+    "severity_metrics.csv": "6798859f38ffdb5e0c5520e6bed353cbe2e328495a450d8956fbc3a28913cb76",
+    "source_characteristic_associations.csv": "206941e9fecde4c9e08fe768bcb252c889157580da24b4b3a04ff3bf812afe86",
+    "source_group_metrics.csv": "032ad428e445d2f246665b248b551e97e1ddeba3bbc4762009887e30fa5b1119",
+    "summary_metrics.csv": "6d68e465887e3053e20a7c582f79e8318900e8cd14fb48005f15a54c224f1303",
+    "verification_checks.csv": "bc0fcf9ed4e39499ded192378391535d5c911663787e8a826f80184f91b87a59"
+  },
+  "schema": "m9a-interference-error-analysis-protocol-v1",
+  "scope_definitions": {
+    "all_primary": "all 5,700 primary rows",
+    "arc_strokes": "primary arc-stroke rows",
+    "clean_reference": "diagnostic clean-reference rows (target is constant)",
+    "gaussian_blur": "primary Gaussian blur rows",
+    "gaussian_noise": "primary Gaussian noise rows",
+    "geometric_primary": "primary elastic geometric rows",
+    "interference": "primary thin-line and arc-stroke rows",
+    "original_blur_noise": "primary Gaussian blur and Gaussian noise rows",
+    "thin_lines": "primary thin-line rows"
+  },
+  "source_structure": {
+    "cases": 30,
+    "fonts": 10,
+    "interference_rows": 2400,
+    "joined_rows": 6300,
+    "primary_rows": 5700,
+    "rows_per_source": [
+      21
+    ],
+    "sources": 300
+  },
+  "thresholds": {
+    "large_error_exploratory": true,
+    "large_error_threshold": 0.2,
+    "near_degenerate_sd": 0.005
+  },
+  "verification_check_count": 90,
+  "verification_checks_passed": 90
+}

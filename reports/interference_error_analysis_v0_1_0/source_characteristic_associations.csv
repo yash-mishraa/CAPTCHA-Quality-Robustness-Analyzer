@@ -1,0 +1,23 @@
+scope,font_id,characteristic,n_sources,n_rows,spearman_rho,p_value,exploratory,rule,bh_q_value,direction
+interference_source_mae,all,background_level,300,300,0.155282939641,0.00704486744765,True,descriptive source-level Spearman association; font and case composition remain confounded,0.0596235405792,positive
+interference_source_mae,all,text_length,300,300,0.0110447416362,0.848911286621,True,descriptive source-level Spearman association; font and case composition remain confounded,0.889335633603,positive
+interference_source_mae,arial,background_level,30,30,0.0706802202817,0.710528473283,True,descriptive source-level Spearman association; font and case composition remain confounded,0.82271717959,positive
+interference_source_mae,arial,text_length,30,30,0.326329809296,0.0784120148056,True,descriptive source-level Spearman association; font and case composition remain confounded,0.345012865144,positive
+interference_source_mae,chalkduster,background_level,30,30,-0.10164277573,0.593028855586,True,descriptive source-level Spearman association; font and case composition remain confounded,0.801833360395,negative
+interference_source_mae,chalkduster,text_length,30,30,0.426448361497,0.0187747255925,True,descriptive source-level Spearman association; font and case composition remain confounded,0.103260990759,positive
+interference_source_mae,courier_new,background_level,30,30,0.199400059125,0.290782575259,True,descriptive source-level Spearman association; font and case composition remain confounded,0.70097450188,positive
+interference_source_mae,courier_new,text_length,30,30,0.0557263639608,0.769916884833,True,descriptive source-level Spearman association; font and case composition remain confounded,0.846908573317,positive
+interference_source_mae,georgia,background_level,30,30,0.0913258403212,0.631254023389,True,descriptive source-level Spearman association; font and case composition remain confounded,0.801833360395,positive
+interference_source_mae,georgia,text_length,30,30,0.0148761056336,0.937810769162,True,descriptive source-level Spearman association; font and case composition remain confounded,0.937810769162,positive
+interference_source_mae,impact,background_level,30,30,0.14196460556,0.454258416773,True,descriptive source-level Spearman association; font and case composition remain confounded,0.752770207353,positive
+interference_source_mae,impact,text_length,30,30,-0.695162777545,2.01345981609e-05,True,descriptive source-level Spearman association; font and case composition remain confounded,0.000442961159541,negative
+interference_source_mae,luminari,background_level,30,30,0.136419587017,0.472250408177,True,descriptive source-level Spearman association; font and case composition remain confounded,0.752770207353,positive
+interference_source_mae,luminari,text_length,30,30,-0.157261688127,0.406572787461,True,descriptive source-level Spearman association; font and case composition remain confounded,0.752770207353,negative
+interference_source_mae,monaco,background_level,30,30,0.474077640798,0.00813048280626,True,descriptive source-level Spearman association; font and case composition remain confounded,0.0596235405792,positive
+interference_source_mae,monaco,text_length,30,30,-0.134357208024,0.479035586498,True,descriptive source-level Spearman association; font and case composition remain confounded,0.752770207353,negative
+interference_source_mae,times_new_roman,background_level,30,30,0.188448381496,0.318624773582,True,descriptive source-level Spearman association; font and case composition remain confounded,0.70097450188,positive
+interference_source_mae,times_new_roman,text_length,30,30,0.0847701892454,0.656045476687,True,descriptive source-level Spearman association; font and case composition remain confounded,0.801833360395,positive
+interference_source_mae,trebuchet_ms,background_level,30,30,0.202926249363,0.282158168079,True,descriptive source-level Spearman association; font and case composition remain confounded,0.70097450188,positive
+interference_source_mae,trebuchet_ms,text_length,30,30,-0.206848706905,0.272759268614,True,descriptive source-level Spearman association; font and case composition remain confounded,0.70097450188,negative
+interference_source_mae,verdana,background_level,30,30,-0.0891829225263,0.639316484008,True,descriptive source-level Spearman association; font and case composition remain confounded,0.801833360395,negative
+interference_source_mae,verdana,text_length,30,30,0.268242158727,0.151796779997,True,descriptive source-level Spearman association; font and case composition remain confounded,0.556588193323,positive
