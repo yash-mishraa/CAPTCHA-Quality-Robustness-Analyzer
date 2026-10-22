@@ -1,7 +1,9 @@
 # Experiment Log
 
-**Status:** `EXP-0001` through `EXP-0021` completed. No other experiments have
-been run.
+**Status:** `EXP-0001` through `EXP-0026` completed. This includes the M8C
+benchmark execution, the M8D/M8E audit and integrity work, the M9A exploratory
+analysis, the M9B preregistration and the M9C closure decision. No confirmatory
+H1/H2/H3 experiment was executed; all three remain `not_tested`.
 
 This file is the authoritative record of experiments. An experiment is logged
 only if it can be reproduced from the recorded configuration, dataset version,
@@ -33,6 +35,11 @@ split, and code revision.
 
 | ID | Date | Task | Status | One-line outcome |
 | --- | --- | --- | --- | --- |
+| `EXP-0026` | 2026-10-22 | `robustness-analysis` | `completed` | M9C decision-only milestone: **Path A — stop experimentation and package the research** selected; H1 is the first candidate only if the project is reopened, H2/H3 are deprioritized, M9B remains unexecuted and all three hypotheses stay `not_tested`; no model, feature, dataset or benchmark was changed |
+| `EXP-0025` | 2026-10-22 | `robustness-analysis` | `completed` | M9B planning-only preregistration: three hypotheses with frozen estimands, support/falsification/inconclusive rules, new independent set C requirement, 2,000-replicate simultaneous 98.333% intervals, seed `20261023`; validator 26/26; **no experiment executed** and all hypotheses `not_tested` |
+| `EXP-0024` | 2026-10-22 | `robustness-analysis` | `completed` | M9A read-only exploratory analysis of frozen M8C predictions: interference MAE 0.0908, R² -0.4302; top 5% of sources account for 10.6% of interference SSE; thin/arc within-source slopes 0.241/0.337 and SD ratios 0.320/0.397; descriptive only, not causal or confirmatory |
+| `EXP-0023` | 2026-10-22 | `robustness-analysis` | `completed` | M8D provenance/robustness audit and M8E integrity contract: M8C metrics independently reproduced with 1,656 comparisons and 0 failures; exact ground-truth hash checked without reading text; 17/17 modules and 36/36 input rows pinned; honest `75c8ef4-dirty` revision preserved; no erratum |
+| `EXP-0022` | 2026-10-22 | `robustness-analysis` | `completed` | M8C matched cross-font benchmark executed the frozen protocol: 10 fonts × 30 cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic); frozen champion all-primary MAE 0.059607, RMSE 0.088610, R² 0.732898; interference R² -0.430242; no fitting, tuning or model change |
 | `EXP-0021` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only milestone (no dataset, no benchmark image, no inference, no result): closes both M8A execution blockers — thirty deterministic matched text cases are committed in a versioned, hash-pinned manifest with an explicit no-normalisation policy and glyph coverage proven from every pinned face's `cmap` (31/31 characters in all ten faces) — and a canonical identity scheme (`case_id`, `source_id`, `variant_id`, `sample_id`, `row_id`) is defined over a documented serialisation, reusing the existing Milestone 2 helpers; execution protocol v0.2.0 and lifecycle v0.2.0 supersede their v0.1.0 versions (which stay byte-for-byte) and the lifecycle stays **authorized-but-not-executed**; the existing generator is exercised on a bounded set in a temporary directory with 6 explicit failure probes, and the 10 fonts, 30 cases, 300 sources, 6,300 rows, 5,700/600 split and 6,300 image identities are proven without materialising anything |
 | `EXP-0020` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only protocol and lifecycle milestone (no image, text case, dataset row, prediction or model artifact): a frozen execution protocol fixes the M7D design verbatim (10 typefaces, 30 matched cases, 300 sources, 6,300 rows, the M7B ladder, the frozen renderer, the zero-shot frozen M5C champion) and a versioned lifecycle protocol enumerates the only two paths a future milestone may create plus their exact membership, with a file-exact 20-member dependency set, the M7D planning-state check classified rather than deleted, and two unresolved details recorded as fail-closed; the lifecycle is left in the **authorized-but-not-executed** state and every transition was exercised only in isolated temporary shadow trees |
 | `EXP-0019` | 2026-10-21 | `robustness-analysis` | `completed` | Read-only licence resolution for the one face M7E left unresolved (no images, dataset rows, predictions or model artifacts): Luminari is cleared as **eligible** for the intended evaluation-only workflow, because the installed copy is governed by the macOS 27 product licence and the rights holder's own terms treat a software rasteriser producing static png, jpeg and gif images from the installed font data as a licensed use while restricting only the font software; four binding conditions are recorded (pinned environment and hash, no font binary in the tree, evaluation only with no training on font-rendered data, and a fresh review before leaving the macOS product licence); all ten faces are eligible, the audit gate is passed and the benchmark generation gate is **open**, with no roster change proposed and three residual uncertainties recorded rather than resolved |
@@ -63,6 +70,7 @@ model, report or scientific conclusion, and they never rewrite a closed entry.
 
 | Date | Scope | Change | Effect on recorded results |
 | --- | --- | --- | --- |
+| 2026-10-22 | M8E integrity contract (`benchmark_integrity.py`) | Added a historical-evidence verifier and a separate future-execution guard around the completed M8C benchmark. Historical mode checks the exact ground-truth byte hash, parsed schema and joins without reading text, the input-manifest duplicate-key declaration, the 17-module execution closure, external package versions and the historical protocol/lifecycle metadata. Future mode requires a clean committed tree, absent output paths and unique manifest keys. | None. M8C dataset, images, predictions, metrics, report, protocol, lifecycle and run metadata were not modified. The verifier records `75c8ef4-dirty` honestly and does not rewrite historical evidence. |
 | 2026-10-21 | M7D verifier (`evaluation_plan.py`) | The protected-asset fingerprint was scoped from whole-directory trees (`configs/`, `data/processed/`, `models/`) to an explicitly declared, file-level dependency membership (`m7d-scoped-dependencies-v1`): the M7D planning configuration, the 38 upstream evidence files M7D pins, the 17 plan artifacts M7D writes, and an explicit list of ignored scratch and planned-future-output paths. M7D's dependencies are a file set, not a tree, because every upstream dependency is individually hash-pinned in the committed planning configuration. Expected hashes are anchored to that committed configuration and cross-checked against the recorded M7D run snapshot, and the two anchors must agree, so a missing, malformed or tampered manifest fails closed. | None. The M7D research plan is unchanged: the proposed dataset size, font roster, split design, sample-size rationale, chosen direction, success criteria, recorded tables, plan manifest and report are exactly as recorded and were not recomputed, regenerated or re-hashed. The change was required because the whole-`configs/` tree fingerprint would have been invalidated by any future milestone configuration, in the same way the M7D planning configuration invalidated the M7C fingerprint that was repaired in the previous maintenance change. `EXP-0017` remains valid as recorded; see [`docs/METHODOLOGY.md`](METHODOLOGY.md) §5.22. |
 | 2026-10-21 | M7C verifier (`cross_font_analysis.py`) | The protected-asset fingerprint was scoped from whole-directory trees (`configs/`, `data/processed/`, `models/`) to an explicitly declared membership of the dependencies M7C actually depends on: its own protocol plus the M7A/M5A/M7B/M5C protocols, the five frozen dataset roots, the nine frozen model roots, the eighteen historical report roots, the exact set of M7C output files, and an explicit list of transient scratch roots that are excluded as generated outputs. Expected hashes continue to come from the snapshot M7C recorded when it ran, so a modified, deleted, missing or substituted declared dependency is still detected. | None. M7C's metrics, predictions, datasets, protocol, report, tables and 13-claim audit are unchanged and were not recomputed, regenerated or re-hashed. The change was required because the M7D planning configuration (an unrelated file added to the shared `configs/` tree) had invalidated the M7C tree fingerprint even though all 31 M7C pinned inputs and every M7C output artifact were byte-identical. `EXP-0016` and `EXP-0017` remain valid as recorded; see [`docs/METHODOLOGY.md`](METHODOLOGY.md) §5.21. |
 
@@ -105,6 +113,276 @@ class imbalance, and so on).
 
 **Artifacts.** Paths to Git-ignored reports/figures, if any.
 ```
+
+---
+
+### EXP-0026 — Research prioritization and project closure decision (M9C)
+
+- **Date:** 2026-10-22
+- **Status:** `completed`
+- **Task:** `robustness-analysis` (decision and prioritization; no experiment)
+- **Hypothesis / question:** Should the project continue into H1/H2/H3
+  confirmatory work, run a limited pilot, or stop and package the existing
+  measurement and robustness study?
+- **Code revision:** `ba581d2` (M9C decision commit); evidence cut
+  `81710e6`.
+- **Environment:** repository review only; no execution environment was used
+  for a new experiment.
+- **Configuration:** no execution config. The decision package is
+  `reports/research_prioritization_v0_1_0/`.
+- **Dataset:** none generated or modified.
+- **Split:** none.
+- **Seeds:** none introduced.
+
+**Method.** Read-only comparison of H1, H2 and H3 and the three possible paths,
+using only the recorded M8C and M9A evidence and the frozen M9B protocol.
+
+**Decision.** **Path A — stop experimentation and package the research.**
+H1 is the best candidate if the project is reopened, but it is not authorized
+now. H2 and H3 are deprioritized. M9B was not executed; all three hypotheses
+remain `not_tested`. The memo does not authorize training, calibration, feature
+engineering, data generation, benchmark modification or a champion replacement.
+
+**Observations.** The decision is a judgement that the existing evidence is
+sufficient for a credible descriptive study, not a claim that the hypotheses are
+unimportant. The evidence snapshot includes M8C interference MAE `0.0908`,
+thin-line MAE `0.1021`, arc MAE `0.0796`, interference R² `-0.4302` and the M9A
+top-5% source SSE share `10.6%`.
+
+**Conclusion.** The project has a defensible stopping point. The next action is
+documentation and release work, not another experiment.
+
+**Limitations.** Path A does not test H1/H2/H3 and does not establish a causal
+mechanism, human readability, CAPTCHA security or production robustness.
+
+**Next step.** Complete the v1.0 documentation and release packaging. No new
+research milestone is authorized.
+
+**Artifacts.** `reports/research_prioritization_v0_1_0/` (committed).
+
+---
+
+### EXP-0025 — Preregistered interference experiment protocol (M9B)
+
+- **Date:** 2026-10-22
+- **Status:** `completed` (planning-only; **not executed**)
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** What would count as support, falsification or an
+  inconclusive result for H1 (attenuated response), H2 (edge/sharpness feature
+  conflation) and H3 (font/glyph-specific difficulty)?
+- **Code revision:** `81710e6`.
+- **Environment:** static validation only.
+- **Configuration:** `reports/interference_experiment_protocol_v0_1_0/` with
+  `experiment_protocol.md`, `hypothesis_matrix.csv` and
+  `statistical_analysis_plan.json`.
+- **Dataset:** none generated. The design requires a future independent source
+  set C.
+- **Split:** future confirmatory design is source-grouped; no data were
+  collected.
+- **Seeds / settings:** seed `20261023`; 2,000 bootstrap replicates; primary
+  Bonferroni simultaneous confidence 98.333% across three hypotheses.
+
+**Method.** Fixed the estimands, independent units, reference conditions,
+support/falsification/inconclusive rules, multiplicity control, missing-data
+rules and decision states. H1 uses a paired within-source slope deficit. H2 uses
+the eight frozen features as matching covariates. H3 requires new thin-stroke
+and thick-stroke font groups and matched cases. All confirmatory tests require a
+new independent source set C; M8C and M9A are exploratory for these hypotheses.
+
+**Metrics.**
+
+| Item | Value | Notes |
+| --- | --- | --- |
+| Validator checks | 26/26 passed | Static package validator |
+| Recorded package checks | 38/38 passed | `verification_checks.csv` |
+| Hypothesis decision states | `not_tested`, `not_tested`, `not_tested` | H1/H2/H3 |
+| M8C confirmatory use | not permitted | `m8c_can_be_confirmatory = false` |
+
+**Observations.** The package defines no `run`, `fit`, `predict`, `generate`,
+`calibrate` or `select` entry point. The validator confirms 27 provenance hashes
+and the frozen statistical settings.
+
+**Conclusion.** M9B is a preregistration, not evidence. It authorizes no
+execution.
+
+**Limitations.** No sample size is claimed; it must be determined from a future
+pilot and frozen before set C is generated. No power, optional stopping or
+post-hoc endpoint change is permitted.
+
+**Next step.** None. M9C deferred execution.
+
+**Artifacts.** `reports/interference_experiment_protocol_v0_1_0/` (committed).
+
+---
+
+### EXP-0024 — Read-only interference error analysis (M9A)
+
+- **Date:** 2026-10-22
+- **Status:** `completed`
+- **Task:** `robustness-analysis` (read-only exploratory analysis)
+- **Hypothesis / question:** Where is prediction error concentrated under
+  thin-line and arc-stroke interference, and is the pattern broad, font-driven
+  or feature-associated?
+- **Code revision:** `37bc86d` (analysis); report commit `e3d8ed3`.
+- **Environment:** read-only analysis of committed M8C artifacts; the model was
+  hash-checked but never loaded.
+- **Configuration:** `configs/interference_error_analysis_v0_1_0.toml`.
+- **Dataset:** M8C `matched_font_benchmark_v0.1.0` — 6,300 rows, 300 source
+  groups; primary rows only for primary metrics.
+- **Split:** M8C `eval`; source group is the independent unit.
+- **Seeds:** bootstrap seed recorded in `analysis_protocol.json`; no model fit.
+
+**Method.** Recomputed scope, severity, font, source-concentration and
+feature-association summaries from the frozen M8C predictions. The `ground_truth`
+file was integrity-pinned; only `source_id`, `case_id` and `font_id` were read,
+never the text. All thresholds and subgroup proportions are labelled
+exploratory.
+
+**Metrics.**
+
+| Scope | MAE | RMSE | Bias | R² | Large error ≥ 0.20 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| all primary | 0.0596 | 0.089 | -0.031 | 0.7329 | 5.67% |
+| original blur/noise | 0.0327 | 0.057 | 0.016 | 0.8997 | 2.29% |
+| interference | 0.0908 | 0.119 | -0.087 | -0.4302 | 11.08% |
+| thin lines | 0.1021 | 0.132 | -0.097 | -0.5752 | 15.17% |
+| arc strokes | 0.0796 | 0.103 | -0.077 | -0.2989 | 7.00% |
+| geometric primary | 0.0480 | 0.060 | -0.009 | 0.1625 | 0.22% |
+
+**Observations.** The top 5% of interference source groups account for 10.6% of
+interference squared error, versus 51.5% for blur and 49.7% for noise. Thin and
+arc within-source slopes are 0.241 and 0.337; SD ratios are 0.320 and 0.397.
+Large errors reach 55.3% for thin severity 4 and 28.0% for arc severity 4.
+Feature associations are strong but descriptive and not source-clustered
+inference.
+
+**Conclusion.** Interference error is broad and consistent with amplitude
+compression on the observed data. The cause is not identified.
+
+**Limitations.** Exploratory only; no causal claim, no H1/H2/H3 test, no
+feature-selection result, and no human or security outcome. M8C is not a
+like-for-like comparison to M3/M5C.
+
+**Next step.** M9B preregistration; no execution authorized.
+
+**Artifacts.** `reports/interference_error_analysis_v0_1_0/` (committed).
+
+---
+
+### EXP-0023 — M8C provenance audit and M8E integrity contract
+
+- **Date:** 2026-10-22
+- **Status:** `completed`
+- **Task:** `robustness-analysis` (read-only audit and maintenance contract)
+- **Hypothesis / question:** Can the committed M8C predictions and metrics be
+  tied to the executed code, was ground truth isolated, are the metrics
+  reproducible, and do lifecycle/tamper checks fail closed?
+- **Code revision:** M8D audit commit `9f406da`; M8E contract commit
+  `ac4cc81`. Audited M8C revision: `ce5963f`; recorded run revision
+  `75c8ef4-dirty`.
+- **Environment:** macOS 27.0.1 arm64, CPython 3.13.16; audit package records
+  the full execution stack.
+- **Configuration:** `configs/benchmark_integrity_v0_1_0.toml`.
+- **Dataset:** M8C dataset and report, unchanged.
+- **Split:** M8C `eval`; no new split.
+- **Seeds:** no new model fit; audit recomputation uses recorded bootstrap seed.
+
+**Method.** Recomputed metrics independently from committed predictions and
+manifest, checked exact ground-truth bytes and joins without reading text,
+replayed the execution closure, and exercised lifecycle/tamper checks. The M8E
+verifier adds a historical-evidence mode and a separate future-execution guard.
+
+**Metrics.**
+
+| Check | Result |
+| --- | --- |
+| M8D metric comparisons | 1,656 comparisons; 0 failures |
+| M8D report cells | 159 checked; 0 failures |
+| Maximum absolute difference | 6.04 × 10^-14 |
+| M8E dependency closure | 17/17 pinned modules |
+| M8E input manifest | 36/36 rows; 35 unique keys; one declared historical duplicate |
+| Ground-truth SHA-256 | `426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd` |
+| Verdict | Verified with documented limitations; no erratum |
+
+**Observations.** The dirty revision is honestly recorded and explained by
+uncommitted M8C work. Six imported modules were not hash-pinned at run time.
+The historical input manifest duplicate is cosmetic and was preserved
+byte-for-byte.
+
+**Conclusion.** The M8C evidence is internally consistent and independently
+reproducible from committed predictions. The M8E contract checks historical
+bytes and guards future execution without rewriting history.
+
+**Limitations.** The original run did not pin every imported module; a full
+regeneration would be required to prove corruption operators without relying on
+the recorded reproducibility run. That regeneration was not performed.
+
+**Next step.** M9A analysis; then M9B preregistration and M9C decision.
+
+**Artifacts.**
+`reports/matched_font_benchmark_provenance_audit_v0_1_0/` (committed),
+`docs/BENCHMARK_INTEGRITY.md`.
+
+---
+
+### EXP-0022 — Matched cross-font generalisation benchmark (M8C)
+
+- **Date:** 2026-10-22
+- **Status:** `completed`
+- **Task:** `robustness-analysis`
+- **Hypothesis / question:** How does the frozen M5C champion perform zero-shot
+  when ten fonts, including seven held-out identities, are rendered on the same
+  thirty text cases?
+- **Code revision:** execution commit `ce5963f`; recorded execution revision
+  `75c8ef4-dirty` (honest dirty-tree record).
+- **Environment:** macOS 27.0.1 arm64; CPython 3.13.16; scikit-learn 1.9.1,
+  NumPy 2.5.4, pandas 3.0.6, Pillow 12.3.0; 36/36 pinned inputs verified.
+- **Configuration:** `configs/cross_font_benchmark_protocol_v0_2_0.toml`
+  (SHA-256 `059388572f264fb2332f3427da774f1ab30f1339a27f19fd3e98e98163d4574c`);
+  text cases `configs/cross_font_text_cases_v0_1_0.toml`.
+- **Dataset:** `matched_font_benchmark_v0.1.0`; manifest SHA-256
+  `35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743`;
+  10 fonts, 30 cases, 300 sources, 6,300 rows.
+- **Split:** one `eval` split; 5,700 primary and 600 diagnostic rows.
+- **Seeds:** frozen protocol seed schedule; no model fit.
+
+**Method.** Generated the authorised matched dataset, loaded the exact M5C
+champion without fitting or calibration, predicted every row and wrote the
+fifteen authorised report files. Clean and 0.5 px elastic rows were diagnostic
+only; primary metrics excluded them.
+
+**Metrics.**
+
+| Scope | Rows / sources | MAE | RMSE | R² |
+| --- | ---: | ---: | ---: | ---: |
+| all primary | 5,700 / 300 | 0.059607 | 0.088610 | 0.732898 |
+| original blur/noise | 2,400 / 300 | 0.032735 | 0.057131 | 0.899708 |
+| interference | 2,400 / 300 | 0.090825 | 0.118525 | -0.430242 |
+| thin lines | 1,200 / 300 | 0.102073 | 0.132114 | -0.575158 |
+| arc strokes | 1,200 / 300 | 0.079578 | 0.103162 | -0.298911 |
+| geometric primary | 900 / 300 | 0.048018 | 0.059687 | 0.162498 |
+
+**Observations.** The familiar group RMSE is 0.092894, the M7B-held-out group
+RMSE is 0.091626 and the new held-out group RMSE is 0.082831. Font MAE ranges
+from 0.053974 (Arial) to 0.077869 (Impact). The comparison is not a font effect:
+the seven held-out identities are purposive, three were already evaluated in
+M7B, and target difficulty is entangled with font and glyph shape.
+
+**Conclusion.** The frozen champion generalises imperfectly. Blur and noise are
+relatively well predicted; thin-line and arc interference produce negative R².
+The observed descriptive result does not support a causal font or population
+claim.
+
+**Limitations.** Synthetic SSIM target; fixed renderer and font builds; seven
+held-out identities; 300 sources are not 300 independent fonts; recorded dirty
+revision; no human or security outcome. The all-font result is not a
+like-for-like comparison to the M5C familiar-font test slice.
+
+**Next step.** M8D provenance audit and M8E integrity contract. No model change.
+
+**Artifacts.** `reports/matched_font_benchmark_v0_1_0/` (committed);
+`data/processed/matched_font_benchmark_v0.1.0/` (local, Git-ignored);
+`models/retention_aware_selection_v0_1_0/` (local, Git-ignored).
 
 ---
 

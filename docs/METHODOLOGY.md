@@ -1,12 +1,13 @@
 # Methodology
 
-**Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C,
-M6D, M7A, M7B and M7C complete. The target and M3 dataset are frozen, the
-conventional benchmark, grouped interference/geometric benchmarks,
-handcrafted-feature follow-ups, the read-only dataset audit, the held-out-font
-generalisation benchmark and the read-only cross-font evaluation analysis are
-implemented, and the CNN comparison and dashboard remain planned.
-**Last updated:** 2026-10-21
+**Status:** M0–M9C complete. The target and datasets are frozen, the conventional
+benchmark and grouped robustness studies are implemented, the matched cross-font
+benchmark and provenance audit are complete, the interference error analysis is
+exploratory, and the three follow-up hypotheses are preregistered but
+`not_tested`. M9C selected **Path A — stop experimentation and package the
+research**. The CNN comparison and dashboard were never implemented and are not
+part of this release.
+**Last updated:** 2026-10-22
 
 ## 1. Research framing
 
@@ -2946,6 +2947,174 @@ platform-specific. Determinism has been demonstrated in this environment
 only; no cross-platform determinism is claimed, and the benchmark must be
 generated and evaluated in the environment the protocol pins.
 
+### 5.26 M8C matched cross-font benchmark
+
+M8C executes the frozen M8B protocol. It generates the authorised 6,300-image
+dataset, evaluates the exact frozen M5C champion zero-shot and writes fifteen
+authorised report files. It does not train, fine-tune, calibrate, refit or
+select a model, and it does not change the renderer, corruption ladder, feature
+extractor or target.
+
+**Design.** Ten pinned fonts are rendered with the same thirty committed text
+cases. The result is 300 source groups and 21 rows per source: one clean
+reference, four blur levels, four noise levels, four thin-line levels, four
+arc-stroke levels, three primary elastic levels and one diagnostic 0.5 px
+elastic level. The total is 6,300 rows: 5,700 primary and 600 diagnostic. The
+clean and 0.5 px rows are excluded from every primary metric and from the
+primary bootstrap.
+
+**Target and model.** The target remains `ssim_target`. PSNR is diagnostic. The
+champion is `expanded_random_forest` with calibration `none`, artifact SHA-256
+`c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0` and card
+SHA-256 `9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`.
+Inference receives the same eight features in the same order and performs no
+fit.
+
+**Results.** On 5,700 primary rows from 300 sources, MAE is `0.059607`, RMSE is
+`0.088610` and R² is `0.732898`. Original blur/noise RMSE is `0.057131` and
+R² is `0.899708`. Interference is the weak condition: MAE `0.090825`, RMSE
+`0.118525`, R² `-0.430242`. Thin lines reach MAE `0.102073` and R² `-0.575158`;
+arc strokes reach MAE `0.079578` and R² `-0.298911`. Geometric primary MAE is
+`0.048018`, RMSE `0.059687`, R² `0.162498`. Negative R² means the model is worse
+than a condition-mean predictor in squared-error terms on that slice; it is
+reported, not tuned away.
+
+**Font interpretation.** The primary all-font result must not be compared
+directly with the M5C familiar-font test slice: the datasets, font rosters, case
+composition and corruption mixture differ. Within M8C, the familiar group RMSE
+is `0.092894`, the M7B-held-out group RMSE is `0.091626` and the new held-out
+group RMSE is `0.082831`. The per-font MAE range is `0.053974` to `0.077869`.
+These are descriptive differences over seven held-out identities. Three of those
+identities (Georgia, Monaco and Impact) were already evaluated in M7B, so M8C is
+not an independent replication of the M7B three-font pattern. The 300 sources
+are not 300 independent fonts, and no font-population or causal font effect is
+claimed.
+
+**Verification.** The M8C verifier replays all 6,300 images, 6,300 feature rows,
+6,300 predictions, thirteen tables and `report.md`; it reports 16/16 checks. The
+run recorded the honest revision `75c8ef4-dirty`, which is preserved rather than
+rewritten. The dataset and report contents are the historical record; this
+release does not modify them.
+
+### 5.27 M8D provenance and robustness audit
+
+M8D is a read-only audit of M8C. It does not regenerate the benchmark, alter a
+prediction or target, train or tune a model, or rewrite a historical artifact.
+It answers four questions: whether the committed predictions can be tied to the
+executed code; whether `ground_truth.csv` stayed out of the feature, fitting,
+calibration and selection paths; whether the committed metrics follow the frozen
+definitions; and whether the lifecycle and tamper checks fail closed.
+
+The verdict is **verified with documented limitations; no erratum required**.
+The audit independently recomputes 1,656 metric comparisons with zero failures
+(maximum absolute difference `6.04 × 10^-14`), checks 159 report cells with zero
+failures, and confirms that the ground-truth file was never committed or
+reachable in Git history. It also records two boundaries rather than repairing
+them: six imported modules were not hash-pinned at run time, and the historical
+input manifest has 36 rows but 35 unique keys because `text_case_manifest` was
+added twice. The duplicate rows agree, so the issue is cosmetic for M8C; M8E
+validates the declared multiplicity and future execution rejects duplicates.
+
+### 5.28 M8E benchmark integrity contract
+
+M8E is a maintenance contract around the completed M8C benchmark. It has two
+modes:
+
+- **Historical evidence.** Re-check the recorded M8C ground truth byte hash,
+  row count and schema without reading its text; verify the input manifest and
+  its declared duplicate key; verify the execution module closure and external
+  package versions; verify the historical protocol, lifecycle and run-metadata
+  bytes. The recorded revision is checked as `75c8ef4-dirty`, not relabelled as
+  clean.
+- **Future execution.** Require a clean committed tree, absent output paths, a
+  complete dependency closure and a unique-key input manifest before any caller
+  action runs.
+
+The verifier reports 17/17 pinned modules, 36/36 pinned input rows and the exact
+ground-truth hash. It does not change the M8C verifier, which remains the
+authority for replaying images, features, predictions and tables.
+
+### 5.29 M9A interference error analysis (exploratory)
+
+M9A is a read-only analysis of the frozen M8C predictions. It asks where error
+is concentrated under thin-line and arc-stroke interference, whether fonts or
+source groups drive it, which existing features are associated with it, and
+whether the pattern is specific to interference.
+
+The independent unit is the source group. The analysis does not load the model,
+fit or select anything, add a feature, generate data or write into M8C, M8D or
+M8E artifacts. It records 82/82 pre-package checks and 38/38 recorded package
+checks.
+
+Findings, all descriptive and exploratory:
+
+- Interference MAE `0.0908`, RMSE `0.119`, bias `-0.087` (overprediction) and
+  R² `-0.4302`, compared with blur MAE `0.0265` and noise MAE `0.0390`.
+- Thin-line MAE `0.1021`, arc MAE `0.0796`; large errors at
+  `|residual| >= 0.20` occur on 15.17% of thin rows and 7.00% of arc rows,
+  rising to 55.3% and 28.0% at severity 4.
+- Within-source thin-line slope `0.241`, prediction/target SD ratio `0.320`;
+  arc slope `0.337`, ratio `0.397`; blur and noise are near 1.0. This is
+  amplitude compression, not a completely constant predictor.
+- The top 5% of interference source groups account for `10.6%` of interference
+  squared error, versus `51.5%` for blur and `49.7%` for noise. The error is
+  broad across sources, not a handful of outliers.
+- Font differences are large (interference MAE `0.0358` to `0.1302`) but
+  entangled with glyph shape, rasterisation and target difficulty. They are not
+  a causal font effect.
+
+The 0.20 large-error threshold was fixed before the subgroup tables were
+generated, but earlier reconnaissance had inspected aggregate and severity
+summaries, so every threshold-based subgroup proportion is labelled exploratory.
+Feature associations are rank correlations, not source-clustered inference and
+not a feature-selection result. M9A's findings motivate H1–H3 but do not test
+them.
+
+### 5.30 M9B preregistered interference experiment protocol
+
+M9B fixes a future design for three hypotheses:
+
+- **H1 — attenuated response.** Predictions cover too little of the target SSIM
+  range, especially at severe interference.
+- **H2 — edge/sharpness feature conflation.** The frozen eight-feature
+  representation may not separate interference-induced edge changes from benign
+  image-quality variation.
+- **H3 — font/glyph-specific difficulty.** Apparent font differences may reflect
+  target difficulty, glyph composition, renderer effects or other confounders.
+
+The design uses the source group as the independent unit. H1 is a paired
+within-source slope-deficit test against the original blur/noise reference. H2
+uses all eight frozen features as matching covariates. H3 requires new
+thin-stroke and thick-stroke font groups and matched cases. Primary multiplicity
+control is a Bonferroni simultaneous 98.333% percentile interval across the
+three hypotheses; the frozen settings are 2,000 replicates and seed `20261023`.
+All confirmatory tests require a **new independent source set C**. M8C and M9A
+are observed data and are exploratory for these hypotheses. Sample size is to
+be determined by a precision simulation from a pilot and frozen before C is
+generated; no power claim and no optional stopping are permitted.
+
+**Status: preregistered, not executed.** The package has no `run`, `fit`,
+`predict`, `generate`, `calibrate` or `select` command. The validator reports
+26/26 checks; all three hypotheses remain `not_tested`. M9B is not evidence and
+does not authorize execution.
+
+### 5.31 M9C prioritization and closure decision
+
+M9C selects **Path A — stop experimentation and package the research**. The
+decision is based on the existing descriptive evidence, not on a new model
+result. M8C and M9A already support a credible measurement and robustness study;
+H1 remains the best candidate if the project is reopened, but even a supported
+H1 would not establish a causal mechanism or a human/security outcome. H2 has low
+explanatory leverage and high matching risk. H3 is externally dependent and
+still only supports a conditional association under a fixed renderer.
+
+The memo explicitly does not authorize execution, data generation, training,
+calibration, feature engineering, model selection, benchmark modification or
+champion replacement. The frozen champion and all historical artifacts remain
+unchanged. The evidence cut is `81710e6c839f4e7f66752d4045c765df573acbe2`.
+M9C is complete at commit `ba581d2ad518ca207df23222f46f242b8f1f059b`; this
+release milestone only packages the research.
+
 ## 6. Data leakage risks and controls
 
 | Risk | Why it matters | Control |
@@ -2986,6 +3155,12 @@ generated and evaluated in the environment the protocol pins.
   paired contrasts resample whole sources on both sides; font differences and
   familiar-versus-held-out differences are unpaired and descriptive. The three
   held-out fonts have 20 source groups each and are not a font population.
+- M8C uses one `eval` split with 300 source groups and 30 matched cases across
+  ten fonts. Source-grouped intervals resample whole sources; matched-case
+  intervals resample whole cases and keep all ten font renders together.
+  Neither interval is a significance test or a font-population estimate.
+- M9A uses the same M8C source groups and resamples them as whole units. It is
+  exploratory and does not add a new split or a confirmatory test.
 
 ### 7.2 Regression metrics
 
@@ -3015,6 +3190,16 @@ metadata, not as a classification target. These metrics remain planned.
 - Cross-family generalisation: train on some families, test on held-out ones.
 - Worst-group and tail error reporting, not only aggregate means.
 - Qualitative examples of large residuals, with generation metadata for context.
+- M4B and M5B evaluate frozen-model zero-shot transfer and controlled
+  adaptation separately; adaptation results are not reported as frozen-model
+  performance.
+- M7B and M8C evaluate the frozen M5C champion zero-shot. They do not train,
+  calibrate or select on the evaluation data.
+- M8C matched-case intervals keep all ten font renders of a case together;
+  source-grouped intervals keep all variants of a source together.
+- M9A reports source-level error concentration and exploratory feature
+  associations. It does not identify mechanism, test H1–H3 or justify a feature
+  or model change.
 
 ### 7.5 Reporting standards
 
@@ -3038,22 +3223,36 @@ machine-readable `run_metadata.json`; generated artifacts remain Git-ignored.
   RMSE, so the exact winner should not be treated as a stable ranking. The
   family-level comparison is more defensible than the individual forest
   configuration.
-- **External validity:** synthetic renderings, three fonts, one canvas size and
-  two corruption families do not represent production CAPTCHAs. The held-out
-  font (Times New Roman) is a preliminary stress test, not broad generalisation.
-- **Confounding:** severity + family metadata alone reaches test R² 0.911.
-  Image features recover more (0.986), but the synthetic design makes the target
-  easier than real-world quality assessment.
-- **Conclusion validity:** small held-out group counts limit statistical power;
-  bootstrap intervals are wide and unstable. No significance claim is made.
+- **External validity:** synthetic renderings, ten purposively selected fonts,
+  one 192×64 canvas and a fixed macOS renderer do not represent production
+  CAPTCHAs. M7B and M8C are held-out-font probes, not broad font-population or
+  cross-platform generalisation.
+- **Confounding:** severity + family metadata alone reaches test R² 0.911 in
+  M3. Image features recover more (0.986), but the synthetic design makes the
+  target easier than real-world quality assessment. In M8C, font identity is
+  entangled with glyph shape, font metrics, rasterisation and target
+  difficulty; font-level differences are descriptive, not causal.
+- **Conclusion validity:** M3/M5C have 12 test source groups, M7B has 60 and
+  M8C has 300, but M8C has only seven held-out font identities. Intervals are
+  descriptive; no significance or population claim is made.
 - **Target saturation:** clean samples have SSIM exactly 1 and a constant-target
-  subgroup, so R² is undefined there and the pooled R² is inflated relative to
-  corrupted-only performance. Corrupted-only and family slices are reported.
+  subgroup, so R² is undefined there and the pooled R² can be inflated relative
+  to corrupted-only performance. The 0.5 px elastic rung is near-degenerate and
+  diagnostic only. Corrupted-only, family and diagnostic slices are reported
+  separately.
+- **No human outcome:** the project has no human readability, solving,
+  response-time or security labels and cannot support such claims.
+- **Provenance boundaries:** M8C recorded the honest revision `75c8ef4-dirty`.
+  M8D found six unpinned imported modules and a historical duplicate
+  input-manifest key. M8E verifies the historical evidence without rewriting it;
+  a future execution has a clean-tree and unique-key guard.
 - **Persistence safety:** joblib/pickle artifacts are not safe for untrusted
   files. The verification step checks schema and hashes, but only locally
   generated artifacts should be loaded.
-- **Reproducibility:** results depend on library versions and hardware; these are
-  pinned and logged where they affect numerical output.
+- **Reproducibility:** results depend on library versions, font builds and
+  hardware; these are pinned and logged where they affect numerical output. The
+  full benchmark is not reconstructible from a fresh clone without the local
+  datasets, model artifact, fonts and pinned environment.
 
 ## 9. Ethical and legal considerations
 

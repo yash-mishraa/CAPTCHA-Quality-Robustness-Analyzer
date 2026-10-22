@@ -1,1837 +1,332 @@
 # CAPTCHA Quality & Robustness Analyzer
 
-A reproducible, end-to-end computer-vision project for generating synthetic
-CAPTCHA-style text images, applying controlled visual distortions, measuring
-image quality, and modelling how those distortions affect image degradation.
+A reproducible research repository for measuring how controlled visual
+degradations affect **synthetic CAPTCHA-style images**, and for testing whether
+a conventional image-quality model can predict that degradation.
 
-> **Status:** Milestones 0–3, M4A, M4B, M5A, M5B, M5C, M5D, M6A, M6B, M6C,
-> M6D, M7A, M7B, M7C, M7D, M7E, M8A and M8B complete — the metric-validation pilot, a reproducible
-> dataset/feature pipeline, a leakage-safe conventional-ML benchmark, an
-> occlusion/interference feasibility pilot, a grouped occlusion/interference
-> robustness benchmark, a geometric-distortion feasibility pilot, a grouped
-> geometric-robustness benchmark, a retention-aware selection and calibration
-> study, a retention-aware training-objective study, a spatial-aware feature
-> study, a spatial resolution study, a local structural feature study, a
-> multi-scale structure-tensor study, a dataset-adequacy audit, a held-out-font
-> generalisation benchmark, a cross-font evaluation analysis and a next-benchmark
-> evaluation-design plan, a font-roster licensing and availability audit and a
-> benchmark protocol and output-lifecycle versioning milestone have been run and
-> logged. M7D is a **planning** milestone: the proposed dataset, benchmark,
-> endpoints and success criteria are *planned, not executed*. M7E is an **audit**
-> milestone: every proposed typeface now carries a defensible eligibility
-> decision, so the benchmark generation gate is **open** (the M7D plan itself is
-> still only a plan). M8A freezes the execution protocol and versions the
-> output-lifecycle transition, and leaves the lifecycle in the
-> **authorized-but-not-executed** state. M8B closes the two execution blockers M8A
-> left open — the exact matched text strings and the deterministic source
-> identifier scheme — with a committed, hash-pinned text-case manifest and a
-> canonical identity scheme, and validates the existing generator against the
-> frozen protocol in an isolated temporary environment. The CNN
-> comparison, full M5 error taxonomy and dashboard are
-> **not implemented**, and the project does **not** predict human CAPTCHA
-> solvability. See [Current status](#current-status).
+> **Release status:** `v1.0.0` research release. Milestones M0–M9C are complete.
+> M9C selected **Path A — stop experimentation and package the research**.
+> Active experimentation is closed. M9B remains a preregistered but unexecuted
+> protocol, and H1, H2 and H3 remain `not_tested`.
 
-## Overview
+The project is deliberately narrower than the name may suggest. It predicts a
+reference-based image-similarity target. It does **not** measure human
+readability, CAPTCHA solvability, CAPTCHA security or production robustness.
 
-CAPTCHA images are intentionally degraded, but "degraded" is rarely measured.
-This project builds a controlled testbed in which the degradation is known,
-parameterised, and reproducible. Synthetic text images are rendered from known
-strings and fonts, passed through one or more configurable corruption families,
-and then described by reference-based image-quality metrics and handcrafted
-features. Those measurements become the supervised targets for conventional ML
-baselines and a CNN comparison.
+## Research question
 
-The long-term goal is a small, well-documented system that answers questions
-such as:
+Can a small set of deterministic, whole-image features predict the structural
+similarity of a degraded synthetic text image to its corresponding clean
+reference, and how does that prediction behave when the corruption family,
+severity or font changes?
 
-- Which distortion families cause the largest measurable loss of image quality?
-- Can image-quality metrics be predicted from cheap image features?
-- How sensitive are those predictions to corruption type and severity?
-- Where do feature-based models and CNNs disagree, and why?
+The primary target is **SSIM against the exact source-specific clean reference**.
+PSNR is recorded as a diagnostic only. The model receives only eight image
+features; it never receives the target, corruption metadata, font identity, text
+length, source identifiers or split labels.
 
-## Problem statement
+## Scope and non-claims
 
-There is no widely used, open, reproducible benchmark for quantifying how much
-a CAPTCHA-style transformation degrades the underlying text image. Practitioners
-choose distortion parameters by intuition, and portfolio datasets often report
-model accuracy without documenting the data-generation process.
+**In scope**
 
-This project addresses the measurement gap by treating image quality and
-robustness as supervised learning problems over a **synthetic, fully labelled**
-image corpus. Every image carries its generating parameters, so error analysis
-can be grouped by corruption family and severity rather than guessed after the
-fact.
+- Synthetic text rendering at 192×64 in 8-bit grayscale PNG.
+- Controlled Gaussian blur, additive Gaussian noise, thin-line interference,
+  arc-stroke interference and bounded elastic warp.
+- Source-grouped train/validation/test evaluation.
+- Conventional regression on eight documented image features.
+- Zero-shot evaluation of one frozen model on held-out fonts and matched cases.
+- Provenance, integrity, lifecycle and preregistration checks.
+- Read-only error analysis of the frozen benchmark.
 
-### Intended users
+**Out of scope**
 
-- ML/CV practitioners who want a documented synthetic-data and evaluation
-  workflow.
-- Researchers and students studying image-quality assessment or corruption
-  robustness.
-- Reviewers assessing the reproducibility of a computer-vision portfolio
-  project.
+- Human readability, legibility, solvability or user-response prediction.
+- CAPTCHA security, attack success, production robustness or deployment claims.
+- Real CAPTCHA services, captured text or human-subject data.
+- Causal claims about fonts, features or corruption mechanisms.
+- A new model-fitting or benchmark programme. M9C explicitly closed that work.
 
-## Scope and limitations
+## Contributions
 
-**In scope:**
+| Contribution | What was delivered | Evidence |
+| --- | --- | --- |
+| Synthetic corpus and baseline | Deterministic renderer, corruption ladder, grouped splits, manifest/feature pipeline and a leakage-safe conventional benchmark | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md), [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) |
+| Robustness evaluation | Separate pilots and grouped benchmarks for occlusion/interference and geometric warp; frozen-model zero-shot and controlled adaptation | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md), [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) |
+| Feature and retention studies | Retention-aware selection and training objectives, plus four feature-family studies; no added feature family was retained | [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) |
+| Cross-font evaluation | Held-out-font benchmark followed by a matched 10-font, 30-case, 300-source benchmark | [`reports/matched_font_benchmark_v0_1_0/report.md`](reports/matched_font_benchmark_v0_1_0/report.md) |
+| Provenance and integrity | Independent M8C audit, M8E evidence contract, replay, lifecycle and ground-truth isolation checks | [`docs/BENCHMARK_INTEGRITY.md`](docs/BENCHMARK_INTEGRITY.md), [`reports/matched_font_benchmark_provenance_audit_v0_1_0/report.md`](reports/matched_font_benchmark_provenance_audit_v0_1_0/report.md) |
+| Error analysis | Read-only analysis of where interference error concentrates and how the frozen model responds | [`reports/interference_error_analysis_v0_1_0/README.md`](reports/interference_error_analysis_v0_1_0/README.md) |
+| Preregistration and closure | Three frozen hypotheses, explicit decision gates and a documented stop decision | [`reports/interference_experiment_protocol_v0_1_0/README.md`](reports/interference_experiment_protocol_v0_1_0/README.md), [`reports/research_prioritization_v0_1_0/README.md`](reports/research_prioritization_v0_1_0/README.md) |
 
-- A deterministic synthetic text-image renderer with recorded metadata
-  (**implemented**).
-- A configurable distortion engine with two controlled corruption families and
-  severity ladders in the frozen dataset, two isolated occlusion/interference
-  pilot variants, and an isolated smooth elastic-warp pilot (**implemented**;
-  the geometric family is not in the frozen dataset).
-- Reference-based image-quality targets (SSIM primary, PSNR secondary for noise)
-  and eight documented handcrafted features (**implemented**).
-- A versioned dataset with a public manifest, grouped splits, and programmatic
-  verification (**implemented**).
-- Leakage-aware conventional ML baselines with grouped evaluation and a
-  held-out-font stress test (**implemented**).
-- Robustness/error analysis grouped by corruption family, severity and ink
-  coverage for the conventional benchmark (**implemented**; a broader M5 error
-  taxonomy is planned).
-- A grouped occlusion/interference robustness benchmark comparing frozen M3,
-  controlled conventional retraining and naive baselines on held-out sources
-  (**implemented**).
-- A grouped geometric-robustness benchmark comparing frozen M3, controlled
-  conventional adaptation and naive baselines on held-out geometric sources,
-  with original-task retention on the untouched M3 test split (**implemented**).
-- A retention-aware selection and calibration study with predeclared candidate
-  policies, a validation-only calibration procedure and a predeclared
-  retention-aware selection rule (**implemented**).
-- A retention-aware training-objective study that holds the model family,
-  hyperparameters, training rows and seed fixed and varies only the per-example
-  sample weight (**implemented**).
-- A spatial-aware feature study adding localized grid features in a separate
-  versioned module, with three predeclared ablations and a grid-resolution
-  diagnostic (**implemented**).
-- A spatial resolution study varying only the grid (2×2, 4×2, 4×4, 8×8) with
-  the feature definitions unchanged, plus training-only redundancy and
-  overfitting diagnostics (**implemented**).
-- A local structural feature study computing gradient-magnitude and
-  gradient-orientation features from the corrupted image alone, under a
-  structurally enforced no-reference boundary, with three predeclared ablations
-  (**implemented**).
-- A multi-scale structure-tensor study computing two-scale coherence,
-  anisotropy and tensor-energy summaries from the corrupted image alone, under
-  the same structurally enforced no-reference boundary, with three predeclared
-  ablations (**implemented**).
-- A read-only dataset-adequacy and evaluation audit that verifies the frozen
-  inputs, replays the champion, quantifies source-grouped uncertainty, audits
-  training-only feature redundancy, classifies claims against the current
-  evidence and recommends one next direction without executing it
-  (**implemented**).
-- A separately versioned held-out-font generalisation benchmark that generates
-  an untouched evaluation dataset from fonts absent from model development and
-  evaluates the frozen M5C champion zero-shot with source-grouped uncertainty
-  and an explicit familiar-font comparison caveat (**implemented**).
-- A CNN comparison (**planned**).
-- A Streamlit dashboard for exploring results (**planned**).
+The project's main methodological contribution is not a higher model score. It
+is the combination of source-grouped evaluation, a frozen champion, matched
+cross-font cases, fail-closed provenance checks and a preregistered stopping
+point.
 
-**Explicitly out of scope / not claimed:**
+## Architecture and workflow
 
-- **No prediction of human solvability.** The project has no human-labelled
-  responses, so it cannot and will not claim to predict whether a person can
-  solve a CAPTCHA. Any quality score here is a machine-computed proxy.
-- **No evaluation of production CAPTCHAs.** All images are synthetic and
-  generated locally; no third-party CAPTCHA services are scraped.
-- **No security claims.** This is an image-quality and robustness study, not a
-  CAPTCHA-strength benchmark or an attack toolkit.
-- **No novelty claim.** The methods use established image-quality metrics and
-  standard supervised learning; the contribution is a careful, reproducible
-  pipeline and analysis.
-- **No deep-learning results.** PyTorch is a planned dependency, not an
-  implemented component. The M3 benchmark shows that a conventional random
-  forest reconstructs 98.6% of held-out SSIM variance, so a CNN is not justified
-  for this synthetic target without a harder shift.
-
-## Architecture
+The repository contains several related runners rather than one monolithic
+pipeline. The shared stages are:
 
 ```text
-                    configs/ (seeds, fonts, corruption grid)
-                                  |
-                                  v
-  +-------------------+    +-------------------+    +---------------------+
-  | Text renderer     | -> | Distortion engine | -> | Degraded image      |
-  | (clean reference) |    | (type + severity) |    | + generation record |
-  +-------------------+    +-------------------+    +---------------------+
-            |                       |                        |
-            |                       v                        v
-            |             +-------------------+    +---------------------+
-            +-----------> | Quality targets   |    | Feature extractor   |
-                          | SSIM / MS-SSIM /  |    | sharpness, contrast,|
-                          | PSNR vs reference |    | entropy, edge stats |
-                          +-------------------+    +---------------------+
-                                    |                        |
-                                    +-----------+------------+
-                                                v
-                                   +--------------------------+
-                                   | Versioned dataset +      |
-                                   | manifest (Parquet/CSV)   |
-                                   +--------------------------+
-                                                |
-                            +-------------------+-------------------+
-                            v                                       v
-                 +---------------------+                 +---------------------+
-                 | Conventional ML     |                 | CNN comparison      |
-                 | (scikit-learn)      |                 | (PyTorch)           |
-                 +---------------------+                 +---------------------+
-                            |                                       |
-                            +------------------+--------------------+
-                                               v
-                                  +--------------------------+
-                                  | Evaluation + robustness  |
-                                  | analysis + error slices  |
-                                  +--------------------------+
-                                               |
-                                               v
-                                  +--------------------------+
-                                  | Streamlit dashboard      |
-                                  +--------------------------+
+configs/*.toml
+      |
+      v
+render.py ────────────────► clean reference PNG
+      |                           |
+      |                           +──────────────┐
+      v                                          v
+corruptions.py / interference.py / geometric.py  quality_metrics.py
+      |                                          |
+      v                                          v
+degraded PNG ──► features.py ───────────────► ssim_target (PSNR diagnostic)
+      |                                          |
+      +──────────────┬───────────────────────────+
+                     v
+        dataset.py + splits.py
+        manifest.csv / sources.csv / features.csv / summary / images
+                     |
+      ┌──────────────┼─────────────────────────────┐
+      v              v                             v
+ benchmark.py   robustness / geometric      matched_font_benchmark.py
+ (M3, M5C)       benchmarks (M4B, M5B)       (M8C, frozen zero-shot)
+      |              |                             |
+      +──────────────┴──────────────┬──────────────+
+                                    v
+                     metrics, tables, reports, predictions
+                                    |
+                                    v
+             provenance + lifecycle + replay + integrity verifiers
+             (M8D, M8E, M8C verify, M9B validator)
 ```
 
-Stages 1–8 are implemented for the conventional benchmark, the M4B grouped
-robustness benchmark (grouped uncertainty, corruption/coverage slices, a
-held-out-font stress test and source-isolated interference evaluation), the
-M5A geometric-distortion feasibility pilot, the M5B grouped
-geometric-robustness benchmark, the M5C retention-aware selection study, the
-M5D retention-aware training-objective study, the M6A spatial-aware feature
-study, the M6B spatial resolution study, the M6C local structural feature study,
-the M6D multi-scale structure-tensor study, the M7A dataset-adequacy and
-evaluation audit, the M7B held-out-font generalisation benchmark, the M7C
-cross-font evaluation analysis, the M7D next-benchmark evaluation-design
-plan and the M7E font-roster licensing and availability audit. The full M5
-error taxonomy and Stage 9 dashboard are planned.
-Each implemented stage
-writes artifacts with an explicit schema and a recorded configuration hash, so a
-result can be traced back to the exact data and parameters that produced it. Manifests and summaries are timestamp-free,
-which makes repeated runs byte-comparable.
+Key points:
 
-## Technology stack
+- **The clean image is the reference.** Every SSIM/PSNR target is computed
+  against the exact clean image for that source.
+- **Splits are assigned by clean source.** All variants of a source stay in one
+  split. The independent unit is the source group, not the image.
+- **Features see only the degraded image.** They never see the clean reference,
+  targets or generation metadata.
+- **The M5C champion is frozen.** The M7B, M8C and M9A stages do not fit,
+  calibrate, tune or replace it.
+- **The M8C pipeline is frozen at its historical revision.** The M8C run
+  recorded the honest revision `75c8ef4-dirty`; the historical record is not
+  rewritten as a clean run.
 
-| Layer | Tools | Status |
-| --- | --- | --- |
-| Language | Python >= 3.11 | Configured |
-| Data handling | NumPy, pandas | Core dependencies |
-| Image I/O and rendering | Pillow | Core dependency |
-| Image processing | OpenCV, scikit-image | Optional extra `image`; scikit-image provides SSIM/PSNR and the Otsu/Canny features |
-| Conventional ML | scikit-learn, joblib | Optional extra `ml`; used by the M3 benchmark |
-| Deep learning | PyTorch | Optional extra `deep-learning` (planned use) |
-| Dashboard | Streamlit | Optional extra `app` (planned use) |
-| Testing | pytest, pytest-cov | Extra `dev` |
-| Lint / format | Ruff | Extra `dev` |
-| Packaging | hatchling, `pyproject.toml` | Configured |
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the component map and
+[`docs/PROJECT_OVERVIEW.md`](docs/PROJECT_OVERVIEW.md) for the system
+boundaries and navigation guide.
 
-Dependencies are grouped by milestone so the foundation installs only what it
-needs. Large optional stacks (PyTorch, Streamlit) are declared but not installed
-during Milestone 0.
-
-## Repository layout
+## Repository map
 
 ```text
-.
-├── app/                     # Streamlit dashboard (planned)
-├── configs/                 # Versioned experiment/generator configs
-├── data/
-│   ├── raw/                 # Generated source images (ignored)
-│   ├── processed/           # Feature tables and derived datasets (ignored)
-│   └── README.md            # Data and artifact policy
-├── docs/
-│   ├── PROJECT_OVERVIEW.md  # Full intended pipeline
-│   ├── METHODOLOGY.md       # Targets, models, leakage, evaluation
-│   └── EXPERIMENT_LOG.md    # Structured experiment record
-├── models/                  # Trained artifacts (ignored)
-├── notebooks/               # Exploratory notebooks
-├── reports/                 # Generated reports and figures (ignored)
-├── scripts/                 # Thin CLI entry points
-├── src/captcha_quality/     # Importable package
-├── tests/                   # Test suite
-├── .gitignore
-├── LICENSE                  # MIT
-├── pyproject.toml
-└── README.md
+configs/                         committed experiment and protocol configs
+docs/                            methodology, architecture, log, release record
+reports/                         committed final evidence packages
+src/captcha_quality/             implementation
+tests/                           unit, integration and documentation checks
+data/                            generated datasets (Git-ignored)
+models/                          generated model artifacts (Git-ignored)
 ```
 
-## Development setup
+Important source modules:
 
-### Prerequisites
-
-- Git
-- Python 3.11 or newer (the foundation was created and verified with CPython
-  3.13.16)
-- [uv](https://docs.astral.sh/uv/) (recommended) or `pip` + `venv`
-
-### Option A — uv (recommended)
-
-```bash
-uv sync --extra dev --extra image --extra ml
-uv run --extra dev --extra image --extra ml pytest
-uv run --extra dev --extra image --extra ml ruff check .
-uv run --extra dev --extra image --extra ml ruff format --check .
-```
-
-The `image` extra is required for SSIM/PSNR and the Otsu/Canny features; the
-`ml` extra is required for the Milestone 3 benchmark and its tests. Benchmark
-tests skip cleanly if scikit-learn is not installed. To reproduce the Milestone
-1 target-validation pilot:
-
-```bash
-uv run --extra image captcha-pilot --config configs/pilot_target_validation.toml
-```
-
-Outputs are written to `reports/pilot/`, which is Git-ignored.
-
-### Option B — standard venv and pip
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -e ".[dev,image,ml]"
-pytest
-ruff check .
-ruff format --check .
-```
-
-The virtual environment (`.venv/`) is ignored by Git. No credentials or
-environment files are required at this stage.
-
-### Reproducibility conventions
-
-- Pin the supported Python range in `pyproject.toml` (`>=3.11`).
-- Every generator and experiment run is driven by a configuration file and a
-  recorded seed.
-- Datasets, checkpoints, and generated reports stay out of Git; their configs are
-  versioned, and manifests are regenerated deterministically. See
-  [`data/README.md`](data/README.md).
-- Dataset generation writes to a `.partial` staging directory and renames it into
-  place only on success. Existing datasets are never overwritten silently.
-- The public manifest contains `text_sha256`, not raw text; raw strings live only
-  in the internal, Git-ignored `ground_truth.csv`.
-- Results are recorded in [`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md)
-  with the exact configuration and dataset version used.
-
-## Planned milestones
-
-| Milestone | Deliverable | Status |
-| --- | --- | --- |
-| M0 | Repository structure, tooling, documentation foundation | **Complete** |
-| M1 | Target definition and validation: confirm the reference-based quality target is stable, sensitive, and worth modelling | **Complete** — SSIM passes for blur and noise; PSNR passes for noise, fails for blur |
-| M2 | Dataset generation, manifest, grouped splits, handcrafted features, leakage diagnostic | **Complete** — 540-sample dataset; 11/11 verification checks and 4/4 leakage checks pass |
-| M3 | Conventional ML baselines with leakage-safe grouped evaluation | **Complete** — 23-candidate search; selected RF test R² 0.986; held-out-font R² 0.980; CNN not justified |
-| M4 | Occlusion/interference robustness benchmark; CNN comparison under the same splits | **Partially complete** — M4A pilot PASS; M4B grouped benchmark complete (frozen M3 R² -1.045, retrained R² 0.975); CNN comparison not started |
-| M5 | Geometric-distortion feasibility pilot; broader robustness analysis and error taxonomy | **M5A, M5B, M5C, M5D, M6A, M6B, M6C and M6D complete** — M5A pilot is deterministic/replayable, monotonic 60/60, feature-distinct from blur/noise/interference; CONDITIONAL PASS because the 0.5 px rung has between-source SD below the declared margin. M5B grouped benchmark: frozen M3 fails zero-shot geometric calibration (R² -1.186); validation-selected adaptation cuts primary RMSE 31.8% but leaves R² near zero and degrades clean-reference retention. M5C retention-aware study: a slice-aware rule selects an expanded random forest that cuts primary geometric RMSE 39.0% while keeping the original M3 test RMSE at 0.0220 versus 0.0226. M5D training-objective study: no weighted candidate beats the M5C champion. M6A feature study: coarse spatial features do not help, because a 4×2 grid resolves blur ~25× more strongly than a 1–3 px warp. M6B resolution study: finer grids *do* resolve the warp (correlation +0.45 → +0.83) but still produce no demonstrable gain, so the blocker is feature relevance, not resolution. M6C local-structure study: gradient-magnitude and gradient-orientation features do not beat the global eight while preserving retention; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0044, interval includes zero) but regresses clean and original-task slices, and the local family is strongly redundant with the global one. M6D structure-tensor study: two-scale coherence/anisotropy/energy features also fail; the combined candidate is neutral on the geometric aggregate (paired RMSE +0.0014, interval includes zero) but breaches the clean-reference tolerance, and the new features are strongly redundant with each other and with the global eight. CNN not justified |
-| M7A | Dataset-adequacy and evaluation audit of the frozen dataset, targets, split, champion and feature studies | **Complete** — 60 sources, 12 independent test groups, 3 supported / 2 suggestive / 7 unsupported claims; recommended next direction is explicitly held-out fonts or rendering conditions |
-| M7B | Held-out-font generalisation benchmark of the frozen M5C champion | **Complete** — 60 new sources / 1,260 rows from Georgia, Monaco and Impact (absent from M3); zero-shot primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; blur/noise RMSE 0.0959 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; descriptive only |
-| M7C | Cross-font evaluation analysis of the frozen M7B and M5C predictions | **Complete** — read-only, 31 pinned inputs and 13 audited claims (3 supported / 0 suggestive / 10 unsupported); all-primary MAE/RMSE/R² 0.0634 / 0.0930 / 0.7435; per-font all-primary RMSE 0.0852 / 0.0761 / 0.1134; blur/noise RMSE 0.0279 / 0.0346 / 0.1601 versus familiar 0.0233; geometric RMSE 0.0588 versus familiar 0.0590; uncertainty and font differences are descriptive only |
-| M7D | Evaluation design and dataset-expansion plan for the next cross-font benchmark | **Complete as a plan** — read-only, 38 pinned inputs and 46 reproduced evidence values; Direction **A** (broader unseen-font) selected with Direction C's matched text-case control incorporated, Direction B (unseen-renderer) deferred; planned design is 10 fonts × 30 matched text cases = 300 sources / 6,300 rows (5,700 primary, 600 diagnostic), frozen M5C champion evaluated zero-shot; no dataset, image, model or prediction was produced |
-| M7E | Font-roster licensing and availability audit of the planned cross-font benchmark | **Complete as an audit** — read-only, 3 pinned inputs; all 10 faces available with the M7D-pinned SHA-256 and all proprietary (none open-licensed); protocol v0.2.0 (superseding v0.1.0 for Luminari only) records **10 eligible, 0 `review_required`, 0 ineligible, 0 unavailable**; audit gate **passed**, **benchmark generation gate open**; the roster is unchanged and no image, text case, dataset row, prediction or model artifact was produced |
-| M8B | Deterministic matched source cases, canonical identity scheme and generator preflight | **Complete as a protocol** — read-only, nothing generated; thirty deterministic matched text cases committed in a versioned, hash-pinned manifest with an explicit no-normalisation policy and glyph coverage proven from every pinned face's `cmap` (31/31 characters in all ten faces), a canonical `case_id`/`source_id`/`variant_id`/`sample_id`/`row_id` scheme over a documented serialisation that reuses the existing Milestone 2 helpers, execution protocol v0.2.0 and lifecycle v0.2.0 superseding their byte-for-byte unchanged v0.1.0 versions, and a bounded generator preflight in a temporary directory with six explicit failure probes; the 10 fonts, 30 cases, 300 sources, 6,300 rows, 5,700/600 split and 6,300 image identities are proven without materialising anything |
-| M8A | Benchmark protocol and output-lifecycle versioning for the planned cross-font benchmark | **Complete as a protocol** — read-only, nothing generated; frozen execution protocol fixes the M7D design verbatim (10 typefaces, 30 matched cases, 300 sources, 6,300 rows) and a versioned lifecycle protocol enumerates the only two authorisable output paths with their exact membership, a file-exact 20-member dependency set, the M7D planning-state check classified rather than deleted, and two unresolved details recorded as fail-closed; lifecycle left **authorized-but-not-executed** |
-| M6 | Streamlit dashboard, reproducibility package, final report | Planned |
-
-Milestone 1 was a validation gate, not a modelling milestone. Milestone 2 turns
-that validated target into a versioned dataset and asks whether the target is
-trivially predictable from cheap features. Milestone 3 compares conventional
-models on that frozen dataset and tests whether the result survives a held-out
-font. Milestone 4A adds a separate feasibility pilot for occlusion and visual
-interference; M4B uses its frozen source assignment for a grouped zero-shot and
-controlled-adaptation benchmark. M5A adds a separate smooth elastic-warp
-feasibility pilot without training a model; M5B uses the M5A dataset for a
-grouped zero-shot and controlled-adaptation benchmark on the same frozen M3
-source split, M5C adds a retention-aware selection and calibration study on
-those same frames, M5D adds a retention-aware training-objective study, M6A adds
-a spatial-aware feature study, M6B adds a spatial resolution study, M6C adds
-a local structural feature study under a strict no-reference boundary, and M6D
-adds a multi-scale structure-tensor study under the same boundary. See
-[`docs/EXPERIMENT_LOG.md`](docs/EXPERIMENT_LOG.md) for all sixteen recorded
-experiments.
-
-## Quick start: dataset pipeline
-
-```bash
-uv sync --extra dev --extra image
-
-# 1. End-to-end check on the small pilot configuration (9 sources, 81 samples)
-uv run --extra image captcha-dataset generate --config configs/dataset_pilot.toml
-
-# 2. Reference dataset (60 sources, 540 samples), then verify and diagnose
-uv run --extra image captcha-dataset generate --config configs/dataset_v0_1_0.toml
-uv run --extra image captcha-dataset verify   --dataset data/processed/captcha_quality_v0.1.0
-uv run --extra image captcha-dataset diagnose --dataset data/processed/captcha_quality_v0.1.0 \
-    --config configs/dataset_v0_1_0.toml
-
-# 3. Reproducibility: generate a second copy and compare
-uv run --extra image captcha-dataset generate --config configs/dataset_v0_1_0.toml \
-    --output-dir data/processed/repro
-uv run --extra image captcha-dataset compare \
-    --a data/processed/captcha_quality_v0.1.0 --b data/processed/repro
-```
-
-`generate` refuses to replace an existing directory unless `--overwrite` is
-passed. `verify` returns exit code 1 when any check fails; configuration and
-usage errors return 2. `diagnose` writes a markdown report plus four CSV tables
-to `reports/<dataset-name>_<version>/` by default.
-
-Outputs:
-
-| Path | Contents |
+| Module | Responsibility |
 | --- | --- |
-| `manifest.csv` | one row per sample: IDs, split, family, severity, parameters, paths, SSIM/PSNR targets, hashes; no raw text |
-| `sources.csv` | one row per clean source with its split and clean-image hash |
-| `ground_truth.csv` | internal `source_id,text` table (Git-ignored) |
-| `features.csv` | `sample_id` plus the eight documented features |
-| `dataset_summary.json` | counts, per-split summaries, font resolution, split policy and assignment hash, artifact hashes, disk usage |
-| `images/` | lossless PNGs: `clean/` and one directory per corruption family |
+| `render.py` | Deterministic clean text rendering and reference images |
+| `corruptions.py` | Gaussian blur and additive Gaussian noise |
+| `interference.py` | Thin-line and arc-stroke interference |
+| `geometric.py` | Bounded smooth elastic warp |
+| `quality_metrics.py` | SSIM and PSNR against the clean reference |
+| `features.py` | The eight documented whole-image features |
+| `dataset.py` | Dataset generation, manifests, feature tables and verification |
+| `splits.py` | Deterministic source-grouped split assignment |
+| `benchmark.py` / `modelling.py` | M3 conventional benchmark, grouped metrics and frozen-model inference |
+| `robustness_benchmark.py` / `geometric_benchmark.py` | M4B and M5B grouped robustness benchmarks |
+| `retention_aware*.py` | M5C selection/calibration study and M5D training-objective study |
+| `spatial_*.py`, `local_structure*.py`, `structure_tensor*.py` | M6A–M6D feature studies |
+| `heldout_font_benchmark.py`, `cross_font_analysis.py` | M7B and M7C font evaluation |
+| `matched_font_benchmark.py` | M8C matched cross-font execution and replay |
+| `benchmark_lifecycle.py`, `benchmark_preflight.py` | M8A/M8B output lifecycle and generator preflight |
+| `benchmark_integrity.py` | M8E historical-evidence and future-execution checks |
+| `interference_error_analysis.py` | M9A read-only error analysis |
+| `interference_experiment_protocol.py` | M9B static protocol validator |
 
-## Quick start: conventional benchmark
+Committed evidence packages under `reports/` are the M8C benchmark, the M8D
+provenance audit, the M9A error analysis, the M9B preregistered protocol and the
+M9C closure decision. Earlier M3–M7 reports and datasets are generated locally
+and are Git-ignored; they are not present in a fresh clone.
 
-```bash
-uv sync --extra dev --extra image --extra ml
+## Setup
 
-# 1. Run the frozen benchmark on the reference dataset
-uv run --extra image --extra ml captcha-benchmark run \
-    --config configs/benchmark_v0_1_0.toml \
-    --dataset data/processed/captcha_quality_v0.1.0
+Python **3.11+** is required. The historical benchmark environment was CPython
+**3.13.16 on macOS 27.0.1 (arm64)** with the pinned library versions recorded in
+the M8C metadata. Determinism is demonstrated only in that environment.
 
-# 2. Verify persisted model cards, feature schema and dataset/split hashes
-uv run --extra image --extra ml captcha-benchmark verify-model \
-    --dataset data/processed/captcha_quality_v0.1.0 \
-    --model-dir models/benchmark_v0_1_0
-```
-
-The `run` command fits 23 learned candidates on the training sources, selects on
-validation only, evaluates each family winner and the overall winner once on
-test, runs the metadata diagnostics and stratified analysis, and repeats the
-selection without Times New Roman for the held-out-font stress test. It writes
-a Markdown report plus CSV/JSON tables to `reports/benchmark_v0_1_0/` and model
-artifacts to `models/benchmark_v0_1_0/`; both are Git-ignored. Use
-`--output-dir` / `--model-dir` to redirect them.
-
-The command exits 2 on configuration/dataset errors and 1 if model verification
-fails. See [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5 for the frozen
-protocol, model grid, metrics, leakage controls and held-out-font design.
-
-## Quick start: occlusion/interference pilot
-
-This is a feasibility pilot, not a robustness benchmark. It reads the frozen
-reference dataset, verifies and re-renders every clean source, writes a separate
-pilot dataset, and does not train or retune a model.
-
-```bash
-uv sync --extra dev --extra image
-
-uv run --extra image captcha-robustness-pilot run \
-    --config configs/robustness_pilot_occlusion_v0_1_0.toml
-
-# Optional: verify the written pilot dataset against its recorded geometry
-uv run --extra image captcha-robustness-pilot verify \
-    --config configs/robustness_pilot_occlusion_v0_1_0.toml
-```
-
-The run writes `data/processed/occlusion_interference_pilot_v0.1.0/` and
-`reports/robustness_pilot/` (both Git-ignored). It exits 1 only when the
-predeclared feasibility gate returns `FAIL`; dataset/config errors exit 2.
-The gate and findings are recorded in `EXP-0004` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.9.
-
-## Quick start: grouped robustness benchmark
-
-M4B reads the frozen M3 dataset and the M4A pilot dataset, re-verifies both, and
-writes only to its own Git-ignored output directories.
+Using `uv` (recommended):
 
 ```bash
 uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-robustness-benchmark run \
-    --config configs/robustness_benchmark_v0_1_0.toml
-
-uv run --extra image --extra ml captcha-robustness-benchmark verify \
-    --config configs/robustness_benchmark_v0_1_0.toml
 ```
 
-The run evaluates the frozen M3 model zero-shot on the 12 held-out M4A test
-sources, fits a 12-candidate conventional grid on M3 plus M4A training-source
-rows, selects on validation sources only, and evaluates once on test. It writes
-`reports/robustness_benchmark_v0_1_0/` and
-`models/robustness_benchmark_v0_1_0/`, both Git-ignored. `verify` replays both
-models and checks the recorded hashes. See
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.10.
-
-## Quick start: geometric-distortion pilot
-
-M5A is a feasibility pilot, not a robustness benchmark. It reads and verifies
-the frozen M3 dataset, re-renders every clean source, writes a separate pilot
-dataset, and trains no model.
+Or a standard virtual environment:
 
 ```bash
-uv sync --extra dev --extra image
-
-uv run --extra image captcha-geometric-pilot run \
-    --config configs/geometric_distortion_pilot_v0_1_0.toml
-
-# Optional: verify the written pilot dataset against recorded fields and targets
-uv run --extra image captcha-geometric-pilot verify \
-    --config configs/geometric_distortion_pilot_v0_1_0.toml
+python3.13 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -e '.[dev,image,ml]'
 ```
 
-The run writes `data/processed/geometric_distortion_pilot_v0.1.0/` and
-`reports/geometric_distortion_pilot/` (both Git-ignored). It exits 1 only when
-the predeclared feasibility gate returns `FAIL`; dataset/config errors exit 2.
-The gate and findings are recorded in `EXP-0006` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.11.
+The `deep-learning` and `app` extras exist in `pyproject.toml`, but they are not
+used by the completed research. No CNN or dashboard result is part of this
+release.
 
-## Quick start: grouped geometric-robustness benchmark
+## Verification and tests
 
-M5B benchmarks the frozen M3 model against the M5A geometric dataset. It
-measures two different things: **zero-shot transfer** (the frozen M3 model,
-never refitted, on unseen geometric sources) and **controlled adaptation** (a
-conventional model trained on representative geometric rows, selected on
-validation only). The primary geometric score uses the 1.0, 2.0 and 3.0 px
-rungs; the 0.5 px rung is reported only as a separately labelled diagnostic.
+These commands are read-only with respect to the research evidence:
 
 ```bash
-uv sync --extra dev --extra image --extra ml
+uv run pytest -q
+uv run ruff check .
+uv run ruff format --check .
 
-uv run --extra image --extra ml captcha-geometric-benchmark run \
-    --config configs/geometric_robustness_benchmark_v0_1_0.toml
+uv run python -m captcha_quality.benchmark_integrity verify
+uv run python -m captcha_quality.benchmark_lifecycle verify \
+  --config configs/benchmark_lifecycle_v0_3_0.toml --state post-execution
+uv run python -m captcha_quality.matched_font_benchmark verify \
+  --lifecycle-post configs/benchmark_lifecycle_v0_3_0.toml
+uv run python -m captcha_quality.interference_experiment_protocol verify
 
-# Verify the written run: artifact hashes, prediction replay and protocol
-uv run --extra image --extra ml captcha-geometric-benchmark verify \
-    --config configs/geometric_robustness_benchmark_v0_1_0.toml
+git diff --check
 ```
 
-The run writes `reports/geometric_robustness_benchmark_v0_1_0/` and
-`models/geometric_robustness_benchmark_v0_1_0/` (both Git-ignored). It refuses
-to evaluate if any predeclared data-integrity or leakage check fails, and it
-never fits anything on test-source rows. The results are recorded in
-`EXP-0007` and [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.12.
-
-## Quick start: retention-aware selection and calibration
-
-M5C asks whether a conventional model-selection or calibration policy can
-improve geometric prediction while retaining performance on clean references
-and on the original blur/noise task. It compares six predeclared candidate
-policies against the frozen M3 model, fits any calibration only on
-out-of-sample validation predictions, and selects using a retention-aware rule
-declared before any test evaluation.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-retention-aware run \
-    --config configs/retention_aware_selection_v0_1_0.toml
-
-# Verify the written run: artifact hashes, prediction replay and protocol
-uv run --extra image --extra ml captcha-retention-aware verify \
-    --config configs/retention_aware_selection_v0_1_0.toml
-```
-
-The run writes `reports/retention_aware_selection_v0_1_0/` and
-`models/retention_aware_selection_v0_1_0/` (both Git-ignored). The results are
-recorded in `EXP-0008` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.13.
-
-## Quick start: retention-aware training objectives
-
-M5D asks whether a retention-aware *training objective* can improve geometric
-prediction without degrading clean-reference and original-task performance. The
-model family, hyperparameters, training rows and seed are held fixed across all
-candidates, so only the per-example sample weight varies.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-retention-training run \
-    --config configs/retention_aware_training_v0_1_0.toml
-
-# Verify the written run: artifact hashes, prediction replay and protocol
-uv run --extra image --extra ml captcha-retention-training verify \
-    --config configs/retention_aware_training_v0_1_0.toml
-```
-
-The run writes `reports/retention_aware_training_v0_1_0/` and
-`models/retention_aware_training_v0_1_0/` (both Git-ignored). The results are
-recorded in `EXP-0009` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.14.
-
-## Quick start: spatial-aware feature study
-
-M6A asks whether adding spatially localized image features improves geometric
-prediction. The frozen eight-feature pipeline is untouched: the localized
-features live in a separate, separately versioned module.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-spatial-study run \
-    --config configs/spatial_feature_study_v0_1_0.toml
-
-# Verify the written run: artifact hashes, prediction replay and protocol
-uv run --extra image --extra ml captcha-spatial-study verify \
-    --config configs/spatial_feature_study_v0_1_0.toml
-```
-
-The run writes `reports/spatial_feature_study_v0_1_0/` and
-`models/spatial_feature_study_v0_1_0/` (both Git-ignored). The results are
-recorded in `EXP-0010` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.15.
-
-## Quick start: spatial resolution study
-
-M6B varies only the grid resolution (2×2, 4×2, 4×4, 8×8), reusing the M6A
-feature definitions unchanged, to test whether a finer partition captures
-geometric information the coarse grid missed.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-resolution-study run \
-    --config configs/spatial_resolution_study_v0_1_0.toml
-
-# Verify the written run: artifact hashes, prediction replay and protocol
-uv run --extra image --extra ml captcha-resolution-study verify \
-    --config configs/spatial_resolution_study_v0_1_0.toml
-```
-
-The run writes `reports/spatial_resolution_study_v0_1_0/` and
-`models/spatial_resolution_study_v0_1_0/` (both Git-ignored). The results are
-recorded in `EXP-0011` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.16.
-
-## Quick start: local structural feature study
-
-M6C asks whether local structural features computed from the corrupted image
-alone add information beyond the global eight while preserving clean-reference
-and original-task performance. The extractor accepts one corrupted image and
-nothing else; the no-reference boundary is checked structurally on every run.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-local-structure-study run \
-    --config configs/local_structure_study_v0_1_0.toml
-
-# Verify the written run: boundary, artifact hashes, prediction replay and protocol
-uv run --extra image --extra ml captcha-local-structure-study verify \
-    --config configs/local_structure_study_v0_1_0.toml
-```
-
-The run writes `reports/local_structure_study_v0_1_0/` and
-`models/local_structure_study_v0_1_0/` (both Git-ignored). The results are
-recorded in `EXP-0012` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.17.
-
-## Quick start: multi-scale structure-tensor study
-
-M6D asks whether compact multi-scale structure-tensor features computed from the
-corrupted image alone add information beyond the global eight while preserving
-clean-reference and original-task performance. The extractor accepts one
-corrupted image and nothing else; the no-reference boundary is checked
-structurally on every run.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-structure-tensor-study run \
-    --config configs/structure_tensor_study_v0_1_0.toml
-
-# Verify the written run: boundary, artifact hashes, prediction replay and protocol
-uv run --extra image --extra ml captcha-structure-tensor-study verify \
-    --config configs/structure_tensor_study_v0_1_0.toml
-```
-
-The run writes `reports/structure_tensor_study_v0_1_0/` and
-`models/structure_tensor_study_v0_1_0/` (both Git-ignored). The results are
-recorded in `EXP-0013` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.18.
-
-## Quick start: dataset-adequacy and evaluation audit
-
-M7A is a read-only audit of the frozen dataset, targets, source-grouped split,
-M5C champion and M6A–M6D feature studies. It does not train, recalibrate,
-regenerate or replace anything. It verifies 24 pinned inputs, replays the
-champion's stored test predictions, quantifies source-grouped uncertainty,
-reports training-only feature redundancy, classifies claims against the current
-evidence and recommends one next direction without executing it.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-dataset-audit run \
-    --config configs/dataset_adequacy_audit_v0_1_0.toml
-
-# Verify the written run: input pins, prediction replay, output hashes,
-# frozen-asset fingerprints, claim schema and recommendation
-uv run --extra image --extra ml captcha-dataset-audit verify \
-    --config configs/dataset_adequacy_audit_v0_1_0.toml
-```
-
-The run writes only to `reports/dataset_adequacy_audit_v0_1_0/` (Git-ignored).
-The headline finding is that the benchmark supports within-condition synthetic
-SSIM claims and the M5C champion comparison, but not unseen-font,
-unseen-renderer, real-world, human-readability or broad-generalisation claims.
-All three fonts and the single renderer/resolution/format are shared across
-splits, only 12 test source groups are independent, the 0.5 px rung is
-near-degenerate (target SD 0.00266), and the eight features are strongly
-redundant (max training |r| 0.991). The recommended next direction is **B: add
-explicitly held-out fonts or rendering conditions in a future versioned
-dataset**. See `EXP-0014` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.19.
-
-## Quick start: held-out-font generalisation benchmark
-
-M7B implements the M7A recommendation as a **separate, versioned evaluation
-dataset**, not as a change to M3. It uses Georgia, Monaco and Impact — three
-fonts that are absent from the M3 development data — and evaluates the exact
-frozen M5C champion (`expanded_random_forest`, no calibration) zero-shot. No
-model is trained, recalibrated, selected or tuned.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-heldout-font-benchmark run \
-    --config configs/heldout_font_benchmark_v0_1_0.toml
-
-# Replay generation/evaluation, compare every table/report and recheck hashes
-uv run --extra image --extra ml captcha-heldout-font-benchmark verify \
-    --config configs/heldout_font_benchmark_v0_1_0.toml
-```
-
-The run writes `data/processed/heldout_font_benchmark_v0.1.0/` and
-`reports/heldout_font_benchmark_v0_1_0/` (both Git-ignored). The dataset has 60
-sources (20 per font) and 1,260 rows: one clean reference plus four levels each
-of blur, noise, thin lines, arc strokes and elastic warp per source. The primary
-slices exclude the constant clean target and the near-degenerate 0.5 px elastic
-rung. See `EXP-0015` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.20.
-
-## Quick start: cross-font evaluation analysis
-
-M7C is a **read-only analysis** of the frozen M7B held-out-font predictions and
-the frozen M5C familiar-font predictions. It pins 31 upstream files by SHA-256,
-verifies their schemas and counts, reproduces the frozen metrics, and adds
-source-grouped uncertainty, per-font and corruption-family summaries, geometric
-severity slices, source-level error concentration, paired within-source
-contrasts, unpaired font differences and an unmatched familiar-versus-held-out
-comparison. It does not train, refit, recalibrate, select, tune, generate data or
-write into any prior dataset/model/report directory.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-cross-font-analysis run \
-    --config configs/cross_font_analysis_v0_1_0.toml --overwrite
-
-# Replay every deterministic table/report and recheck input/output/frozen hashes
-uv run --extra image --extra ml captcha-cross-font-analysis verify \
-    --config configs/cross_font_analysis_v0_1_0.toml
-```
-
-The run writes only to `reports/cross_font_analysis_v0_1_0/` (Git-ignored). It
-uses seed `20261110` and 2,000 source-grouped percentile bootstrap replicates;
-the independent unit is `source_id`, and every replicate keeps all rows of a
-sampled source together. Font differences and familiar-versus-held-out
-differences are unpaired and descriptive, not causal effects or significance
-tests. See `EXP-0016` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.21.
-
-## Quick start: evaluation-design and dataset-expansion plan
-
-M7D is a **read-only planning milestone**. It compares three candidate next
-benchmarks — broader unseen fonts (Direction A), an unseen renderer (Direction
-B) and a matched font-transfer design (Direction C) — selects one, and
-pre-registers the dataset, endpoints, uncertainty, sample-size rationale,
-leakage controls, success criteria and stopping rules. It then stops: no
-dataset is generated, no image is rendered, no model is trained, refitted,
-recalibrated, selected or tuned, no prediction is changed, and no frozen
-benchmark artifact is modified. Everything it proposes is *planned, not
-executed*.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-uv run --extra image --extra ml captcha-evaluation-plan run \
-    --config configs/evaluation_design_plan_v0_1_0.toml --overwrite
-
-# Replay every deterministic table/report and recheck input/output/frozen hashes
-uv run --extra image --extra ml captcha-evaluation-plan verify \
-    --config configs/evaluation_design_plan_v0_1_0.toml
-```
-
-The run writes only to `reports/evaluation_design_plan_v0_1_0/` (Git-ignored).
-The selected direction is **A**, with Direction C's matched text-case control
-incorporated into the design and Direction B deferred. The planned benchmark is
-10 pre-specified typefaces (3 familiar, 7 held-out) × 30 matched text cases =
-300 font-specific sources and 6,300 rows (5,700 primary, 600 diagnostic), with
-the frozen M5C champion evaluated zero-shot. The ten font files were verified
-by path, SHA-256 and charset glyph coverage; licensing is **not** asserted and
-every font is `review_required_before_generation`. See `EXP-0017` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.22.
-
-## Quick start: font-roster licensing and availability audit
-
-M7E is a **read-only audit** of the ten typefaces the M7D plan proposes for the
-planned matched cross-font benchmark. It re-verifies each face against its
-pinned path and SHA-256, records the licence evidence for that face, and
-re-derives an eligibility decision from that evidence. It generates no images,
-no text cases, no dataset rows, no predictions and no model artifacts, and it
-does not change the M7D plan, the M5C champion or any historical output.
-
-```bash
-uv sync --extra dev --extra image
-
-# Current protocol version (v0.2.0)
-uv run --extra image captcha-font-roster-audit run \
-    --config configs/font_roster_audit_v0_2_0.toml --overwrite
-
-# Replay every deterministic table/report and recheck the declared dependencies
-uv run --extra image captcha-font-roster-audit verify \
-    --config configs/font_roster_audit_v0_2_0.toml
-```
-
-The run writes only to `reports/font_roster_audit_v0_2_0/` (Git-ignored). All
-ten faces are available with the M7D-pinned SHA-256 and all ten are
-proprietary; **all ten are eligible** for the intended evaluation-only
-workflow, so the audit gate is **passed** and the **benchmark generation gate
-is open**. The roster is unchanged: 10 typefaces, 30 matched text cases, 300
-sources, 6,300 rows. See `EXP-0019` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.23.
-
-The superseded protocol version `configs/font_roster_audit_v0_1_0.toml` is
-preserved unchanged as the historical M7E record and remains independently
-verifiable; it reported Luminari as `review_required` before the licence
-investigation in `EXP-0019`.
-
-
-## Quick start: benchmark protocol and output-lifecycle verification
-
-M8A is a **planning and verification** milestone. It freezes the execution
-protocol for the planned cross-font benchmark and versions the transition from
-the historical M7D planning state to the authorised execution state. It
-generates no image, no text case, no dataset row, no prediction and no model
-artifact, and it creates nothing at the planned benchmark output paths.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-# Verify the lifecycle in its current (authorized-but-not-executed) state
-uv run --extra image --extra ml captcha-benchmark-lifecycle verify \
-    --config configs/benchmark_lifecycle_v0_1_0.toml
-
-# The state can also be asserted explicitly
-uv run --extra image --extra ml captcha-benchmark-lifecycle verify \
-    --config configs/benchmark_lifecycle_v0_1_0.toml --state pre-execution
-```
-
-The verifier re-hashes every declared dependency, re-verifies the historical
-M7D state, the execution protocol and the roster against the M7E v0.2.0
-evidence, checks that no font binary exists anywhere, and applies the
-pre-execution or post-execution rules. The M7D planning-state check is
-*classified*, not deleted: it must pass before execution and is expected to
-report the transition afterwards, while every other M7D artifact check must
-still pass. See `EXP-0020` and
-[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.24.
-
-## Quick start: matched source cases and generator preflight
-
-M8B is a **planning and verification** milestone. It closes the two execution
-blockers the frozen M8A protocol left open — the exact matched text strings
-and the deterministic source identifier scheme — and validates the existing
-generator against the protocol in an isolated temporary environment. It
-creates no dataset, renders none of the 6,300 authorised PNGs, runs no M5C
-inference and produces no benchmark result.
-
-```bash
-uv sync --extra dev --extra image --extra ml
-
-# Verify the committed text cases, the identity scheme and the planned row identities
-uv run --extra image --extra ml captcha-benchmark-preflight verify
-
-# Exercise the existing generator on a bounded set of representative cases
-uv run --extra image --extra ml captcha-benchmark-preflight preflight
-```
-
-The verifier fails closed on a missing or changed text-case manifest, a
-duplicate or missing case identifier, a font roster or font-hash mismatch, an
-invalid canonical serialisation, a duplicate or unstable source identifier,
-unsupported or unresolved glyph coverage, a changed renderer configuration or
-an unpinned dependency, unexpected files or outputs, and any attempt to bypass
-the M8A lifecycle contract. The dependency membership is file-exact, so
-unrelated shared-directory additions do not invalidate the verification.
-See `EXP-0021` and [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) §5.25.
-
-## Current status
-
-Implemented:
-
-- Repository structure, MIT license, `.gitignore`, and contributor-facing docs.
-- `pyproject.toml` with a `src/` layout, dependency extras, pytest, coverage, and
-  Ruff configuration.
-- A deterministic pilot text renderer (`render.py`) with explicit font
-  resolution, fixed 192x64 canvas, seeded text/jitter, and read-only clean
-  references.
-- Two controlled corruption families (`corruptions.py`): Gaussian blur and
-  additive Gaussian noise, each with an explicit severity ladder and validated
-  parameters.
-- Reference metrics (`quality_metrics.py`): SSIM and PSNR via scikit-image, with
-  documented range/window settings and exact `+inf` PSNR for identical images.
-- A validation pilot (`pilot.py`, `summarise.py`, `gate.py`) with a predeclared
-  acceptance gate, a `captcha-pilot` CLI, and Git-ignored CSV/JSON/Markdown
-  outputs plus example contact sheets.
-- The M1 pilot added 104 tests covering rendering determinism, corruption
-  behaviour and non-mutation, metric sanity and input validation, gate
-  statistics, configuration errors, and an end-to-end pilot run.
-- A typed dataset configuration (`config.py`) with strict key validation, explicit
-  text-length distributions, font IDs, background policy, corruption ladders,
-  split ratios, seeds, dataset version and output directory, plus a stable
-  content-defining generation hash.
-- Deterministic grouped splits (`splits.py`): one group per clean source,
-  font-stratified allocation, explicit failure when infeasible, and no source in
-  more than one split.
-- Dataset generation, verification and comparison (`dataset.py`): stable IDs,
-  clean reference for every sample, conditional PSNR (`null` + `psnr_infinite`),
-  raw-pixel hashes, staging/atomic rename, and recomputation of every target from
-  the exact pair.
-- Eight image-only features (`features.py`) with documented definitions and
-  fixed order; uniform-image short-circuits; no NaN/inf; batch extraction;
-  SSIM/PSNR/severity/font/length are never inputs.
-- A leakage-safe diagnostic (`diagnostics.py`): train-only fits, validation-based
-  one-feature selection, held-out test reporting, metadata baselines, and
-  family/severity-conditioned correlations.
-- A `captcha-dataset` CLI with `generate`, `verify`, `features`, `diagnose` and
-  `compare` subcommands.
-- A conventional benchmark (`modelling.py`, `benchmark.py`,
-  `configs/benchmark_v0_1_0.toml`): 23-candidate OLS/Ridge/random-forest/HGB
-  search, validation-only selection, test evaluated once per family winner,
-  metadata diagnostics, corruption/severity/coverage slices, grouped bootstrap,
-  and a held-out-font stress test.
-- An isolated occlusion/interference pilot (`interference.py`,
-  `robustness_pilot.py`, `configs/robustness_pilot_occlusion_v0_1_0.toml`):
-  thin lines and curved arcs, nested deterministic stroke pools, exact clean
-  re-rendering, geometry replay, grouped bootstrap, feature contrast against
-  blur/noise, and a predeclared feasibility gate.
-- A grouped robustness benchmark (`robustness_benchmark.py`,
-  `configs/robustness_benchmark_v0_1_0.toml`): frozen-M3 zero-shot evaluation,
-  expanded-data conventional grid, validation-only selection, source-grouped
-  bootstrap, clean-reference handling, data accounting, target-distribution
-  comparison and a run/verify CLI.
-- An isolated geometric-distortion pilot (`geometric.py`,
-  `geometric_pilot.py`, `configs/geometric_distortion_pilot_v0_1_0.toml`):
-  seeded smooth elastic fields, bilinear resampling with edge padding, identity/
-  zero-field/minimal controls, field replay, grouped uncertainty, feature
-  contrasts against blur/noise/interference, and a predeclared gate.
-- A grouped geometric-robustness benchmark (`geometric_benchmark.py`,
-  `configs/geometric_robustness_benchmark_v0_1_0.toml`): frozen-M3 zero-shot
-  evaluation on the M5A test sources, controlled conventional adaptation with
-  validation-only selection, original-task retention on the untouched M3 test
-  split, the 0.5 px rung held out as a diagnostic, predeclared
-  integrity/leakage checks, source-grouped uncertainty and a run/verify CLI.
-- A retention-aware selection and calibration study (`retention_aware.py`,
-  `configs/retention_aware_selection_v0_1_0.toml`): six predeclared candidate
-  policies, a univariate affine calibration fitted only on out-of-sample
-  validation predictions with leave-one-fold-out validation scoring, a
-  predeclared retention-aware selection rule, per-source consistency analysis
-  and a run/verify CLI.
-- A retention-aware training-objective study (`retention_aware_training.py`,
-  `configs/retention_aware_training_v0_1_0.toml`): four predeclared candidate
-  training policies with a fixed model family, metadata-only sample weighting
-  normalised to mean one, a predeclared eligibility-and-score rule with a
-  per-severity constraint, and a run/verify CLI.
-- A spatial-aware feature study (`spatial_features.py`, `spatial_study.py`,
-  `configs/spatial_feature_study_v0_1_0.toml`): sixteen localized grid features
-  in a separate versioned module, three predeclared ablations with a fixed
-  model family and training partition, a grid-resolution diagnostic, and a
-  run/verify CLI.
-- A spatial resolution study (`spatial_resolution_study.py`,
-  `configs/spatial_resolution_study_v0_1_0.toml`): four predeclared grid
-  resolutions in two representations with the feature definitions unchanged,
-  training-only redundancy and overfitting diagnostics, and a run/verify CLI.
-- A dataset-adequacy and evaluation audit (`dataset_audit.py`,
-  `configs/dataset_adequacy_audit_v0_1_0.toml`): 24 pinned upstream inputs,
-  frozen-asset fingerprints, champion prediction replay, source-grouped
-  bootstrap, target-distribution and feature-redundancy diagnostics, a
-  claim-to-evidence table, a four-direction comparison, and a run/verify CLI.
-- A held-out-font generalisation benchmark (`heldout_font_benchmark.py`,
-  `configs/heldout_font_benchmark_v0_1_0.toml`): a separately versioned
-  Georgia/Monaco/Impact dataset (60 sources, 1,260 rows), pinned font files and
-  frozen M5C artifact/card, zero-shot prediction with the unchanged eight-feature
-  extractor, source-grouped bootstrap, per-font/family/severity slices,
-  explicit familiar-font comparison caveats, deterministic reports, and a
-  run/evaluate/verify CLI.
-- A cross-font evaluation analysis (`cross_font_analysis.py`,
-  `configs/cross_font_analysis_v0_1_0.toml`): 31 pinned frozen inputs, schema
-  and count checks, per-font/family/severity/source tables, source-grouped
-  percentile intervals, paired within-source contrasts, unpaired font
-  differences, an unmatched familiar-versus-held-out comparison, a 13-claim
-  audit, output protection and a run/verify CLI.
-- An evaluation-design and dataset-expansion plan (`evaluation_plan.py`,
-  `configs/evaluation_design_plan_v0_1_0.toml`): 38 pinned frozen inputs, 46
-  recomputed evidence values, a three-way direction comparison with a single
-  selected direction, a ten-font roster verified by path/SHA-256/glyph
-  coverage, nine separated independent units, a split hierarchy, twelve leakage
-  controls, eleven pre-registered endpoints, source/paired/font precision
-  scenarios, fourteen success criteria, eight stopping rules, a twelve-row
-  claim-limit table, a machine-readable plan manifest, output protection and a
-  run/verify CLI. It produces no dataset, image, model or prediction.
-- A canonical source-identity scheme (`source_identity.py`) and a matched
-  source-case and generator-preflight verifier (`benchmark_preflight.py`,
-  `configs/cross_font_text_cases_v0_1_0.toml`,
-  `configs/cross_font_benchmark_protocol_v0_2_0.toml`): thirty committed,
-  deterministic, hash-pinned matched text cases with an explicit
-  no-normalisation policy, glyph coverage proven from every pinned face's
-  `cmap`, one documented identifier per level of the benchmark hierarchy
-  (`case_id`, `source_id`, `variant_id`, `sample_id`, `row_id`) over a
-  canonical serialisation, the planned counts and join contracts proven
-  without materialising anything, and a bounded generator preflight that
-  reuses the existing renderer and corruption code. It creates nothing.
-- A benchmark protocol and output-lifecycle verifier (`benchmark_lifecycle.py`,
-  `configs/benchmark_lifecycle_v0_1_0.toml`,
-  `configs/cross_font_benchmark_protocol_v0_1_0.toml`): a frozen execution
-  protocol that fixes the M7D design verbatim (roster and font hashes, matched
-  text-case derivation, renderer and PNG specification, corruption ladder and
-  diagnostic exclusions, row counts, identifier and pairing rules, the frozen
-  M5C champion and feature schema, metrics and uncertainty, execution order and
-  failure behaviour, environment, licensing conditions and unresolved items),
-  plus a versioned lifecycle protocol that declares the authorised output
-  paths and their exact membership, a file-exact dependency membership, and
-  the pre- and post-execution verification rules. It creates nothing.
-- A font-roster licensing and availability audit (`font_roster_audit.py`,
-  `configs/font_roster_audit_v0_2_0.toml`): a versioned protocol with the
-  recorded licence evidence and the eligibility decisions in separate tables,
-  three pinned M7D inputs, live re-verification of every face against its
-  pinned path, SHA-256 and embedded name/OS-2 metadata, an explicit
-  four-status derivation that rejects an unsupported `eligible` decision, a
-  machine-readable audit manifest, an exact output file set, file-exact scoped
-  dependencies and a run/verify CLI. It produces no image, text case, dataset
-  row, prediction or model artifact.
-- Model persistence (`joblib` + JSON cards) with a `verify-model` command that
-  rejects mismatched feature schemas, targets, dataset/split hashes, artifact
-  hashes and incompatible scikit-learn major/minor versions.
-- 761 tests in total, all passing, including byte-identical dataset
-  regeneration, tamper detection, split isolation, feature edge cases,
-  train-only preprocessing, validation-only selection, grouped bootstrap,
-  held-out-font isolation, persistence checks, interference determinism and
-  geometry replay, pilot tamper detection, M4B source isolation/merge checks,
-  frozen-model zero-shot replay, adaptation determinism, elastic-field
-  determinism/replay/validation, M5A manifest/feature reproducibility and the
-  M5B split/merge contracts, 0.5 px exclusion, feature-leakage guard, metric
-  correctness, grouped bootstrap and model-replay checks, plus the M5C
-  validation-only selection, calibration fit-data isolation, test immutability,
-  source-group isolation, slice-score calculation, feature-schema
-  preservation, calibration serialization/reload, prediction replay and
-  deterministic-report tests, the M5D weight validity and normalisation,
-  target-independence, group-assignment, training isolation, diagnostic
-  exclusion, eligibility, tie-breaking, fallback, control-reproduction and
-  deterministic-report tests, the M6A feature names/order/dtypes, blank and
-  degenerate images, determinism, metadata-leakage, schema immutability,
-  split-integrity, diagnostic exclusion, selection and serialization tests, and
-  the M6B per-resolution feature counts, ordering, region boundaries, uneven
-  dimensions, blank and empty regions, determinism, leakage, selection
-  isolation, fallback and deterministic-report tests, and the M6C exact local
-  feature schema/order, deterministic extraction, uniform and empty-edge
-  degeneracy, finite/valid ranges, a structural no-reference signature and AST
-  scan, metadata-leakage, split-integrity, 0.5 px exclusion, validation-only
-  selection, champion fallback, model-reload equivalence and deterministic
-  tables/report/model-bundle tests, and the M6D exact structure-tensor
-  schema/order, two-scale manifest, known-orientation and isotropic-noise
-  behaviour, blank/uniform and near-zero-energy degeneracy, finite/valid ranges,
-  structural no-reference signature and AST scan, metadata-leakage,
-  split-integrity, 0.5 px exclusion, validation-only selection, champion
-  fallback, model-reload equivalence and deterministic tables/report/model-bundle
-  tests, and the M7A config/schema validation, pinned-input tamper detection,
-  dataset/split/source-isolation accounting, target-slice and near-degeneracy
-  checks, per-source aggregation, leave-one-source-out arithmetic, grouped
-  bootstrap determinism, training-only feature diagnostics, claim schema,
-  single-direction recommendation, frozen-asset immutability, deterministic
-  two-run output equality, output-hash tamper detection and CLI run/verify
-  tests, and the M7B font-identity/missing-font failure, isolated output-path,
-  source-grouped generation, clean-reference/target replay, per-font and
-  near-degeneracy accounting, grouped-bootstrap, byte-reproducible generation,
-  report/output-hash consistency, tamper detection and CLI verify tests, and the
-  M7C metric/residual/source-SSE accounting, grouped-bootstrap determinism,
-  paired eligibility, severity and degenerate-target handling, claim-table and
-  report consistency, output-path protection and frozen-input immutability
-  tests, and the M7D config/count/corruption-ladder validation, font-inventory
-  and glyph-coverage checks, evidence-reproduction assertions, direction
-  decision, research-question and independent-unit coverage, split-hierarchy
-  and leakage-control checks, endpoint/sample-size/success-criteria/stopping-rule
-  coverage, report-section and non-execution checks, output-path protection,
-  deterministic two-run output equality, tamper detection, JSON-safe metadata
-  and CLI run/verify tests, the M7D scoped protected-dependency contract:
-  verification with the declared dependencies intact, unrelated configuration,
-  dataset, model and report additions not invalidating M7D, modified and
-  deleted planning configurations, modified and deleted declared upstream
-  dependencies, modified, deleted and unexpected protected outputs, missing,
-  malformed and tampered dependency manifests failing closed, the M7C scoped
-  verifier remaining unaffected, and deterministic repeated verification, the
-  M7C scoped protected-dependency contract:
-  verification with the declared dependencies intact, an unrelated
-  configuration not invalidating M7C, modified and deleted pinned inputs,
-  a deleted declared-but-not-pinned dependency, altered and unexpected M7C
-  output artifacts, missing, malformed and tampered dependency manifests
-  failing closed, deterministic repeated verification, and M7D remaining
-  unaffected, and the M7E font-roster audit: complete and malformed evidence
-  records, missing licence evidence, an unsupported or malformed licence
-  status, an `eligible` decision without adequate evidence, a missing or
-  duplicated roster member, modified and deleted declared evidence, modified
-  and unexpected protected outputs, missing, malformed and tampered dependency
-  manifests failing closed, unrelated configuration, dataset, model and report
-  additions not invalidating the audit, deterministic output and verification,
-  and the M7C and M7D verifiers still passing and still detecting tampering.
-
-Milestone 5A findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- The smooth elastic-warp pilot is deterministic, exactly replayable, and
-  non-destructive. Identity and zero-field controls reproduce all 60 clean
-  references exactly; the 0.25 px minimal control has mean SSIM 0.998.
-- SSIM falls monotonically on **60/60** source trajectories (Spearman -1.0);
-  0/180 adjacent steps increase. Mean SSIM is 0.992, 0.971, 0.907 and 0.837 at
-  0.5, 1, 2 and 3 px maximum displacement. No elastic output is near-identity
-  or degenerate, and no elastic image duplicates another.
-- At severity 4 the eight features are strongly separated from blur, noise,
-  thin lines and arcs (mean |Cohen's d| 4.28–6.49; 4–8 features above |d| = 0.8
-  per contrast). Pooled feature/target correlations mix severity and are
-  reported alongside within-severity correlations, not treated as stable.
-- Gate: **CONDITIONAL PASS**. The only failed margin is between-source SD at
-  0.5 px (0.0025 versus 0.005), which is close to the interpolation floor.
-  This is not an unqualified pass and does not justify a separate geometric
-  benchmark without revising or dropping the lowest rung.
-
-Milestone 5B findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **Zero-shot transfer fails on the new corruption family.** On the primary
-  1.0–3.0 px geometric test slice (36 rows / 12 sources) the frozen M3 model
-  reaches MAE 0.0777, RMSE 0.0967 and R² -1.1858 with a mean residual of
-  -0.0717, against MAE 0.2030, RMSE 0.2132 and R² -9.6363 for the M3
-  training-mean baseline. It is far better than the constant but badly
-  mis-calibrated in absolute terms. On the original M3 blur/noise test rows the
-  same model reaches MAE 0.0157 and R² 0.9865, so this is a cross-corruption
-  transfer failure, not a general model failure.
-- **Controlled adaptation reduces aggregate error but not the calibration
-  failure.** A validation-selected histogram gradient boosting model (12
-  predeclared candidates) reaches MAE 0.0544, RMSE 0.0659 and R² -0.0165 on the
-  same rows; the paired source-grouped RMSE difference is -0.0307 (preliminary
-  interval -0.0472 to -0.0155), a 31.8% reduction. R² stays near zero, so the
-  aggregate error falls without the model explaining between-source variation at
-  fixed severity.
-- **The gain is not uniform across severity.** Adapted MAE is worse at 1.0 px
-  (0.0520 versus 0.0259 for frozen M3) and better at 2.0 px (0.0363 versus
-  0.0662) and 3.0 px (0.0749 versus 0.1409). At the diagnostic 0.5 px rung the
-  two models are nearly indistinguishable (0.0170 versus 0.0171).
-- **The original task is largely retained in aggregate, but not on clean
-  references.** On the untouched M3 test rows the adapted model reaches MAE
-  0.0179, RMSE 0.0243 and R² 0.9843 versus 0.0157/0.0226/0.9865 for frozen
-  M3. The aggregate paired RMSE difference includes zero (0.0017, interval
-  -0.0022 to 0.0042), but the clean-reference slice degrades clearly (MAE
-  0.0134 versus 0.0004), so the adapted model is not a drop-in replacement.
-- **Decision.** Conventional feature-based ML remains the benchmark family.
-  Zero-shot failure with successful adaptation is a distribution-shift result
-  that representative training data addresses in this synthetic setting. The
-  clean-calibration trade-off and the near-zero R² are unresolved; the next
-  step would be a predeclared retention-aware selection or calibration
-  protocol, **not** a larger model. A new corruption family does not by itself
-  justify a CNN.
-- **Uncertainty.** Every interval resamples whole source groups and there are
-  only 12 held-out test sources, so all intervals are preliminary and
-  descriptive. Interval overlap or non-overlap is not treated as a
-  significance test, and no universal threshold was introduced after seeing
-  test results.
-
-Milestone 5C findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **The trade-off was resolved, mostly by the model family.** A retention-aware
-  rule over six predeclared candidates selects an expanded random forest that
-  cuts primary geometric RMSE by **39.0%** (0.0590 versus the frozen 0.0967)
-  and is the only candidate with a positive geometric R² (0.1855). The frozen
-  M3 model reaches 0.0967 with R² -1.186.
-- **The original task is retained.** On the untouched M3 test rows the selected
-  policy reaches MAE 0.0156, RMSE 0.0220 and R² 0.9872, against the frozen
-  0.0157 / 0.0226 / 0.9865. The paired source-grouped RMSE difference is
-  -0.0006 with a preliminary interval of -0.0024 to 0.0005, and the
-  per-source gains and losses nearly cancel.
-- **The cost is small but real.** The clean-reference slice degrades from RMSE
-  0.0012 to 0.0023 (paired difference 0.0011, interval 0.0006 to 0.0017), and
-  the selected model is worse than the frozen model at the mildest included
-  rung (1.0 px MAE 0.0570 versus 0.0259).
-- **Calibration did not do the work.** The affine calibration was tested on
-  every base model and selected for none of them. It reduced the M5B HGB's
-  clean-reference offset (mean residual +0.0122 to +0.0038), confirming the
-  error is partly a systematic offset, but a single global affine map could not
-  remove it without moving the other slices.
-- **The improvement is broad-based.** The geometric gain holds on 11 of 12
-  held-out sources, and the single best source accounts for 22.9% of the total
-  gain.
-- **Decision.** Conventional feature-based ML remains the benchmark champion.
-  The next question, if the line continues, is whether a retention-aware
-  *training* objective rather than a post-hoc selection or calibration policy
-  can remove the remaining small clean-reference cost. The evidence does not
-  justify a CNN, and a new corruption family does not by itself justify one.
-- **Uncertainty.** Every interval resamples whole source groups and there are
-  only 12 held-out test sources, so all intervals are preliminary and
-  descriptive. Interval overlap or non-overlap is not treated as a
-  significance test, and no universal threshold was introduced after seeing
-  test results.
-
-Milestone 5D findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **No weighted candidate beat the champion.** The M5C champion is retained.
-  This is reported as a negative result rather than a manufactured winner.
-- **The control is bit-identical to the champion.** The unweighted retrained
-  control reproduces the frozen M5C bundle's predictions exactly and has the
-  same artifact SHA-256, so every difference below is attributable to the
-  sample weighting alone.
-- **The per-severity constraint earned its keep.** The severity-aware scheme
-  improves the severe geometric rung (severity 4 RMSE 0.0537 versus the
-  champion's 0.0624) but degrades the mild one (severity 2 RMSE 0.0715 versus
-  0.0525, 36% worse) while its *aggregate* geometric RMSE barely moves
-  (+0.0005 on test). Selecting on the aggregate alone would have hidden a real
-  regression on the 1.0 px rung; the predeclared per-severity constraint is
-  what rejects it.
-- **The retention-aware scheme trades rather than wins.** It is eligible but
-  scores +0.0062 against the champion's 0: it improves the clean slice
-  (validation RMSE 0.0018 versus 0.0022) at the cost of the original task
-  (+0.0013) and the aggregate geometric slice (+0.0007). On test it reaches
-  geometric RMSE 0.0580 and clean RMSE 0.0019, but the original-task RMSE rises
-  to 0.0241 against the champion's 0.0233.
-- **Why weighting did not help.** Within one model family, one shared feature
-  representation and one shared sample of 432 training rows, reweighting moves
-  error between slices instead of removing it.
-- **The representation is the likely constraint.** The eight image-only
-  features are global whole-image statistics that do not describe *where* on
-  the canvas a distortion occurs, and a geometric warp moves ink locally while
-  leaving many of them nearly unchanged. This is consistent with the near-zero
-  between-source R² that M5B and M5C both observed, and reweighting cannot add
-  spatial information the representation never exposed. It is a hypothesis
-  consistent with the evidence, not an isolated cause.
-- **Decision.** Conventional feature-based ML remains the benchmark champion
-  and the M5C champion remains the best geometric-robustness policy found so
-  far. The evidence does not justify a CNN, and a new corruption family does
-  not by itself justify one.
-- **Uncertainty.** Every interval resamples whole source groups and there are
-  only 12 held-out test sources, so all intervals are preliminary and
-  descriptive. Interval overlap or non-overlap is not treated as a
-  significance test, and no universal threshold was introduced after seeing
-  test results.
-
-Milestone M6A findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **No spatial ablation was selected.** The frozen M5C champion is retained.
-  This is reported as a negative result rather than a manufactured winner.
-- **The combined ablation traded rather than won.** Adding the 16 spatial
-  features to the 8 global ones improved the aggregate geometric validation
-  RMSE by only 0.00056 while regressing the original task by 15.2%, so it is
-  ineligible under the predeclared tolerance. On test its geometric RMSE is
-  0.0584 against the champion's 0.0590, but its paired interval includes zero,
-  while the original-task and M3-retention regressions exclude zero.
-- **The spatial-only ablation is far worse everywhere** (test geometric RMSE
-  0.0930 against 0.0590), because it discards the global summary that actually
-  tracks blur and noise.
-- **A grid-resolution diagnostic explains why.** On training rows, a 4×2
-  partition of the 192×64 canvas (16×96-pixel cells) resolves blur about **25
-  times** more strongly than the elastic family: the mean absolute per-cell
-  ink-occupancy change against the same source's clean reference is 0.136 for
-  blur and 0.005 for a 1–3 px warp. A warp that small moves ink by a fraction
-  of a cell, so a coarse partition averages the effect away and the spatial
-  features mostly re-encode how much ink the image has — which the global
-  features already state.
-- **What this rules in and out.** The negative result is specific to the
-  declared resolution: it shows that a *coarse* spatial summary does not
-  help, not that localization is useless. The remaining headroom is a
-  resolution question, not an objective question.
-- **Decision.** Conventional feature-based ML remains the benchmark champion
-  and the M5C champion remains the best geometric-robustness policy found so
-  far. The evidence does not justify a CNN, and a new corruption family does
-  not by itself justify one.
-- **Uncertainty.** Every interval resamples whole source groups and there are
-  only 12 held-out test sources, so all intervals are preliminary and
-  descriptive. Interval overlap or non-overlap is not treated as a
-  significance test, and no universal threshold was introduced after seeing
-  test results.
-
-Milestone M6B findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **No spatial candidate qualified.** Every combined candidate breached the
-  10% original-task tolerance and every spatial-only candidate breached it
-  plus the clean-slice and per-severity tolerances, so the frozen M5C champion
-  is retained. This is reported as a negative result rather than a manufactured
-  winner.
-- **The finer grid does resolve the warp.** On training rows the per-cell
-  ink-occupancy change against the same source's clean reference rises from
-  0.0042 at 2×2 to 0.0107 at 8×8, and its correlation with the SSIM drop rises
-  from **+0.45 to +0.83**, closing most of the gap to blur's +0.89. M6A's
-  diagnosis was right and the obvious follow-up still fails.
-- **The model cannot use the information.** No resolution produces a
-  demonstrable geometric gain — every paired geometric interval includes zero —
-  and the aggregate geometric validation RMSE is *best* at the coarsest grid.
-  Meanwhile the retention slices degrade monotonically with the feature count,
-  because the forest considers every feature at each split and the extra
-  spatial features are informative about the geometric family but largely
-  uninformative about blur, noise and clean references.
-- **Redundancy is not the mechanism.** Mean absolute pairwise correlation
-  *falls* with resolution (0.59 at 2×2 to 0.26 at 8×8), and no feature is
-  constant or duplicated at any grid, while the overfitting gap grows.
-- **Cross-milestone check.** The 4×2 candidates reproduce the M6A 4×2 candidates
-  bit-for-bit (max difference 0.0e+00 on every test slice), confirming M6B is a
-  strict extension of M6A.
-- **What this rules in and out.** The blocker is the **relevance** of the
-  spatial features to the other corruption families, not the resolution of the
-  partition. The next defensible question is whether a feature specifically
-  sensitive to local *displacement*, rather than to local ink quantity, can add
-  information without diluting the splits that support blur, noise and clean
-  references.
-- **Decision.** Conventional feature-based ML remains the benchmark champion
-  and the M5C champion remains the best geometric-robustness policy found so
-  far. The evidence does not justify a CNN, and a new corruption family does
-  not by itself justify one.
-- **Uncertainty.** Every interval resamples whole source groups and there are
-  only 12 held-out test sources, so all intervals are preliminary and
-  descriptive. Interval overlap or non-overlap is not treated as a
-  significance test, and no universal threshold was introduced after seeing
-  test results.
-
-Milestone M6C findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **No local-structure candidate was selected.** The frozen M5C champion is
-  retained. Both local candidates are ineligible on validation: the combined
-  candidate breaches the 50% clean-reference tolerance (validation RMSE 0.00621
-  versus 0.00223), and the local-only candidate breaches the 10% original-task
-  tolerance (0.02850 versus 0.02007), the 25% severity-3 tolerance (0.03145
-  versus 0.02494) and the 25% severity-4 tolerance (0.08451 versus 0.06240).
-- **The combined candidate is neutral on the geometric aggregate, not better.**
-  Its test geometric RMSE is 0.06338 versus 0.05901 for the champion (paired
-  difference +0.00438, preliminary interval [-0.00015, 0.00891]). The local-only
-  candidate is 0.06612 (+0.00711, [0.00165, 0.01204]).
-- **The geometric effect is mixed across the ladder.** Both candidates improve
-  the 1 px rung (RMSE 0.04277 local-only and 0.05355 combined versus 0.06187)
-  and regress the 2 px and 3 px rungs; the 1 px paired intervals include zero,
-  so the only apparent gain is not clear.
-- **Retention clearly degrades.** On test, the clean-reference RMSE is 0.02021
-  (local-only) and 0.00931 (combined) versus 0.00228; the original-task RMSE is
-  0.03600 and 0.03112 versus 0.02333; the M3 overall RMSE is 0.03461 and 0.02950
-  versus 0.02201. The paired clean, original-task and M3 intervals exclude zero
-  for both candidates.
-- **The local family is largely redundant with the global eight.** The maximum
-  absolute pairwise correlation among the local features is 0.9926 (the four
-  magnitude statistics duplicate one another), and the maximum absolute
-  local-versus-global correlation in the combined candidate is 0.8743.
-  Random-forest importance gives the combined candidate a local share of 0.2283,
-  with `histogram_entropy` alone at 0.6303 and `grad_mag_std` at 0.1521.
-- **The no-reference boundary is structural, not cosmetic.** The extractor
-  signature accepts one corrupted image and an optional spec; an AST scan of the
-  feature module confirms no target, reference, source, severity, font, split or
-  path identifier, no dynamic import and no file I/O. Tests repeat both checks
-  independently, and an opaque `sample_id` never changes a feature value.
-- **What this rules in and out.** Local gradient strength and orientation, as
-  declared here, do not add usable information beyond the global summary while
-  preserving retention. The result does not rule out every local
-  representation; it specifically weakens the case for whole-image summaries of
-  a local operator. A representation explicitly sensitive to local
-  *displacement* (for example multi-scale structure-tensor anisotropy or local
-  autocorrelation) is the most defensible next handcrafted question.
-- **Decision.** Conventional feature-based ML remains the benchmark champion
-  and the M5C champion remains the best geometric-robustness policy found so
-  far. The evidence does not justify a CNN, and a new corruption family does
-  not by itself justify one.
-- **Uncertainty.** Every interval resamples whole source groups and there are
-  only 12 held-out test sources, so all intervals are preliminary and
-  descriptive. Interval overlap or non-overlap is not treated as a
-  significance test, and no universal threshold was introduced after seeing
-  test results.
-
-Milestone M6D findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **No structure-tensor candidate was selected.** The frozen M5C champion is
-  retained. The combined candidate is ineligible on validation because its
-  clean-reference RMSE 0.00516 exceeds the champion's 0.00223 by more than the
-  50% tolerance; the structure-only candidate breaches the clean-reference
-  tolerance (0.01540 versus 0.00223) and the original-task tolerance (0.03315
-  versus 0.02007).
-- **The combined candidate is neutral on the geometric aggregate, not better.**
-  Its test geometric RMSE is 0.06036 versus 0.05901 for the champion (paired
-  difference +0.00135, preliminary interval [-0.00390, 0.00575]). The
-  structure-only candidate is 0.06532 (+0.00631, [-0.00019, 0.01181]).
-- **The geometric effect is mixed across the ladder.** The combined candidate
-  improves the 1 px rung (RMSE 0.04293 versus 0.06187, paired -0.01894
-  [-0.03022, -0.00620]), regresses the 2 px rung (0.03848 versus 0.02362,
-  +0.01486 [0.00749, 0.02226]) and the 3 px rung (0.08721 versus 0.07784,
-  +0.00937 [-0.00268, 0.01907], interval includes zero).
-- **Retention is worse.** On test, the combined candidate's clean-reference RMSE
-  is 0.00328 versus 0.00228, original-task RMSE 0.02526 versus 0.02333 and M3
-  overall RMSE 0.02384 versus 0.02201. The structure-only candidate is worse on
-  every aggregate slice: clean 0.01822, original 0.03879 and M3 0.03707, with
-  paired intervals that exclude zero.
-- **The new family is strongly redundant.** The maximum absolute pairwise
-  correlation among the nine new features is 0.9977 (`st_s2_coh_mean` versus
-  `st_s2_aniso_mean`); the energy summaries are also nearly interchangeable
-  across scales (0.9820-0.9935). The maximum new-versus-global correlation is
-  0.9387 (`st_s1_coh_mean` versus `ink_fraction`). Random-forest importance
-  gives the combined candidate a structure-tensor share of 0.1362, with
-  `histogram_entropy` alone at 0.6292.
-- **The no-reference boundary is structural, not cosmetic.** The extractor
-  signature accepts one corrupted image and an optional spec; an AST scan of the
-  feature module confirms no target, reference, source, severity, font, split or
-  path identifier, no dynamic import and no file I/O. Tests repeat both checks
-  independently, and an opaque `sample_id` never changes a feature value.
-- **What this rules in and out.** Two-scale structure-tensor coherence,
-  anisotropy and energy summaries do not add usable information beyond the
-  global eight while preserving retention. The M6A-M6D series now covers coarse
-  regional summaries, finer regional grids, whole-image gradient summaries and
-  multi-scale structure-tensor summaries; none adds a retention-safe geometric
-  gain. A learned representation is the remaining distinct family, but it is a
-  separate milestone and is not justified by this result alone.
-- **Decision.** Conventional feature-based ML remains the benchmark champion
-  and the M5C champion remains the best geometric-robustness policy found so
-  far. The evidence does not justify a CNN on this result alone.
-- **Uncertainty.** Every interval resamples whole source groups and there are
-  only 12 held-out test sources, so all intervals are preliminary and
-  descriptive. Interval overlap or non-overlap is not treated as a significance
-  test, and no universal threshold was introduced after seeing test results.
-
-Milestone M7E findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **M7E is an audit, not a benchmark.** It pins the M7D planning configuration,
-  the M7D plan manifest and the M7D font inventory, re-verifies every proposed
-  face against its pinned path and SHA-256, reads the family, style, version
-  string, PostScript name, copyright, licence string and OS/2 embedding bits
-  back out of the font file, and re-derives an eligibility decision from the
-  recorded licence evidence. It generated no image, no text case, no dataset
-  row, no prediction and no model artifact, and it did not modify the M7D plan,
-  the M5C champion or any historical output.
-- **All ten faces are available, and all ten are proprietary.** Each face was
-  verified present with the M7D-pinned SHA-256, and each pins family, style,
-  version and file hash, so the exact face that would be rendered is
-  identifiable. **None of the ten is released under an open licence**, so the
-  planned benchmark is reproducible from a pinned Apple environment but not
-  from freely redistributable inputs.
-- **All ten faces are eligible; Luminari was resolved by `EXP-0019`.** For the
-  Microsoft designs (Georgia, Verdana, Trebuchet MS) and the Monotype designs
-  (Arial, Courier New, Times New Roman, Impact) the foundry terms expressly
-  permit distributing materials made with the font, provided the material does
-  not embed the font and a static graphic image does not correspond to
-  individually addressed glyphs — both conditions the benchmark satisfies. The
-  Apple-published designs (Monaco, Chalkduster) rest on the macOS product
-  licence, which grants use to display and print content and extends to
-  publishing and distributing materials the licensee is authorised to
-  distribute. Luminari is unresolved: the macOS product licence grants the use
-  that creates the output but is silent on redistributing it, while the Canada
-  Type terms that do cover the rendered output permit static images in png,
-  jpeg and gif formats but only take effect once Canada Type has received full
-  payment. The follow-up investigation in `EXP-0019` established the
-  contractual connection and cleared the face: the installed copy is governed by
-  the macOS product licence, the rights holder's own terms treat a software
-  rasteriser producing static png/jpeg/gif images from the installed font data
-  as a licensed use, and every distribution restriction in those terms attaches
-  to the font software rather than to the rendered output. The face was
-  retained in the roster throughout; it was not removed and no similarly named
-  family was substituted.
-- **The font-file boundary is what makes the roster usable.** No licence in
-  the roster permits redistributing a font file, and the workflow never needs
-  to: the dataset manifest records the font identifier and the font SHA-256,
-  never the font file, the repository ignores `data/`, `models/` and
-  `reports/`, and the audit verifies at run time that no font binary exists
-  anywhere in the working tree. Distribution of the rendered images is the
-  only redistribution the workflow performs.
-- **A project-level licence risk was found and recorded.** Monotype's direct
-  licence forbids using the font software, or any rendered glyphs, outlines,
-  kerning data or other visual elements, in connection with developing,
-  training or fine-tuning artificial-intelligence models. The macOS-bundled
-  copies audited here are governed by the macOS Software License Agreement,
-  which contains no such clause, and the planned benchmark is evaluation-only.
-  The finding is still material, because the frozen M3 development data was
-  rendered with three of these faces and the M5C champion was trained on it.
-  Any future move to a directly licensed Monotype copy, or any training on
-  font-rendered data under such a licence, needs a fresh licence review first.
-- **Georgia, Monaco and Impact are not new to the project.** They were already
-  evaluated in M7B. They remain valid held-out identities because the champion
-  was never fitted, calibrated or selected on them, but the roster coverage
-  table keeps the distinction visible so a future result on them is never
-  described as an independent replication of the M7B three-font finding.
-- **The benchmark generation gate is open.** Under protocol version 0.2.0 the
-  audit gate is **passed** (ten eligible, none `review_required`, ineligible
-  or unavailable) and benchmark generation is **open**. Four conditions are
-  binding on Luminari: re-verify the pinned environment and hash before every
-  run, never let a font binary into the working tree, use the face for
-  evaluation only, and re-review the licence before moving off the macOS
-  product licence. M7D's `no_planned_outputs_created` check is preserved and
-  still passes; the audit created nothing at the planned benchmark output
-  paths.
-
-Milestone M8B findings (protocol and preflight only — **not** results):
-
-- **M8B generates nothing.** No dataset, no benchmark image, no prediction and
-  no metric. The 6,300 authorised PNGs were not rendered; the bounded
-  preflight exercised 10 clean references and 40 seeded corruptions in a
-  temporary directory that was removed again.
-- **Both M8A execution blockers are closed with committed evidence.** The
-  thirty matched text cases are frozen in a versioned manifest whose file
-  digest and canonical manifest digest are pinned by execution protocol
-  v0.2.0, and the derivation rule is retained as provenance and re-derived by
-  the verifier to prove the two still agree. The identity scheme reuses the
-  existing Milestone 2 helpers rather than introducing a second convention.
-- **Normalisation is explicit and never silent.** The policy is `none`: the
-  stored strings are used verbatim, and the verifier raises rather than
-  rewriting a string that would need normalising.
-- **Glyph coverage is proven, not assumed.** All 31 characters of the project
-  charset are in the character map of all ten pinned faces. A missing
-  character, a missing font file or a font hash mismatch is a hard failure:
-  no glyph is ever substituted and no character is ever replaced with a
-  question mark.
-- **The counts and joins are proven without the dataset.** 10 fonts, 30
-  cases, 300 unique and stable source identifiers, 6,300 planned rows with
-  5,700 primary and 600 diagnostic, 21 rows per source and 6,300 unique image
-  identities across the six corruption subdirectories.
-- **One protocol defect was found and corrected, not hidden.** The M8A
-  protocol had serialised its numeric parameter arrays as strings, which
-  would have made the corruption ladders unusable. Protocol v0.2.0 corrects
-  the type without changing a value; v0.1.0 stays byte-for-byte unchanged as
-  the historical record.
-
-Milestone M8A findings (protocol and lifecycle only — **not** results):
-
-- **M8A generates nothing.** It produced no image, no text case, no dataset
-  row, no prediction and no model artifact, executed no inference, and created
-  nothing at the planned benchmark output paths. It leaves the lifecycle in the
-  **authorized-but-not-executed** state.
-- **The scientific design is frozen, not revised.** The execution protocol
-  fixes the M7D plan verbatim: 10 typefaces, 30 matched text cases, 300
-  sources, 6,300 rows (5,700 primary, 600 diagnostic), the M7B corruption
-  ladder and diagnostic exclusions, the frozen renderer at 192×64 8-bit
-  grayscale PNG, and the frozen M5C champion evaluated zero-shot. The target
-  stays synthetic-reference SSIM and PSNR stays diagnostic.
-- **The seven held-out font identities, not the 300 source cases, are the
-  limitation.** Georgia, Monaco and Impact were already evaluated in M7B and
-  are recorded as previously evaluated held-out fonts, not as fonts that are
-  new to the project; Verdana, Trebuchet MS, Chalkduster and Luminari are the
-  genuinely new identities. No font-population claim follows.
-- **The lifecycle is explicit and M7D stays immutable.** Only two enumerated
-  paths may ever be created, with an exact file membership; the M7D
-  planning-state check is classified rather than deleted, and every M7D artifact
-  check must still pass in both states; the dependency membership is
-  file-exact, so unrelated shared-directory additions do not invalidate the
-  verification while a modified or deleted declared input does.
-- **Two details are recorded as unresolved, not invented.** The literal text
-  strings depend on a generator that does not exist yet, and the matched
-  source identifier scheme must be defined by the execution milestone. Both
-  make the post-execution verification fail closed.
-
-Milestone M7D findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **M7D is a plan, not a result.** It pins 38 frozen M3/M5C/M7A/M7B/M7C inputs,
-  recomputes 46 numerical claims from them, and writes only to
-  `reports/evaluation_design_plan_v0_1_0/`. No dataset was generated, no image
-  was rendered, no model was trained, refitted, recalibrated, selected or
-  tuned, no prediction was changed, and no frozen artifact was modified. The
-  proposed dataset, benchmark, endpoints, sample size, success criteria and
-  stopping rules are *planned, not executed*.
-- **Direction A is selected, C is folded in, B is deferred.** A is the only
-  option that expands the font-identity axis, so it directly targets the M7C
-  unsupported arbitrary-unseen-font and font-population claims. C has the
-  highest internal validity but reuses the same three held-out fonts, so its
-  matched text-case and matched-corruption logic is incorporated into A as a
-  design control — that is exactly what repairs the M7C unmatched
-  familiar-versus-held-out comparison (+0.072595 blur/noise RMSE, -0.000167
-  geometric). B is deferred because a second renderer confounds renderer with
-  antialiasing, placement, canvas and format, and two renderers are not a
-  renderer sample.
-- **The planned design is fixed before any new outcome exists.** 10
-  pre-specified typefaces (Arial, Courier New, Times New Roman as familiar;
-  Georgia, Monaco, Impact, Verdana, Trebuchet MS, Chalkduster, Luminari as
-  held-out) × 30 matched text cases = 300 font-specific sources, 6,300 rows,
-  5,700 primary and 600 diagnostic. The corruption ladder is the frozen M7B
-  one, the renderer is the frozen Pillow/FreeType path at 192×64 8-bit
-  grayscale PNG, and the sample is not extended after results are seen.
-- **The roster widens the held-out set rather than replacing it.** Georgia,
-  Monaco and Impact were already used in M7B as an *evaluation* set (the
-  champion was never fit, calibrated or selected on them), so they stay valid
-  held-out identities and keep three of the seven directly comparable with M7B
-  — but only four of the seven (Verdana, Trebuchet MS, Chalkduster, Luminari)
-  are genuinely new typefaces. The design therefore does **not** independently
-  re-test the M7B three-font pattern; the per-font `m7b_status` column records
-  this for every face.
-- **Nine independent units are separated explicitly.** Font identity, matched
-  text case, source, clean reference, corrupted variant, renderer, benchmark
-  row, font pair and source group are distinct. Font-level inference stays
-  descriptive: source grouping alone cannot establish font-population
-  generalisation, because it resamples cases within the observed fonts rather
-  than new fonts. Ten purposive typefaces are not a font population, and the
-  two display/script faces are deliberate stress conditions rather than
-  representative CAPTCHA fonts.
-- **One primary endpoint, with the rest pre-registered.** P1 is the matched
-  held-out-minus-familiar all-primary RMSE contrast over 21 font pairs with a
-  2,000-replicate matched-case grouped percentile bootstrap. P1d is the
-  per-font profile with leave-one-font-out range; eight secondary/diagnostic
-  endpoints cover blur/noise, each corruption family, geometric severity,
-  clean reference, target distributions, source concentration, font-level
-  spread and paired within-source contrasts. The clean target and the 0.5 px
-  elastic rung are diagnostic only, and R² is suppressed when target SD is
-  below 0.005.
-- **Precision is planned transparently, and no power calculation is
-  faked.** The source-level planning SD is 0.022634 (the observed M7C
-  per-source RMSE SD); at 30 cases the normal-approximation SE for a mean
-  source RMSE is 0.004132 and the 95% half-width 0.008099. The paired
-  within-case SD does not exist yet, so the plan reports sensitivity at
-  assumed SDs of 0.005/0.010/0.020 (half-widths 0.001789/0.003578/0.007157)
-  rather than a fabricated effect size, and the font-level half-widths at 10
-  fonts (0.006198/0.012396/0.018594 for SDs 0.010/0.020/0.030) are explicitly
-  roster description, not a population interval.
-- **The champion stays frozen and no threshold is invented.** The baseline is
-  the exact M5C `expanded_random_forest` champion with calibration `none`
-  (artifact `c9b1625d…`, card `9a75725b…`). Any future evaluator may predict
-  with it but must not fit, recalibrate, select or tune, and must not use
-  held-out labels. M7D defines no universal SSIM improvement threshold; a
-  future model comparison needs a separate authorized protocol, untouched
-  test groups and a predeclared practical margin.
-- **Licensing is not asserted, and generation fails closed.** All ten planned
-  font files were present on the development machine, matched their recorded
-  SHA-256 and covered the full project charset, but every font carries
-  `license_status = review_required_before_generation`. A missing font, a
-  changed hash, lost glyph coverage or an unresolved license stops the run —
-  no substitute font may be chosen after outcomes are seen.
-- **One frozen-verifier interaction was recorded, then repaired.** The M7C
-  `verify` command originally fingerprinted the whole `configs/` tree, so
-  adding the new M7D configuration changed that tree-level fingerprint. The
-  difference was exactly one added file: all 360 files recorded in the M7C run
-  remained byte-identical, all 31 M7C pinned inputs still matched their recorded
-  SHA-256 values, and all M7C output artifacts were unchanged. M7C code and
-  artifacts were not modified to silence the check, and M7D re-verifies the
-  M7C configuration, tables, metadata and report directly by content instead.
-  A later maintenance change scoped the M7C protected-dependency fingerprint
-  to the dependencies M7C actually declares, so an unrelated configuration
-  added to a shared directory no longer invalidates M7C while a modified,
-  deleted or substituted declared dependency is still detected. That change
-  alters verifier logic only — no metric, prediction, dataset, report or
-  scientific conclusion was altered or regenerated. The same scoping was then
-  applied to M7D's own verifier, which had the identical whole-directory
-  weakness; M7D's declared membership is the planning configuration, the 38
-  upstream evidence files it pins and the 17 plan artifacts it writes, with
-  expected hashes anchored to the committed configuration and cross-checked
-  against the recorded run snapshot.
-- **Null, mixed and negative results have defined meanings.** A null contrast
-  means no detected matched difference on this roster and these corruptions;
-  it is not equivalence, universal robustness or font-population homogeneity,
-  because no equivalence margin was predeclared. A mixed result is a valid
-  conditional finding, reported per family and severity rather than averaged
-  into a universal ranking. A negative result is a conditional descriptive
-  result and does not establish CAPTCHA insecurity or a causal font effect.
-
-Milestone M7C findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **M7C is a read-only analysis, not a new model or dataset.** It pins 31 frozen
-  M7B/M5C/M5A/M7A inputs, reproduces the stored metrics, and writes only to
-  `reports/cross_font_analysis_v0_1_0/`. The independent unit is `source_id`;
-  every bootstrap replicate resamples whole sources and keeps all of a source's
-  rows together.
-- **Per-font all-primary error differs, but not between every pair.** All-primary
-  RMSE is 0.0852 for Georgia, 0.0761 for Monaco and 0.1134 for Impact. The
-  unpaired Georgia–Monaco difference is +0.0091 with interval
-  [-0.0007, 0.0185], which includes zero; Georgia–Impact is -0.0282
-  [-0.0383, -0.0180] and Monaco–Impact is -0.0373 [-0.0466, -0.0279]. The
-  claim that the champion performs differently across the tested fonts is
-  supported for at least one pair on the observed sources, not for every pair.
-- **Blur/noise error is higher in all three fonts, with a very uneven
-  magnitude.** Original blur/noise RMSE is 0.0279 (Georgia), 0.0346 (Monaco)
-  and 0.1601 (Impact), versus 0.0233 on the familiar M5C benchmark. All three
-  point estimates exceed the familiar point estimate, so the direction is
-  consistent, but the max/min ratio is 5.74, so a homogeneity claim is not
-  supported. The comparison is unmatched in fonts, sources and corruption mix.
-- **Aggregate geometric error hides severity-specific behaviour.** Primary
-  geometric RMSE is 0.0588 versus 0.0590 on the familiar benchmark, but the
-  all-font severity RMSEs are 0.0534 at 1 px, 0.0259 at 2 px and 0.0829 at
-  3 px (max/min ratio 3.20). The paired 2 px-minus-1 px difference is -0.0275
-  [-0.0334, -0.0216] and 3 px-minus-2 px is +0.0570 [0.0460, 0.0673]. The
-  aggregate is therefore not a single severity-level error, and the 2 px rung
-  is the strongest, not the middle rung.
-- **Error is distributed broadly across sources, not dominated by a few.**
-  For all-primary rows the top-3 source share is 0.099 and the effective source
-  count is 48.4 of 60; 19 sources account for 50% of squared error. The
-  predeclared concentration rule (top-3 share ≥ 0.25 and effective fraction
-  ≤ 0.50) is not met, so the “small number of sources dominate” claim is
-  unsupported.
-- **Paired within-source contrasts are more informative than raw family
-  comparisons.** Gaussian noise is worse than Gaussian blur by +0.0213 RMSE
-  [0.0140, 0.0279]; thin lines are worse than arc strokes by +0.0232
-  [0.0153, 0.0312]; interference-versus-original blur/noise is +0.0042
-  [-0.0196, 0.0299] and includes zero; geometric primary is better than original
-  blur/noise by -0.0371 [-0.0523, -0.0202]. These are descriptive paired
-  contrasts, not significance tests.
-- **The claim audit is deliberately conservative.** Three claims are
-  `supported` (per-font difference for at least one pair, blur/noise direction
-  in all three fonts, geometric aggregate concealing severity), none are
-  `suggestive`, and ten are `unsupported`. The unsupported set includes
-  arbitrary unseen fonts, unseen renderers/resolutions/formats, human
-  readability or solve rates, security or production robustness, a causal font
-  effect, geometric equivalence from close aggregate RMSE, stable 0.5 px R² or
-  ranking, and font-population generalisation.
-- **The 0.5 px elastic rung remains diagnostic only.** Its target SD is 0.003376,
-  below the 0.005 near-degeneracy margin, so its R² is suppressed and it is not
-  used for model selection, ranking or a stability claim.
-- **Uncertainty is source-grouped and descriptive.** The all-primary 95%
-  intervals are [0.0592, 0.0677] for MAE and [0.0871, 0.0987] for RMSE over 60
-  source groups. Font groups have 20 sources each and are unpaired; the three
-  typefaces are a purposive sample, so no interval estimates font-population
-  variation. No significance test is performed.
-
-Milestone M7B findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **The frozen champion degrades substantially on genuinely new fonts.** On
-  the 60 held-out sources / 1,140 primary rows, MAE is 0.0634, RMSE 0.0930 and
-  R² 0.7435. The source-grouped 95% interval for MAE is [0.0592, 0.0678] and for
-  RMSE [0.0867, 0.0986].
-- **The original blur/noise task is the clearest regression.** Its RMSE is
-  0.0959 versus 0.0233 on the familiar-font M5C test slice; the held-out point
-  estimate lies outside the familiar-font source-grouped interval. Georgia and
-  Monaco remain comparatively strong (RMSE 0.0279 and 0.0346), while Impact is
-  much worse (0.1601, R² 0.4625).
-- **Geometric performance is roughly unchanged in aggregate.** Primary
-  geometric RMSE is 0.0588 versus 0.0590 on the familiar benchmark (MAE 0.0476
-  versus 0.0493), and the point estimate lies inside the familiar interval. The
-  ladder is uneven: the 1 px rung is poor (RMSE 0.0534, R² -20.96) and the 3 px
-  rung is worse than the familiar benchmark (0.0829 versus 0.0778), while the
-  2 px rung is strong (0.0259, R² 0.3010).
-- **Thin-line and arc interference are not calibrated.** The combined
-  interference slice has RMSE 0.1001 and R² -0.1744; thin lines are worse
-  (0.1110, R² -0.2821) than arcs (0.0878, R² -0.0690). These are new
-  out-of-distribution slices, not a matched comparison.
-- **Clean-reference error rises but remains small in absolute terms.** MAE is
-  0.0094 and RMSE 0.0142 with a constant target, so R² is undefined. Per-font
-  clean RMSE is 0.0047 (Georgia), 0.0120 (Monaco) and 0.0208 (Impact).
-- **The dataset is isolated and non-degenerate.** All 60 sources are in one
-  `eval` split; all 1,260 images are distinct; the clean targets are exact 1.0;
-  the 0.5 px elastic rung is diagnostic only (target SD 0.00338 < 0.005); no
-  font or source overlaps M3; and the M3–M7A assets are fingerprinted before and
-  after the run.
-- **What this rules in and out.** The result supports a descriptive statement
-  that zero-shot SSIM prediction is worse on these three unseen fonts, most
-  clearly for blur/noise and interference, while geometric aggregate error is
-  similar. It does **not** estimate a font population, identify a causal font
-  property, prove failure on all unseen fonts, or measure human readability,
-  CAPTCHA solvability or security.
-- **Uncertainty.** The 60 source groups give tighter intervals than the
-  12-group familiar benchmark, but the fonts are a purposive sample of three
-  typefaces. The familiar comparison differs in font, source count, source
-  composition and corruption mix; it is not a controlled effect estimate.
-
-Milestone 4B findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- **Zero-shot absolute calibration does not transfer.** The frozen M3 model
-  scored MAE/RMSE/R² **0.1295 / 0.1612 / -1.0455** on the 12 held-out M4A test
-  sources. Clean references remained near-perfect (MAE 0.0004), but corrupted
-  rows were systematically under-predicted; on corrupted rows alone the paired
-  MAE difference from the M3 training mean was -0.0060 with 95% interval
-  [-0.0307, 0.0129], which includes zero.
-- **Controlled conventional adaptation worked.** Validation selected
-  `random_forest_depth_unlimited_leaf_1` (validation RMSE 0.0201). Test
-  MAE/RMSE/R² was **0.0131 / 0.0178 / 0.9752**, an 89.0% RMSE reduction versus
-  frozen M3; the paired RMSE interval was [-0.1558, -0.1256]. The expanded
-  training-mean baseline scored 0.1261 / 0.1466 / -0.6912 on the same rows.
-- **The M3 result was preserved.** On the original M3 test rows the retrained
-  model scored 0.0158 / 0.0239 / 0.9849, versus 0.0157 / 0.0226 / 0.9865 for
-  frozen M3.
-- **The target shift is disclosed.** Expanded training targets had mean 0.7587
-  versus 0.8524 on M4A test; the lower training mean comes from severe M3
-  blur/noise rows. No test row informed feature selection, scaling,
-  hyperparameters or calibration.
-- Intervals use only 12 source groups and are preliminary. The result supports
-  conventional modelling for this benchmark; it is not evidence that a CNN
-  would fail on a harder or human-labelled shift.
-
-Milestone 4A findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- The occlusion/interference pilot passed all five predeclared gate criteria:
-  deterministic and exactly replayable, non-degenerate, monotone in density,
-  feature-distinct from blur/noise, and duplicate-free.
-- 60 sources × (1 clean + 2 variants × 4 severities) = 540 samples. Mean SSIM
-  fell from 0.943 to 0.662 for `thin_lines` and 0.947 to 0.715 for
-  `arc_strokes`; 0/360 adjacent steps increased.
-- The pilot does **not** show the family is harder for humans or more
-  solvable/unsolvable. It is evidence for proceeding to a separate grouped
-  robustness benchmark, not a benchmark result.
-
-Milestone 3 findings (synthetic image similarity only — **not** human
-readability or solvability):
-
-- The selected random forest (8 features, depth 8, leaf 1) reached test
-  MAE/RMSE/R² **0.0157 / 0.0226 / 0.9865**, versus the naive mean's
-  0.1664 / 0.1942 / -0.0000. The 88.4% RMSE reduction is material under the
-  predeclared 5% rule.
-- A nonlinear forest descriptively beat the best linear family winner (Ridge
-  alpha 0.01: RMSE 0.0379, R² 0.9619), by 40.4% RMSE. The top two forest
-  configurations were nearly tied on validation, so the family result is more
-  stable than the exact hyperparameter choice.
-- Severity + family metadata alone reached test R² **0.911**; font + text length
-  reached **0.002**; image + metadata (OLS) reached 0.984 and did **not** beat
-  the image-only forest. The synthetic design explains most of the target, and
-  font/length are not shortcuts in this split.
-- Test slices: blur RMSE 0.0255 / R² 0.9824; noise 0.0223 / 0.9721; clean 0.0012
-  with R² undefined; highest ink-coverage quartile 0.0288. Grouped bootstrap 95%
-  RMSE interval [0.0157, 0.0309] over 12 source groups. No significance claim.
-- Held-out font: training on Arial + Courier New and evaluating all 20 Times New
-  Roman sources (180 samples) gave selected-HGB R² **0.9799** / RMSE 0.0271,
-  with the random-forest family winner at 0.0248 / 0.9832, versus naive 0.1910.
-  This is a preliminary three-font stress test, not broad generalisation.
-- **A CNN is not justified for this target.** The conventional forest already
-  reconstructs 98.6% of held-out variance and captures the nonlinearity. A CNN
-  would be justified only on a harder predeclared shift where it beats this
-  frozen baseline.
-
-Milestone 2 findings (synthetic image similarity only — **not** human readability
-or solvability):
-
-- The reference dataset (60 sources, 540 samples) is byte-reproducible across
-  independent runs: identical manifest, features, sources, ground truth, and all
-  540 image pixel hashes.
-- All 11 verification checks and all 4 leakage checks pass. Splits contain
-  36/12/12 sources and 324/108/108 samples; every split contains all three fonts.
-- The best single feature (`histogram_entropy`, selected on validation) reaches
-  validation/test R² 0.680/0.644 — below the predeclared "strong confound"
-  threshold, so there is **no single-feature triviality**.
-- However, the eight-feature linear baseline reaches validation/test R²
-  0.968/0.962. The target is highly predictable from simple statistics, so a CNN
-  is not justified by target predictability alone. M3 models must beat this
-  baseline under grouped evaluation.
-- Font and text length show no confounding (held-out R² ≈ 0). Corruption severity
-  and family explain most of the target (metadata-only R² 0.924/0.911), as
-  expected, and are reported as oracle baselines rather than model inputs.
-- Family-conditional correlations can reverse sign (e.g. Laplacian variance:
-  overall r = 0.066, r = 0.883 within blur, r = -0.861 within noise), so the
-  diagnostic reports within-family and within-severity rows.
-
-Milestone 1 findings (synthetic image similarity only — **not** human readability
-or solvability):
-
-- **SSIM passed** all predeclared criteria for both blur and noise and is the
-  candidate primary target.
-- **PSNR passed for noise**, but **failed for blur**: at fixed blur severity,
-  PSNR correlates 0.975 with the image's ink coverage, so it largely restates how
-  much text is present. It is retained only as a secondary diagnostic for the
-  noise family.
-- **MS-SSIM is deferred**: no maintained implementation is available without
-  adding PyTorch solely for one metric.
-- Adjacent severities were separated with large paired effects, no trial-level
-  reversals occurred, and clean-vs-clean comparisons were exactly perfect.
-
-Not implemented (planned): the CNN comparison, the broader M5 error taxonomy,
-notebooks, the Streamlit dashboard, deployment, the M7D benchmark itself (only
-its design is specified), and any human-solvability or production-CAPTCHA
-claims.
-The conventional model's performance is a synthetic image-similarity result, not
-a readability estimate.
+The M8E, M8C and M9B checks expect the recorded local evidence workspace,
+including the Git-ignored datasets, model artifact and pinned font files. They
+fail closed when those inputs are absent. That is a missing-input condition, not
+permission to weaken or skip a check. See
+[`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) for the full boundary.
+
+**Artifact-generating commands are not part of the release check.**
+`captcha-dataset generate`, `captcha-benchmark run`,
+`captcha-robustness-pilot run`, `captcha-geometric-pilot run`,
+`captcha-matched-font-benchmark run` and the study runners write images,
+datasets, predictions, models or reports. They were not run for this release.
+The M9A runner can write a new report and also was not run.
+
+## Results
+
+All figures below are observed on synthetic data. Intervals are descriptive
+source-grouped or matched-case summaries, not significance tests. Do not compare
+metrics from different benchmark compositions as if they were a controlled
+like-for-like experiment.
+
+| Stage | Evaluation context | MAE | RMSE | R² |
+| --- | --- | ---: | ---: | ---: |
+| M3 baseline, selected random forest | 108 test rows, 12 sources, familiar fonts, blur/noise + clean | 0.0157 | 0.0226 | 0.9865 |
+| M5C champion, original M3 test slice | 108 rows, 12 sources | 0.0156 | 0.0220 | 0.9872 |
+| M5C champion, geometric test slice | 36 rows, 12 sources, 1–3 px warp | 0.0493 | 0.0590 | 0.1855 |
+| M5C champion, clean reference | 12 rows, 12 sources | 0.0013 | 0.0023 | n/a |
+| M5C champion, original blur/noise | 96 rows, 12 sources | 0.0174 | 0.0233 | 0.9814 |
+| M7B held-out fonts, all primary | 1,140 rows, 60 sources, Georgia/Monaco/Impact | 0.063427 | 0.092952 | 0.743537 |
+| M7B held-out fonts, original blur/noise | 480 rows, 60 sources | 0.060075 | 0.095923 | 0.761361 |
+| M7B held-out fonts, geometric primary | 180 rows, 60 sources | 0.047571 | 0.058839 | 0.265726 |
+| M8C matched fonts, all primary | 5,700 rows, 300 sources, 10 fonts, 30 cases | 0.059607 | 0.088610 | 0.732898 |
+| M8C matched fonts, original blur/noise | 2,400 rows, 300 sources | 0.032735 | 0.057131 | 0.899708 |
+| M8C matched fonts, interference | 2,400 rows, 300 sources | 0.090825 | 0.118525 | −0.430242 |
+| M8C matched fonts, thin lines | 1,200 rows, 300 sources | 0.102073 | 0.132114 | −0.575158 |
+| M8C matched fonts, arc strokes | 1,200 rows, 300 sources | 0.079578 | 0.103162 | −0.298911 |
+| M8C matched fonts, geometric primary | 900 rows, 300 sources | 0.048018 | 0.059687 | 0.162498 |
+
+### What the results show
+
+- **The baseline task is easy on its original synthetic split.** The selected
+  random forest reaches R² 0.9865 on 12 held-out source groups. This is a
+  within-renderer, within-font-family result, not broad generalisation.
+- **Held-out fonts are harder, but the comparison is unmatched.** The M7B
+  held-out-font blur/noise RMSE is 0.095923 versus 0.023328 on the recorded
+  familiar-font slice. The datasets, fonts, cases and corruption mixtures are
+  not matched, so this is a descriptive difference, not a font effect.
+- **The matched M8C benchmark does not reproduce a uniform held-out penalty.**
+  On 30 matched cases, the recorded all-primary RMSE is 0.092894 for the
+  familiar group, 0.091626 for the M7B-held-out group and 0.082831 for the new
+  held-out group. Font-level MAE ranges from 0.053974 to 0.077869. These are
+  descriptive differences over seven observed held-out identities, not a
+  font-population or causal result.
+- **Thin-line and arc interference are the weak conditions.** M8C interference
+  R² is −0.430242, thin-line R² is −0.575158 and arc R² is −0.298911. On those
+  slices the model is worse than a condition-mean predictor in squared-error
+  terms. The clean-reference and 0.5 px elastic rows are diagnostic and are
+  excluded from primary metrics.
+- **The error is broad, not a few outliers.** M9A finds that the top 5% of
+  interference source groups account for 10.6% of interference squared error,
+  compared with 51.5% for blur and 49.7% for noise. This is exploratory
+  evidence from the observed M8C benchmark.
+- **The response is compressed at severe interference.** M9A reports
+  within-source thin-line slope 0.241 and prediction/target SD ratio 0.320;
+  arc-stroke slope 0.337 and ratio 0.397. Large errors at `|residual| >= 0.20`
+  occur on 15.17% of thin-line rows and 7.00% of arc rows, rising to 55.3% and
+  28.0% at severity 4. These are descriptive, exploratory findings; the cause is
+  not identified.
+
+The frozen M5C champion is `expanded_random_forest` with calibration `none`.
+Its artifact SHA-256 is
+`c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0` and its
+model-card SHA-256 is
+`9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8`.
+
+## Limitations
+
+- **Synthetic target.** SSIM against a clean reference is an image-similarity
+  proxy. It is not human readability, legibility, solvability or security.
+- **One renderer and platform.** The benchmark uses a fixed 192×64 grayscale
+  renderer on one macOS environment with pinned Apple-bundled fonts. No
+  cross-platform, cross-renderer or cross-format result is claimed.
+- **Constrained font roster.** Ten purposively selected fonts are not a random
+  sample of typefaces. Seven held-out identities, each rendered with 30 matched
+  cases, are the central font-generalisation limitation. The 300 M8C sources
+  are not 300 independent fonts.
+- **Confounding.** Font identity is entangled with glyph shape, font metrics,
+  rasterisation, target difficulty and corruption response. M8C does not
+  identify a causal font effect.
+- **Limited independent groups.** M3 and M5C have 12 test source groups; M7B
+  has 60; M8C has 300. Intervals describe those observed groups and are not a
+  population estimate.
+- **Diagnostic slices.** Clean-reference rows have a constant target and
+  undefined R². The 0.5 px elastic rung is near-degenerate and is diagnostic
+  only. Neither is part of a primary metric or the primary bootstrap.
+- **Provenance boundaries.** M8C recorded the honest revision `75c8ef4-dirty`.
+  M8D found six unpinned modules and a historical duplicate input-manifest key;
+  these are documented rather than silently repaired. M8E verifies the
+  historical evidence and adds a clean-tree guard for future execution.
+- **No human or security validation.** There are no human labels, no solver
+  data, no live CAPTCHA experiments and no production deployment evidence.
+- **No confirmatory follow-up.** M9B is a preregistered design, not a result.
+  Its three hypotheses remain `not_tested`.
+
+## Research status
+
+M9C selected **Path A — stop experimentation and package the research**. The
+experiment phase is closed. H1 (attenuated response) is the first candidate only
+if the project is formally reopened with new independent data and an approved
+protocol. H2 (edge/sharpness feature conflation) and H3 (font/glyph difficulty)
+are deprioritized. M9B was not executed, and no part of this release authorizes
+a new experiment, dataset, model fit, calibration, feature change, benchmark
+change or champion replacement.
+
+The final release record is in
+[`docs/RELEASE_NOTES_v1.0.0.md`](docs/RELEASE_NOTES_v1.0.0.md) and the closure
+evidence is in
+[`docs/RELEASE_CHECKLIST_v1.0.0.md`](docs/RELEASE_CHECKLIST_v1.0.0.md).
+
+## Versioning
+
+The Python package version is `1.0.0`; this is the documentation and release
+version for the completed research study. Historical datasets, model cards,
+protocols and reports keep their original `v0.1.0`, `v0.2.0` or milestone
+labels. The release does not re-version historical scientific evidence.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+MIT. See [`LICENSE`](LICENSE). Font binaries are not redistributed. The
+generated benchmark images and local model artifacts are not tracked in Git.
