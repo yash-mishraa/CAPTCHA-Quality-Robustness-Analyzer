@@ -1,0 +1,98 @@
+# M9A read-only interference error analysis, version 0.1.0.
+#
+# This configuration authorises exactly one new report directory. It does not
+# authorise benchmark generation, model loading, fitting, calibration,
+# selection, feature construction or any write to an M8C/M8D/M8E artifact.
+
+schema = "m9a-interference-error-analysis-config-v1"
+
+[run]
+name = "interference-error-analysis"
+version = "v0.1.0"
+seed = 20261022
+n_bootstrap = 2000
+confidence_level = 0.95
+output_reports = "reports/interference_error_analysis_v0_1_0"
+
+[analysis]
+near_degenerate_sd = 0.005
+large_error_threshold = 0.20
+group_column = "source_id"
+independent_unit = "source group (one font rendered with one committed text case)"
+bootstrap_method = "source-grouped percentile bootstrap; whole source groups resampled with replacement"
+feature_association_method = "Spearman rank correlation"
+multiple_comparison_method = "Benjamini-Hochberg q-values; exploratory, not source-clustered inferential tests"
+large_error_rule = "|ssim_target - prediction| >= 0.20 in absolute SSIM units; predeclared exploratory threshold"
+feature_association_rule = "descriptive rank association only; no feature selection or causal interpretation"
+font_contrast_rule = "paired by text case: one font's source MAE minus the mean source MAE of the other nine fonts on the same case"
+source_characteristic_rule = "descriptive source-level Spearman association; font and case composition remain confounded"
+
+[[inputs]]
+key = "predictions"
+path = "reports/matched_font_benchmark_v0_1_0/predictions.csv"
+sha256 = "e6c1f1ba83bbb05c18fed8a9b0dd1c87014a6f6c3667475971b2834dfedd4dd4"
+rows = 6300
+role = "frozen M8C predictions, targets and benchmark labels"
+
+[[inputs]]
+key = "manifest"
+path = "data/processed/matched_font_benchmark_v0.1.0/manifest.csv"
+sha256 = "35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743"
+rows = 6300
+role = "frozen M8C sample, source, corruption and protocol manifest"
+
+[[inputs]]
+key = "features"
+path = "data/processed/matched_font_benchmark_v0.1.0/features.csv"
+sha256 = "fa2d79c85d682b26545dc2c4e3ec5ece2a41d85aea7e1ea1070f7256ff8519bb"
+rows = 6300
+role = "existing frozen eight-feature table; no feature is added"
+
+[[inputs]]
+key = "sources"
+path = "data/processed/matched_font_benchmark_v0.1.0/sources.csv"
+sha256 = "a6f721f8e849d44750a3aaeaec74cc1bd93a8122e243985173904b40116d5010"
+rows = 300
+role = "frozen source groups, font/case/background metadata and clean-image hashes"
+
+[[inputs]]
+key = "source_cases"
+path = "data/processed/matched_font_benchmark_v0.1.0/source_cases.csv"
+sha256 = "5e34d6a826b5f4444675113c0030a138ace02d3369f085a6e197613bacf01b88"
+rows = 300
+role = "frozen source-case lineage and split metadata"
+
+[[inputs]]
+key = "ground_truth"
+path = "data/processed/matched_font_benchmark_v0.1.0/ground_truth.csv"
+sha256 = "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd"
+rows = 300
+role = "local integrity-pinned text lineage; only source_id, case_id and font_id are read, never text"
+
+[[inputs]]
+key = "run_metadata"
+path = "reports/matched_font_benchmark_v0_1_0/run_metadata.json"
+sha256 = "930ce8d8767a3e52919e5736ff8a9dfe4b74b008c54e2cc2107fd221d0944ebd"
+rows = 0
+role = "frozen M8C inference and model provenance metadata"
+
+[[inputs]]
+key = "model_artifact"
+path = "models/retention_aware_selection_v0_1_0/selected_policy.joblib"
+sha256 = "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+rows = 0
+role = "frozen M5C champion artifact; hash-checked only, never loaded"
+
+[[inputs]]
+key = "model_card"
+path = "models/retention_aware_selection_v0_1_0/selected_policy_card.json"
+sha256 = "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+rows = 0
+role = "frozen M5C champion model card; metadata only"
+
+[[inputs]]
+key = "m8e_config"
+path = "configs/benchmark_integrity_v0_1_0.toml"
+sha256 = "0b018004f41c2373fce2463eff78e11763ed53fd96f4436d1584ecd3e03707df"
+rows = 0
+role = "M8E integrity contract; hash-checked and executed read-only, never modified"
