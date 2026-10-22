@@ -88,6 +88,7 @@ captcha-evaluation-plan = "captcha_quality.evaluation_plan:main"
 captcha-font-roster-audit = "captcha_quality.font_roster_audit:main"
 captcha-benchmark-lifecycle = "captcha_quality.benchmark_lifecycle:main"
 captcha-benchmark-preflight = "captcha_quality.benchmark_preflight:main"
+captcha-matched-font-benchmark = "captcha_quality.matched_font_benchmark:main"
 
 [tool.hatch.version]
 path = "src/captcha_quality/__init__.py"

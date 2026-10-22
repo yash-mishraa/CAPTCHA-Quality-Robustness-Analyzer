@@ -380,6 +380,7 @@ def test_repeated_verification_is_deterministic(shadow_repo):
 
 def test_m7d_configuration_and_verification_are_unaffected():
     """The M7D milestone keeps its own configuration, hashes and verifier."""
+    from captcha_quality import benchmark_lifecycle as bl
     from captcha_quality import evaluation_plan as ep
 
     m7d_config = REPO_ROOT / "configs" / "evaluation_design_plan_v0_1_0.toml"
@@ -392,7 +393,15 @@ def test_m7d_configuration_and_verification_are_unaffected():
         "6464989d0c165d4749d2ece04bd7f8435d3499edf38e4dcd5f2097abd44b4537"
     )
     report = ep.verify_plan(m7d_config)
-    assert report.ok, [f"{c.name}: {c.detail}" for c in report.failures()]
+    # M7D's own planning-state check correctly notices the authorized M8C
+    # outputs. It is the only failure; every other M7D check remains active.
+    assert {check.name for check in report.failures()} == {
+        "table:isolation_checks.csv",
+        "isolation_checks",
+    }
+    transition = bl._m7d_verifier_report()
+    assert transition["planning_state_failed"] is True
+    assert transition["other_failures"] == []
 
 
 def test_membership_membership_is_documented_and_declared():

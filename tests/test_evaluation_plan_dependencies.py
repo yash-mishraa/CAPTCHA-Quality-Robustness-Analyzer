@@ -117,9 +117,18 @@ def test_m7d_verification_passes_with_declared_dependencies_intact(shadow_repo):
 
 
 def test_m7d_verification_passes_in_the_real_repository():
-    """The real repository, including the unrelated M7C configuration."""
+    """The real repository now reports only the authorized planning transition."""
+    from captcha_quality import benchmark_lifecycle as bl
+
     report = ep.verify_plan(Path("configs/evaluation_design_plan_v0_1_0.toml"))
-    assert report.ok, [f"{c.name}: {c.detail}" for c in report.failures()]
+    assert not report.ok
+    assert {check.name for check in report.failures()} == {
+        "table:isolation_checks.csv",
+        "isolation_checks",
+    }
+    transition = bl._m7d_verifier_report()
+    assert transition["planning_state_failed"] is True
+    assert transition["other_failures"] == []
     checks = _check_map(report)
     assert checks["frozen_dependencies"].passed
     assert "unchanged" in checks["frozen_dependencies"].detail

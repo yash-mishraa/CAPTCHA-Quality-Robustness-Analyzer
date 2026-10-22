@@ -256,10 +256,14 @@ def _parse_run(raw: Mapping[str, object]) -> RunSettings:
         seed=_as_int(raw["seed"], "run.seed"),
         supersedes=_as_str(raw["supersedes"], "run.supersedes") if "supersedes" in raw else "",
     )
-    if run.milestone != "M8A":
-        raise LifecycleConfigError("run.milestone must be 'M8A'")
-    if run.status != "authorized_not_executed":
-        raise LifecycleConfigError("run.status must be 'authorized_not_executed'")
+    if run.milestone not in {"M8A", "M8C"}:
+        raise LifecycleConfigError("run.milestone must be 'M8A' or 'M8C'")
+    if run.status not in {"authorized_not_executed", "executed"}:
+        raise LifecycleConfigError("run.status must be 'authorized_not_executed' or 'executed'")
+    if run.milestone == "M8C" and run.status != "executed":
+        raise LifecycleConfigError("an M8C lifecycle must declare status 'executed'")
+    if run.status == "executed" and not run.supersedes:
+        raise LifecycleConfigError("an executed lifecycle must declare what it supersedes")
     return run
 
 
@@ -769,7 +773,17 @@ def verify_lifecycle(
         )
     authorised = _authorised_paths(config)
     existing = [path for path in authorised if Path(path).exists()]
-    resolved = ("post-execution" if existing else "pre-execution") if state == "auto" else state
+    if state == "auto":
+        if config.run.status == "executed":
+            # An executed lifecycle is a claim about outputs that must exist.
+            # Resolve to the post-execution rules even when they are absent so
+            # the missing paths fail closed instead of being reported as a
+            # valid pre-execution state.
+            resolved = "post-execution"
+        else:
+            resolved = "post-execution" if existing else "pre-execution"
+    else:
+        resolved = state
     checks.append(
         CheckResult(
             "state",

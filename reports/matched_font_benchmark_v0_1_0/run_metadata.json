@@ -1,0 +1,558 @@
+{
+  "code": {
+    "module": "src/captcha_quality/matched_font_benchmark.py",
+    "module_sha256": "3ec0e93f5d7aa2a773ade5260de4f344c41a68899772767a3b3b7e9ade387506",
+    "package_version": "0.1.0",
+    "revision": "75c8ef4-dirty"
+  },
+  "dataset": {
+    "dataset_summary_sha256": "40158d7e94208e9eb342e3776d21b7f044b04dd1f3e851ce191e5009eea9795e",
+    "features_sha256": "fa2d79c85d682b26545dc2c4e3ec5ece2a41d85aea7e1ea1070f7256ff8519bb",
+    "ground_truth_sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd",
+    "image_pixel_hash_set_sha256": "c39a9fbdfced9de8e55733302bdc966d8431ff70337f5abc13bc1dfd3ab4c695",
+    "manifest_sha256": "35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743",
+    "n_cases": 30,
+    "n_diagnostic_rows": 600,
+    "n_fonts": 10,
+    "n_images": 6300,
+    "n_primary_rows": 5700,
+    "n_rows": 6300,
+    "n_sources": 300,
+    "path": "data/processed/matched_font_benchmark_v0.1.0",
+    "reference_pixel_hash_set_sha256": "fccb970e62c699c3eb3ae76053eddfdeb5b43c9d797c6327f2e1a327051ba72d",
+    "source_cases_sha256": "5e34d6a826b5f4444675113c0030a138ace02d3369f085a6e197613bacf01b88",
+    "sources_sha256": "a6f721f8e849d44750a3aaeaec74cc1bd93a8122e243985173904b40116d5010",
+    "version": "matched-font-benchmark-v0.1.0"
+  },
+  "environment": {
+    "machine": "arm64",
+    "packages": {
+      "fonttools": "4.67.0",
+      "joblib": "1.6.0",
+      "numpy": "2.5.4",
+      "opencv-python-headless": "5.0.0.93",
+      "pandas": "3.0.6",
+      "pillow": "12.3.0",
+      "scikit-image": "0.26.0",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1"
+    },
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "python_implementation": "CPython",
+    "python_version": "3.13.16",
+    "release": "27.0.0",
+    "system": "Darwin"
+  },
+  "inference": {
+    "artifact_file": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+    "artifact_sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+    "calibration": "none",
+    "calibration_performed": false,
+    "card_file": "models/retention_aware_selection_v0_1_0/selected_policy_card.json",
+    "card_sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8",
+    "dataset_row_count": 6300,
+    "feature_change_performed": false,
+    "feature_names": [
+      "intensity_mean",
+      "intensity_std",
+      "contrast_rms",
+      "ink_fraction",
+      "laplacian_variance",
+      "edge_density",
+      "histogram_entropy",
+      "noise_sigma_immerkaer"
+    ],
+    "feature_set_version": "v1",
+    "invalid_predictions": 0,
+    "join_integrity": true,
+    "model_card_sklearn_version": "1.9.1",
+    "model_family": "expanded_random_forest",
+    "model_fit_performed": false,
+    "model_name": "selected_policy",
+    "n_features": 8,
+    "note": "the exact frozen M5C champion was loaded and predict() was called once per dataset row; no fitting, calibration, selection or thresholding occurred",
+    "package_version": "0.1.0",
+    "prediction_count": 6300,
+    "selection": {
+      "base_model": "expanded_random_forest",
+      "benchmark_config_hash": "048b6d990749ca27358ce4c0d0ccb9a91cc0400e1da89ea48bea6661465e3e1a",
+      "n_candidates": 6,
+      "rule": "retention_penalised_rmse_delta",
+      "selected_model": "expanded_random_forest",
+      "selected_on": "val"
+    },
+    "selection_performed": false,
+    "sklearn_version": "1.9.1",
+    "target": "ssim_target",
+    "target_change_performed": false,
+    "thresholding_performed": false
+  },
+  "inputs": [
+    {
+      "expected_sha256": "e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3",
+      "key": "m7d_config",
+      "kind": "protocol",
+      "matches": true,
+      "path": "configs/evaluation_design_plan_v0_1_0.toml",
+      "role": "M7D planning configuration: the immutable design",
+      "sha256": "e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3"
+    },
+    {
+      "expected_sha256": "7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8",
+      "key": "m7d_plan_manifest",
+      "kind": "evidence",
+      "matches": true,
+      "path": "reports/evaluation_design_plan_v0_1_0/plan_manifest.json",
+      "role": "M7D machine-readable plan",
+      "sha256": "7eeaf58969c001142d158681d38283b718cb7a5fa7914c22af29f1c6ec48e8a8"
+    },
+    {
+      "expected_sha256": "bb6755f800874903cf19c7e1ad83cb856462033b801e9e2a158267d3004195c2",
+      "key": "m7d_report",
+      "kind": "evidence",
+      "matches": true,
+      "path": "reports/evaluation_design_plan_v0_1_0/report.md",
+      "role": "M7D human-readable plan",
+      "sha256": "bb6755f800874903cf19c7e1ad83cb856462033b801e9e2a158267d3004195c2"
+    },
+    {
+      "expected_sha256": "5c8140e4bebb4ede473fdbf6499b476afc73157a595a4a16a16be61805038755",
+      "key": "m7e_v0_1_0_config",
+      "kind": "protocol",
+      "matches": true,
+      "path": "configs/font_roster_audit_v0_1_0.toml",
+      "role": "M7E superseded audit protocol",
+      "sha256": "5c8140e4bebb4ede473fdbf6499b476afc73157a595a4a16a16be61805038755"
+    },
+    {
+      "expected_sha256": "bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa",
+      "key": "m7e_v0_2_0_config",
+      "kind": "protocol",
+      "matches": true,
+      "path": "configs/font_roster_audit_v0_2_0.toml",
+      "role": "M7E current audit protocol",
+      "sha256": "bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa"
+    },
+    {
+      "expected_sha256": "d7ba41702991d20e6ca32dfb091ddea0acdff891726a25425edbcb564175ba2b",
+      "key": "m7e_eligibility",
+      "kind": "evidence",
+      "matches": true,
+      "path": "reports/font_roster_audit_v0_2_0/eligibility.csv",
+      "role": "M7E current eligibility decisions",
+      "sha256": "d7ba41702991d20e6ca32dfb091ddea0acdff891726a25425edbcb564175ba2b"
+    },
+    {
+      "expected_sha256": "a8b146ee4c93980b4c9770cb98dac919e1469c60fd5b35d2b565483862e7acf4",
+      "key": "m7e_font_evidence",
+      "kind": "evidence",
+      "matches": true,
+      "path": "reports/font_roster_audit_v0_2_0/font_evidence.csv",
+      "role": "M7E current licence evidence",
+      "sha256": "a8b146ee4c93980b4c9770cb98dac919e1469c60fd5b35d2b565483862e7acf4"
+    },
+    {
+      "expected_sha256": "059388572f264fb2332f3427da774f1ab30f1339a27f19fd3e98e98163d4574c",
+      "key": "execution_protocol",
+      "kind": "protocol",
+      "matches": true,
+      "path": "configs/cross_font_benchmark_protocol_v0_2_0.toml",
+      "role": "the frozen execution protocol",
+      "sha256": "059388572f264fb2332f3427da774f1ab30f1339a27f19fd3e98e98163d4574c"
+    },
+    {
+      "expected_sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+      "key": "m5c_artifact",
+      "kind": "model",
+      "matches": true,
+      "path": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+      "role": "the frozen M5C champion artifact",
+      "sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0"
+    },
+    {
+      "expected_sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8",
+      "key": "m5c_card",
+      "kind": "model",
+      "matches": true,
+      "path": "models/retention_aware_selection_v0_1_0/selected_policy_card.json",
+      "role": "the frozen M5C champion model card",
+      "sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8"
+    },
+    {
+      "expected_sha256": "ee345d09f3f0898d2b13daec85fa695a7c8f59693e318853cf3bdb20a88a1b30",
+      "key": "features_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/features.py",
+      "role": "the frozen feature extractor",
+      "sha256": "ee345d09f3f0898d2b13daec85fa695a7c8f59693e318853cf3bdb20a88a1b30"
+    },
+    {
+      "expected_sha256": "729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e",
+      "key": "render_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/render.py",
+      "role": "the frozen renderer",
+      "sha256": "729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e"
+    },
+    {
+      "expected_sha256": "303136fcf65f92c6d17545d3b56233d827b2ffb98acbb2f2c4aa363789f316a3",
+      "key": "corruptions_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/corruptions.py",
+      "role": "the frozen corruption operators and seed derivation",
+      "sha256": "303136fcf65f92c6d17545d3b56233d827b2ffb98acbb2f2c4aa363789f316a3"
+    },
+    {
+      "expected_sha256": "5af5903a38652b68522a09d0f70a7c010e8d787e6630ae758cf23b39bb2587f0",
+      "key": "dataset_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/dataset.py",
+      "role": "the frozen dataset and source-planning code",
+      "sha256": "5af5903a38652b68522a09d0f70a7c010e8d787e6630ae758cf23b39bb2587f0"
+    },
+    {
+      "expected_sha256": "82b61f6048e09055fa65118313cb5b586ca769cd746df3f492b4eb2ea230ee3f",
+      "key": "splits_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/splits.py",
+      "role": "the frozen grouped-split code",
+      "sha256": "82b61f6048e09055fa65118313cb5b586ca769cd746df3f492b4eb2ea230ee3f"
+    },
+    {
+      "expected_sha256": "c8c08596f1b60169e6e97c13ec1575911caa96372f6e192e6b33785dfafde682",
+      "key": "modelling_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/modelling.py",
+      "role": "the frozen metric definitions",
+      "sha256": "c8c08596f1b60169e6e97c13ec1575911caa96372f6e192e6b33785dfafde682"
+    },
+    {
+      "expected_sha256": "0c32c1a754016154675aac2a274d1f679ce62a9a4e722780149fa30f5cc159eb",
+      "key": "inference_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/heldout_font_benchmark.py",
+      "role": "the frozen zero-shot inference implementation",
+      "sha256": "0c32c1a754016154675aac2a274d1f679ce62a9a4e722780149fa30f5cc159eb"
+    },
+    {
+      "expected_sha256": "19900188e5d660cb9d7731dc731e518691058fdd59e25949e726697bd232a1ee",
+      "key": "m7d_module",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/evaluation_plan.py",
+      "role": "the M7D plan verifier",
+      "sha256": "19900188e5d660cb9d7731dc731e518691058fdd59e25949e726697bd232a1ee"
+    },
+    {
+      "expected_sha256": "e26db288c4d9ce696b1ba8412aa98e961027b3d295de068a07a61a84ac2a40b2",
+      "key": "m7c_module",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/cross_font_analysis.py",
+      "role": "the M7C analysis verifier",
+      "sha256": "e26db288c4d9ce696b1ba8412aa98e961027b3d295de068a07a61a84ac2a40b2"
+    },
+    {
+      "expected_sha256": "1adfaaf7d264f3207a3e9c39adc0e1998ec99461be0bfe19487e4355ed11b3c4",
+      "key": "m7e_module",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/font_roster_audit.py",
+      "role": "the M7E roster audit verifier",
+      "sha256": "1adfaaf7d264f3207a3e9c39adc0e1998ec99461be0bfe19487e4355ed11b3c4"
+    },
+    {
+      "expected_sha256": "fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48",
+      "key": "text_case_manifest",
+      "kind": "protocol",
+      "matches": true,
+      "path": "configs/cross_font_text_cases_v0_1_0.toml",
+      "role": "the committed matched text-case manifest: thirty frozen text cases",
+      "sha256": "fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48"
+    },
+    {
+      "expected_sha256": "2de2b6903124d31c6df707549f4b68331ac540090336c7b0e37e18b1d8e7b7be",
+      "key": "identity_code",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/source_identity.py",
+      "role": "the canonical source, variant, sample and row identifier scheme",
+      "sha256": "2de2b6903124d31c6df707549f4b68331ac540090336c7b0e37e18b1d8e7b7be"
+    },
+    {
+      "expected_sha256": "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9",
+      "key": "font:arial",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Arial.ttf",
+      "role": "pinned Arial font file; evaluated only, never redistributed",
+      "sha256": "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9"
+    },
+    {
+      "expected_sha256": "c886ca3172d8ce9189976992d145ec090500a4ff516ecb9d4df56b1a78336247",
+      "key": "font:courier_new",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Courier New.ttf",
+      "role": "pinned Courier New font file; evaluated only, never redistributed",
+      "sha256": "c886ca3172d8ce9189976992d145ec090500a4ff516ecb9d4df56b1a78336247"
+    },
+    {
+      "expected_sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3",
+      "key": "font:times_new_roman",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+      "role": "pinned Times New Roman font file; evaluated only, never redistributed",
+      "sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+    },
+    {
+      "expected_sha256": "4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218",
+      "key": "font:georgia",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Georgia.ttf",
+      "role": "pinned Georgia font file; evaluated only, never redistributed",
+      "sha256": "4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218"
+    },
+    {
+      "expected_sha256": "c6e990f6429fae28eb85321375dd335252f1122aa64c19fec553619a140724ef",
+      "key": "font:monaco",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Monaco.ttf",
+      "role": "pinned Monaco font file; evaluated only, never redistributed",
+      "sha256": "c6e990f6429fae28eb85321375dd335252f1122aa64c19fec553619a140724ef"
+    },
+    {
+      "expected_sha256": "57e95627fd36fe2740e5ee8a91ff1ae74fb216df9580bd23e30d6772814727be",
+      "key": "font:impact",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Impact.ttf",
+      "role": "pinned Impact font file; evaluated only, never redistributed",
+      "sha256": "57e95627fd36fe2740e5ee8a91ff1ae74fb216df9580bd23e30d6772814727be"
+    },
+    {
+      "expected_sha256": "0da8c12f3e15d95585434d2cf294b3113a3e3fc84bf9ba9d64f2ef834ef4bd98",
+      "key": "font:verdana",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Verdana.ttf",
+      "role": "pinned Verdana font file; evaluated only, never redistributed",
+      "sha256": "0da8c12f3e15d95585434d2cf294b3113a3e3fc84bf9ba9d64f2ef834ef4bd98"
+    },
+    {
+      "expected_sha256": "ff1d49fde63aabd7f4fc7cd0a80ac7cdb1b9540058988fcbb64d7c23639a7386",
+      "key": "font:trebuchet_ms",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Trebuchet MS.ttf",
+      "role": "pinned Trebuchet MS font file; evaluated only, never redistributed",
+      "sha256": "ff1d49fde63aabd7f4fc7cd0a80ac7cdb1b9540058988fcbb64d7c23639a7386"
+    },
+    {
+      "expected_sha256": "0e9ed740bfbfcfef1a7f4333cd041771a9a5b67fbe85515e4d241b7213cf6a8d",
+      "key": "font:chalkduster",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Chalkduster.ttf",
+      "role": "pinned Chalkduster font file; evaluated only, never redistributed",
+      "sha256": "0e9ed740bfbfcfef1a7f4333cd041771a9a5b67fbe85515e4d241b7213cf6a8d"
+    },
+    {
+      "expected_sha256": "4054fff7b5f8bc63343754c046a89f96006bb5b581ec0c529780c6afb4245095",
+      "key": "font:luminari",
+      "kind": "font",
+      "matches": true,
+      "path": "/System/Library/Fonts/Supplemental/Luminari.ttf",
+      "role": "pinned Luminari font file; evaluated only, never redistributed",
+      "sha256": "4054fff7b5f8bc63343754c046a89f96006bb5b581ec0c529780c6afb4245095"
+    },
+    {
+      "expected_sha256": "fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48",
+      "key": "text_case_manifest",
+      "kind": "protocol",
+      "matches": true,
+      "path": "configs/cross_font_text_cases_v0_1_0.toml",
+      "role": "committed matched text-case manifest",
+      "sha256": "fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48"
+    },
+    {
+      "expected_sha256": "",
+      "key": "lifecycle_protocol",
+      "kind": "protocol",
+      "matches": true,
+      "path": "configs/benchmark_lifecycle_v0_2_0.toml",
+      "role": "lifecycle protocol that authorises the output paths",
+      "sha256": "27e4b243f8894a6aba9ebff83376fb4b341857121e8208b1b4af6786c5215ef4"
+    },
+    {
+      "expected_sha256": "",
+      "key": "execution_module",
+      "kind": "code",
+      "matches": true,
+      "path": "src/captcha_quality/matched_font_benchmark.py",
+      "role": "M8C execution implementation",
+      "sha256": "3ec0e93f5d7aa2a773ade5260de4f344c41a68899772767a3b3b7e9ade387506"
+    },
+    {
+      "expected_sha256": "1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1",
+      "key": "recorded_m5c_baseline",
+      "kind": "evidence",
+      "matches": true,
+      "path": "reports/retention_aware_selection_v0_1_0/test_slice_metrics.csv",
+      "role": "recorded familiar-font M5C test-slice metrics",
+      "sha256": "1dd6d630ca61caeabf907a53c758031019eeef47c5b7898f501b020322c9c9e1"
+    }
+  ],
+  "lifecycle": {
+    "post_execution_protocol": "configs/benchmark_lifecycle_v0_3_0.toml",
+    "post_execution_sha256": "3339dc64472b1510cb297d9af0884bb9d3b79e1bf0a8e978f04b72cd64ece83d",
+    "pre_execution_protocol": "configs/benchmark_lifecycle_v0_2_0.toml",
+    "pre_execution_sha256": "27e4b243f8894a6aba9ebff83376fb4b341857121e8208b1b4af6786c5215ef4",
+    "status_after": "executed",
+    "status_before": "authorized_not_executed"
+  },
+  "metrics": {
+    "clean_reference": {
+      "mae": 0.007351787310724691,
+      "n_rows": 300,
+      "n_sources": 300,
+      "r2": null,
+      "r2_defined": false,
+      "r2_status": "suppressed_near_degenerate_target",
+      "r2_suppressed": true,
+      "rmse": 0.013863123663812052
+    },
+    "diagnostic_0_5px": {
+      "mae": 0.029108829409517523,
+      "n_rows": 300,
+      "n_sources": 300,
+      "r2": null,
+      "r2_defined": true,
+      "r2_status": "suppressed_near_degenerate_target",
+      "r2_suppressed": true,
+      "rmse": 0.0364152042624098
+    },
+    "familiar_primary": {
+      "mae": 0.06081219566692343,
+      "n_rows": 1710,
+      "n_sources": 90,
+      "r2": 0.6835434898374908,
+      "r2_defined": true,
+      "r2_status": "reported",
+      "r2_suppressed": false,
+      "rmse": 0.09289448224297654
+    },
+    "m7b_held_out_primary": {
+      "mae": 0.06289088383152783,
+      "n_rows": 1710,
+      "n_sources": 90,
+      "r2": 0.7500913926567446,
+      "r2_defined": true,
+      "r2_status": "reported",
+      "r2_suppressed": false,
+      "rmse": 0.09162579879145862
+    },
+    "new_held_out_primary": {
+      "mae": 0.056240705403510685,
+      "n_rows": 2280,
+      "n_sources": 120,
+      "r2": 0.7531142215536742,
+      "r2_defined": true,
+      "r2_status": "reported",
+      "r2_suppressed": false,
+      "rmse": 0.08283125245000132
+    },
+    "overall_primary": {
+      "mae": 0.059607206010939655,
+      "n_rows": 5700,
+      "n_sources": 300,
+      "r2": 0.7328983709293053,
+      "r2_defined": true,
+      "r2_status": "reported",
+      "r2_suppressed": false,
+      "rmse": 0.08861042886468502
+    }
+  },
+  "milestone": "M8C",
+  "outputs": {
+    "hashes": {
+      "comparison.csv": "a14d35e8ab7f1248c57cadaf2a9bf7b56959306d4880bb6435fac527dd83ccaa",
+      "dataset_composition.csv": "7cb5dd39e6262e8ea385573f27221efb5b60f1c87dc047ffa39047e6629e9b7a",
+      "family_metrics.csv": "338f2ce63ce9a69ad1074b756a59a152afe25d83d046806397968b8105c91d2e",
+      "font_metrics.csv": "c0ec6c9f20b89a43be06a84ed51201aec53d747401894bfaa80f9d8b2cf8d62b",
+      "group_metrics.csv": "49b8ac254c8a5884c112cd4a9c5bed70cad81fdbf357e28e700d343da83353b2",
+      "input_manifest.csv": "70f8b0ca8dfc2a9c6742858f8f0bfa3b863ca78fb9a4aacf4bac0a17952d3d71",
+      "isolation_checks.csv": "f986d923d05b528a552c8c6dbd542fd409d33dc0f8f68f77a7002d979431f812",
+      "overall_metrics.csv": "abbc28d5c73e15091edbf79cc086449d171c91af4233964529811634ed0a79fa",
+      "predictions.csv": "e6c1f1ba83bbb05c18fed8a9b0dd1c87014a6f6c3667475971b2834dfedd4dd4",
+      "report.md": "ef266df7d0e3022b7eb0b6ccf08bb97782a8d2741e4f980f51facf94be7ad85f",
+      "severity_metrics.csv": "776a0720303ae63ac7d44182c5ab70bfb23c0aaf2f4fd2ce5604f97c46a5082f",
+      "source_metrics.csv": "580c4037256046b28a1e45990dbde98acad8a55674e1a40e417d5feb5dcf7504",
+      "target_distributions.csv": "d1ed65d11ccb90d35ea3254a518de81c96f6c777c3d6ade0639d06dbb7b7614b",
+      "uncertainty.csv": "d2284020864e63724c0024ef2e9801cc015ab5f02d892ec3c775d824b3e670c4"
+    },
+    "membership": [
+      "predictions.csv",
+      "overall_metrics.csv",
+      "font_metrics.csv",
+      "family_metrics.csv",
+      "severity_metrics.csv",
+      "group_metrics.csv",
+      "source_metrics.csv",
+      "target_distributions.csv",
+      "uncertainty.csv",
+      "comparison.csv",
+      "dataset_composition.csv",
+      "isolation_checks.csv",
+      "input_manifest.csv",
+      "report.md",
+      "run_metadata.json"
+    ]
+  },
+  "reproducibility": {
+    "dataset_differences": [],
+    "dataset_files_identical": true,
+    "differences": [],
+    "identical": true,
+    "image_count_compared": 6300,
+    "image_differences": [],
+    "images_identical": true,
+    "metadata_core_identical": true,
+    "metadata_only_differences": [
+      "run_metadata.runtime",
+      "run_metadata.reproducibility"
+    ],
+    "note": "the second run repeated generation, inference and report writing from the same pinned inputs and the same working tree; image bytes, dataset tables, report tables and report text were compared directly",
+    "performed": true,
+    "report_differences": [],
+    "report_files_identical": true,
+    "second_run": "isolated temporary directory",
+    "second_run_path_recorded": false
+  },
+  "run": {
+    "dataset_version": "matched-font-benchmark-v0.1.0",
+    "name": "matched-font-benchmark",
+    "protocol_path": "configs/cross_font_benchmark_protocol_v0_2_0.toml",
+    "protocol_sha256": "059388572f264fb2332f3427da774f1ab30f1339a27f19fd3e98e98163d4574c",
+    "protocol_version": "v0.2.0",
+    "seed": 20260821
+  },
+  "runtime": {
+    "duration_seconds": 21.496,
+    "finished_at_utc": "2026-10-22T04:14:37Z",
+    "isolated_staging": false,
+    "started_at_utc": "2026-10-22T04:14:15Z"
+  },
+  "schema_version": "m8c-run-metadata-v1"
+}

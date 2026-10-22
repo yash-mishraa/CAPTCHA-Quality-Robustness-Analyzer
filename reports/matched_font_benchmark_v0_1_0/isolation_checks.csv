@@ -1,0 +1,26 @@
+check,passed,detail
+dataset_membership,True,exactly 6 dataset files and 6 subdirectories
+image_membership,True,"6,300 referenced images across exactly six subdirectories"
+planned_identities,True,all 6300 row identities and 300 source identities match the plan
+source_tables,True,"300 source, source-case and ground-truth rows join exactly to the plan"
+row_labels,True,"primary/diagnostic labels, severity levels and corruption assignments are correct"
+feature_join,True,every feature row joins one-to-one to a dataset row and is finite
+image_content,True,decoded and re-hashed 6300 images and 300 references; targets and features match
+summary,True,"dataset summary counts, protocol identity and image totals match the artifacts"
+model:artifact_hash,True,sha256=c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0
+model:card_hash,True,sha256=9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8
+model:card_parse,True,loaded selected_policy_card.json
+model:artifact_file,True,card artifact_file='selected_policy.joblib'
+model:card_artifact_hash,True,card artifact hash matches the protocol
+model:feature_schema,True,"feature_names=['intensity_mean', 'intensity_std', 'contrast_rms', 'ink_fraction', 'laplacian_variance', 'edge_density', 'histogram_entropy', 'noise_sigma_immerkaer'], n_features=8, feature_set_version='v1'"
+model:target,True,target='ssim_target'
+model:calibration,True,calibration='none'
+model:family,True,model_family='expanded_random_forest'
+model:sklearn_version,True,"installed=1.9.1, card=1.9.1"
+model:load,True,loaded selected_policy.joblib with 8 inputs
+inference:prediction_count,True,6300 predictions for 6300 rows
+inference:prediction_finite,True,0 non-finite prediction(s)
+inference:prediction_range,True,"min=0.327735, max=1.000000"
+inference:identity_join,True,predictions map one-to-one to unique dataset rows
+inference:no_fit,True,"the execution path calls predict() only; no fit, partial_fit, calibration, selection, thresholding or refitting is performed"
+inference:artifact_unchanged,True,artifact sha256=c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0 after prediction

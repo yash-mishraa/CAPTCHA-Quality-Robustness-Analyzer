@@ -1,0 +1,61 @@
+component,expected,realised,matches,detail
+fonts,10,10,True,pinned roster
+cases,30,30,True,committed matched cases
+sources,300,300,True,one source per font-case pair
+rows,6300,6300,True,21 rows per source
+primary_rows,5700,5700,True,diagnostic rows excluded
+diagnostic_rows,600,600,True,clean and 0.5 px elastic
+clean_rows,300,300,True,one per source
+rows:gaussian_blur,1200,1200,True,four severities per source
+rows:gaussian_noise,1200,1200,True,four severities per source
+rows:thin_lines,1200,1200,True,four severities per source
+rows:arc_strokes,1200,1200,True,four severities per source
+rows:elastic_primary,900,900,True,severities 2-4
+rows:elastic_diagnostic,300,300,True,severity 1 (0.5 px) only
+images,6300,6300,True,one image per row
+feature_rows,6300,6300,True,eight frozen features per row
+source_cases_rows,300,300,True,matched-case manifest
+ground_truth_rows,300,300,True,literal text; Git-ignored
+duplicate_row_ids,0,0,True,row identity must be unique
+duplicate_sample_ids,0,0,True,sample identity must be unique
+distinct_source_ids,300,300,True,each source is repeated by its 21 variants
+min_rows_per_source,21,21,True,every source has exactly 21 rows
+max_rows_per_source,21,21,True,every source has exactly 21 rows
+missing_row_ids,0,0,True,row identity is mandatory
+missing_sample_ids,0,0,True,sample identity is mandatory
+missing_image_paths,0,0,True,image path is mandatory
+missing_feature_values,0,0,True,the frozen feature extractor must return eight finite values
+nonfinite_ssim_targets,0,0,True,SSIM target must be finite
+clean_psnr_infinite_rows,300,300,True,the clean reference has infinite PSNR; PSNR is diagnostic only
+sources:arial,30,30,True,arial
+rows:arial,630,630,True,arial
+sources:courier_new,30,30,True,courier_new
+rows:courier_new,630,630,True,courier_new
+sources:times_new_roman,30,30,True,times_new_roman
+rows:times_new_roman,630,630,True,times_new_roman
+sources:georgia,30,30,True,georgia
+rows:georgia,630,630,True,georgia
+sources:monaco,30,30,True,monaco
+rows:monaco,630,630,True,monaco
+sources:impact,30,30,True,impact
+rows:impact,630,630,True,impact
+sources:verdana,30,30,True,verdana
+rows:verdana,630,630,True,verdana
+sources:trebuchet_ms,30,30,True,trebuchet_ms
+rows:trebuchet_ms,630,630,True,trebuchet_ms
+sources:chalkduster,30,30,True,chalkduster
+rows:chalkduster,630,630,True,chalkduster
+sources:luminari,30,30,True,luminari
+rows:luminari,630,630,True,luminari
+fonts:familiar,3,3,True,familiar
+rows:familiar,1890,1890,True,familiar
+fonts:m7b_held_out,3,3,True,m7b_held_out
+rows:m7b_held_out,1890,1890,True,m7b_held_out
+fonts:new_held_out,4,4,True,new_held_out
+rows:new_held_out,2520,2520,True,new_held_out
+text_length:4,True,True,True,"length is sampled by the pinned rule, not fixed per length"
+text_length:5,True,True,True,"length is sampled by the pinned rule, not fixed per length"
+text_length:6,True,True,True,"length is sampled by the pinned rule, not fixed per length"
+split,eval,eval,True,evaluation-only benchmark; no training split
+distinct_image_pixel_hashes,6300,6300,True,image identity must be unique
+distinct_reference_pixel_hashes,300,300,True,one clean reference per source

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import math
-import shutil
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -43,17 +44,29 @@ def bundle():
     return config, inputs, result, checks
 
 
-@pytest.fixture()
-def output_dir():
-    """Use a Git-ignored scratch directory under reports/."""
-    path = REPO_ROOT / "reports" / "_m7d_test_output"
-    if path.exists():
-        shutil.rmtree(path)
+def _shadow_repo(root: Path) -> Path:
+    """Link the declared inputs into a tree where the plan has not executed."""
+    config = ep.load_config(CONFIG_PATH)
+    for pin in config.inputs:
+        target = root / pin.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not (target.exists() or target.is_symlink()):
+            target.symlink_to(REPO_ROOT / pin.path)
+    planning_config = root / ep.M7D_PLANNING_CONFIG_FILE
+    planning_config.parent.mkdir(parents=True, exist_ok=True)
+    if not (planning_config.exists() or planning_config.is_symlink()):
+        planning_config.symlink_to(CONFIG_PATH)
+    return root
+
+
+@contextlib.contextmanager
+def _in_shadow(root: Path):
+    previous = Path.cwd()
+    os.chdir(root)
     try:
-        yield path
+        yield root
     finally:
-        if path.exists():
-            shutil.rmtree(path)
+        os.chdir(previous)
 
 
 def _evidence(result: ep.PlanResult, evidence_id: str) -> pd.Series:
@@ -349,7 +362,11 @@ def test_report_sections_and_content(bundle):
 def test_isolation_checks(bundle):
     _, _, _, checks = bundle
     assert checks["check"].is_unique
-    assert checks["passed"].all()
+    # The authorized M8C execution is the only expected transition. Every
+    # other planning-state check remains active and passing.
+    failed = set(checks.loc[~checks["passed"], "check"])
+    assert failed == {"no_planned_outputs_created"}
+    assert checks.loc[checks["check"] != "no_planned_outputs_created", "passed"].all()
     assert set(checks["check"]).issuperset(
         {
             "input_pins",
@@ -390,46 +407,56 @@ def test_output_protection():
     assert allowed.name == "_m7d_test_output"
 
 
-def test_run_and_verify_determinism(bundle, output_dir):
+def test_run_and_verify_determinism(bundle, tmp_path):
     config, _, _, _ = bundle
-    first_dir, first_metadata = ep.run_plan(CONFIG_PATH, output_reports=output_dir, overwrite=True)
-    assert first_dir == output_dir.resolve()
-    first_hashes = ep._output_hashes(first_dir)
-    assert "report.md" in first_hashes
-    assert "plan_manifest.json" in first_hashes
-    assert "run_metadata.json" not in first_hashes
-    assert first_metadata["summary"]["all_evidence_reproduced"] is True
-    assert first_metadata["summary"]["sources"] == 300
-    assert first_metadata["summary"]["rows"] == 6300
-    assert first_metadata["summary"]["primary_rows"] == 5700
-    assert first_metadata["summary"]["diagnostic_rows"] == 600
-    assert first_metadata["plan"]["chosen_direction"] == "A"
-    assert first_metadata["plan"]["status"] == "planned_not_executed"
-    assert first_metadata["planned_outputs_present_at_run"] == {
-        "dataset": False,
-        "benchmark_report": False,
-    }
-    verification = ep.verify_plan(CONFIG_PATH, output_reports=output_dir)
-    assert verification.ok, verification.failures()
-    second_dir, second_metadata = ep.run_plan(
-        CONFIG_PATH, output_reports=output_dir, overwrite=True
-    )
-    assert second_dir == first_dir
-    assert ep._output_hashes(second_dir) == first_hashes
-    assert second_metadata["plan"]["config_hash"] == first_metadata["plan"]["config_hash"]
-    assert ep.verify_plan(CONFIG_PATH, output_reports=output_dir).ok
+    root = _shadow_repo(tmp_path / "repo")
+    output_dir = root / "reports" / "_m7d_test_output"
+    with _in_shadow(root):
+        first_dir, first_metadata = ep.run_plan(
+            CONFIG_PATH, output_reports=output_dir, overwrite=True
+        )
+        assert first_dir == output_dir.resolve()
+        first_hashes = ep._output_hashes(first_dir)
+        assert "report.md" in first_hashes
+        assert "plan_manifest.json" in first_hashes
+        assert "run_metadata.json" not in first_hashes
+        assert first_metadata["summary"]["all_evidence_reproduced"] is True
+        assert first_metadata["summary"]["sources"] == 300
+        assert first_metadata["summary"]["rows"] == 6300
+        assert first_metadata["summary"]["primary_rows"] == 5700
+        assert first_metadata["summary"]["diagnostic_rows"] == 600
+        assert first_metadata["plan"]["chosen_direction"] == "A"
+        assert first_metadata["plan"]["status"] == "planned_not_executed"
+        assert first_metadata["planned_outputs_present_at_run"] == {
+            "dataset": False,
+            "benchmark_report": False,
+        }
+        verification = ep.verify_plan(CONFIG_PATH, output_reports=output_dir)
+        assert verification.ok, verification.failures()
+        second_dir, second_metadata = ep.run_plan(
+            CONFIG_PATH, output_reports=output_dir, overwrite=True
+        )
+        assert second_dir == first_dir
+        assert ep._output_hashes(second_dir) == first_hashes
+        assert second_metadata["plan"]["config_hash"] == first_metadata["plan"]["config_hash"]
+        assert ep.verify_plan(CONFIG_PATH, output_reports=output_dir).ok
 
 
-def test_verify_detects_tampering(bundle, output_dir):
-    ep.run_plan(CONFIG_PATH, output_reports=output_dir, overwrite=True)
-    report_path = output_dir / "report.md"
-    report_path.write_text(report_path.read_text(encoding="utf-8") + "\ntamper\n", encoding="utf-8")
-    verification = ep.verify_plan(CONFIG_PATH, output_reports=output_dir)
-    assert not verification.ok
-    assert any(not check.passed for check in verification.checks)
+def test_verify_detects_tampering(bundle, tmp_path):
+    root = _shadow_repo(tmp_path / "repo")
+    output_dir = root / "reports" / "_m7d_test_output"
+    with _in_shadow(root):
+        ep.run_plan(CONFIG_PATH, output_reports=output_dir, overwrite=True)
+        report_path = output_dir / "report.md"
+        report_path.write_text(
+            report_path.read_text(encoding="utf-8") + "\ntamper\n", encoding="utf-8"
+        )
+        verification = ep.verify_plan(CONFIG_PATH, output_reports=output_dir)
+        assert not verification.ok
+        assert any(not check.passed for check in verification.checks)
 
 
-def test_metadata_is_json_safe(bundle, output_dir):
+def test_metadata_is_json_safe(bundle):
     _, inputs, result, _ = bundle
     metadata = ep._build_metadata(
         inputs,
@@ -447,30 +474,33 @@ def test_metadata_is_json_safe(bundle, output_dir):
     assert metadata["plan"]["config_sha256"] == inputs.config.config_sha256
 
 
-def test_cli_run_and_verify(bundle, output_dir):
+def test_cli_run_and_verify(bundle, tmp_path):
     _, _, _, _ = bundle
-    assert (
-        ep.main(
-            [
-                "run",
-                "--config",
-                str(CONFIG_PATH),
-                "--output-reports",
-                str(output_dir),
-                "--overwrite",
-            ]
+    root = _shadow_repo(tmp_path / "repo")
+    output_dir = root / "reports" / "_m7d_test_output"
+    with _in_shadow(root):
+        assert (
+            ep.main(
+                [
+                    "run",
+                    "--config",
+                    str(CONFIG_PATH),
+                    "--output-reports",
+                    str(output_dir),
+                    "--overwrite",
+                ]
+            )
+            == 0
         )
-        == 0
-    )
-    assert (
-        ep.main(
-            [
-                "verify",
-                "--config",
-                str(CONFIG_PATH),
-                "--output-reports",
-                str(output_dir),
-            ]
+        assert (
+            ep.main(
+                [
+                    "verify",
+                    "--config",
+                    str(CONFIG_PATH),
+                    "--output-reports",
+                    str(output_dir),
+                ]
+            )
+            == 0
         )
-        == 0
-    )

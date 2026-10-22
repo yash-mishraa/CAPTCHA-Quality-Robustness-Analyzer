@@ -1,0 +1,602 @@
+{
+  "counts": {
+    "cases": 30,
+    "clean_rows": 300,
+    "diagnostic_rows": 600,
+    "feature_rows": 6300,
+    "fonts": 10,
+    "images": 6300,
+    "primary_rows": 5700,
+    "rows": 6300,
+    "sources": 300
+  },
+  "dataset_name": "matched-font-benchmark",
+  "dataset_version": "matched-font-benchmark-v0.1.0",
+  "features": {
+    "feature_names": [
+      "intensity_mean",
+      "intensity_std",
+      "contrast_rms",
+      "ink_fraction",
+      "laplacian_variance",
+      "edge_density",
+      "histogram_entropy",
+      "noise_sigma_immerkaer"
+    ],
+    "feature_set_version": "v1",
+    "rows": 6300
+  },
+  "fonts": {
+    "arial": {
+      "diagnostic_rows": 60,
+      "family": "Arial",
+      "group": "familiar",
+      "path": "/System/Library/Fonts/Supplemental/Arial.ttf",
+      "primary_rows": 570,
+      "role": "familiar",
+      "rows": 630,
+      "sha256": "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9",
+      "sources": 30,
+      "stratum": "grotesque_sans"
+    },
+    "chalkduster": {
+      "diagnostic_rows": 60,
+      "family": "Chalkduster",
+      "group": "new_held_out",
+      "path": "/System/Library/Fonts/Supplemental/Chalkduster.ttf",
+      "primary_rows": 570,
+      "role": "held-out",
+      "rows": 630,
+      "sha256": "0e9ed740bfbfcfef1a7f4333cd041771a9a5b67fbe85515e4d241b7213cf6a8d",
+      "sources": 30,
+      "stratum": "display_script"
+    },
+    "courier_new": {
+      "diagnostic_rows": 60,
+      "family": "Courier New",
+      "group": "familiar",
+      "path": "/System/Library/Fonts/Supplemental/Courier New.ttf",
+      "primary_rows": 570,
+      "role": "familiar",
+      "rows": 630,
+      "sha256": "c886ca3172d8ce9189976992d145ec090500a4ff516ecb9d4df56b1a78336247",
+      "sources": 30,
+      "stratum": "monospace"
+    },
+    "georgia": {
+      "diagnostic_rows": 60,
+      "family": "Georgia",
+      "group": "m7b_held_out",
+      "path": "/System/Library/Fonts/Supplemental/Georgia.ttf",
+      "primary_rows": 570,
+      "role": "held-out",
+      "rows": 630,
+      "sha256": "4f54eb299fccea7f103edeb0d92437359bfd4441811d53222b82b335369f6218",
+      "sources": 30,
+      "stratum": "serif"
+    },
+    "impact": {
+      "diagnostic_rows": 60,
+      "family": "Impact",
+      "group": "m7b_held_out",
+      "path": "/System/Library/Fonts/Supplemental/Impact.ttf",
+      "primary_rows": 570,
+      "role": "held-out",
+      "rows": 630,
+      "sha256": "57e95627fd36fe2740e5ee8a91ff1ae74fb216df9580bd23e30d6772814727be",
+      "sources": 30,
+      "stratum": "display_sans"
+    },
+    "luminari": {
+      "diagnostic_rows": 60,
+      "family": "Luminari",
+      "group": "new_held_out",
+      "path": "/System/Library/Fonts/Supplemental/Luminari.ttf",
+      "primary_rows": 570,
+      "role": "held-out",
+      "rows": 630,
+      "sha256": "4054fff7b5f8bc63343754c046a89f96006bb5b581ec0c529780c6afb4245095",
+      "sources": 30,
+      "stratum": "display_script"
+    },
+    "monaco": {
+      "diagnostic_rows": 60,
+      "family": "Monaco",
+      "group": "m7b_held_out",
+      "path": "/System/Library/Fonts/Monaco.ttf",
+      "primary_rows": 570,
+      "role": "held-out",
+      "rows": 630,
+      "sha256": "c6e990f6429fae28eb85321375dd335252f1122aa64c19fec553619a140724ef",
+      "sources": 30,
+      "stratum": "monospace"
+    },
+    "times_new_roman": {
+      "diagnostic_rows": 60,
+      "family": "Times New Roman",
+      "group": "familiar",
+      "path": "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+      "primary_rows": 570,
+      "role": "familiar",
+      "rows": 630,
+      "sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3",
+      "sources": 30,
+      "stratum": "serif"
+    },
+    "trebuchet_ms": {
+      "diagnostic_rows": 60,
+      "family": "Trebuchet MS",
+      "group": "new_held_out",
+      "path": "/System/Library/Fonts/Supplemental/Trebuchet MS.ttf",
+      "primary_rows": 570,
+      "role": "held-out",
+      "rows": 630,
+      "sha256": "ff1d49fde63aabd7f4fc7cd0a80ac7cdb1b9540058988fcbb64d7c23639a7386",
+      "sources": 30,
+      "stratum": "humanist_sans"
+    },
+    "verdana": {
+      "diagnostic_rows": 60,
+      "family": "Verdana",
+      "group": "new_held_out",
+      "path": "/System/Library/Fonts/Supplemental/Verdana.ttf",
+      "primary_rows": 570,
+      "role": "held-out",
+      "rows": 630,
+      "sha256": "0da8c12f3e15d95585434d2cf294b3113a3e3fc84bf9ba9d64f2ef834ef4bd98",
+      "sources": 30,
+      "stratum": "humanist_sans"
+    }
+  },
+  "generation": {
+    "corruptions": {
+      "arc_aspect_ratio": [
+        0.5,
+        1.5
+      ],
+      "arc_radius_fraction": [
+        0.2,
+        0.55
+      ],
+      "arc_stroke_counts": [
+        1,
+        2,
+        4,
+        7
+      ],
+      "arc_sweep_deg": [
+        120.0,
+        240.0
+      ],
+      "blur_radii_px": [
+        1.0,
+        2.0,
+        3.5,
+        5.0
+      ],
+      "border_mode": "edge",
+      "diagnostic_exclusion": "The clean reference row and the 0.5 px elastic row are diagnostic only. They are reported in a separate diagnostic table and are excluded from every primary metric, from the primary endpoint and from the bootstrap.",
+      "diagnostic_scopes": [
+        "clean_reference",
+        "diagnostic_0_5px"
+      ],
+      "elastic_diagnostic_amplitudes_px": [
+        0.5
+      ],
+      "elastic_primary_amplitudes_px": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "elastic_severity_amplitudes_px": [
+        0.5,
+        1.0,
+        2.0,
+        3.0
+      ],
+      "grid_cols": 13,
+      "grid_rows": 5,
+      "interpolation": "bilinear",
+      "line_angle_deg": [
+        -60.0,
+        60.0
+      ],
+      "noise_sigmas": [
+        6.0,
+        12.0,
+        20.0,
+        32.0
+      ],
+      "primary_scopes": [
+        "all_primary",
+        "original_blur_noise",
+        "gaussian_blur",
+        "gaussian_noise",
+        "interference",
+        "thin_lines",
+        "arc_strokes",
+        "geometric_primary"
+      ],
+      "seed_rule": "Every corruption realisation uses an independent seed derived with derive_noise_seed(dataset_seed, 'variant', source_id, family, severity_level), so severity levels are not correlated by a shared random field and the matched case keeps the same corruption seed schedule in every font.",
+      "smoothing_sigma_px": 2.0,
+      "stroke_intensity": 0,
+      "stroke_width_px": 1,
+      "thin_line_stroke_counts": [
+        1,
+        2,
+        4,
+        7
+      ]
+    },
+    "identity": {
+      "canonical_serialization": "json.dumps(payload, sort_keys=True, separators=(',', ':'), allow_nan=False) encoded as UTF-8",
+      "diagnostic_severities": {
+        "elastic": [
+          1
+        ]
+      },
+      "families": {
+        "arc_strokes": {
+          "parameter_rule": "Severity k applies arc_stroke_counts[k-1] strokes.",
+          "severities": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "elastic": {
+          "parameter_rule": "Severity k applies elastic_severity_amplitudes_px[k-1].",
+          "severities": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "gaussian_blur": {
+          "parameter_rule": "Severity k applies blur_radii_px[k-1].",
+          "severities": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "gaussian_noise": {
+          "parameter_rule": "Severity k applies noise_sigmas[k-1].",
+          "severities": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "thin_lines": {
+          "parameter_rule": "Severity k applies thin_line_stroke_counts[k-1] strokes.",
+          "severities": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "generation_config_hash": "147df5002e93e5f280d60ed10ed417d3100c8c9ccb24191b065f486d3b580e06",
+      "hash_algorithm": "sha256",
+      "image_path_rule": "images/<family>/<sample_id>.png for every corruption, and images/clean/<source_id>.png for the clean reference, so the 6,300 image identities are unique.",
+      "image_subdirectories": [
+        "clean",
+        "gaussian_blur",
+        "gaussian_noise",
+        "thin_lines",
+        "arc_strokes",
+        "elastic"
+      ],
+      "render_config_version": "v1",
+      "row_id": "row-<first 16 hex characters of the SHA-256 digest of the canonical row payload>. The payload additionally distinguishes the corruption family, the corruption severity, the derived variant seed and the primary or diagnostic status, none of which the sample identifier encodes on its own.",
+      "row_id_payload": [
+        "case_id",
+        "corruption_family",
+        "corruption_severity",
+        "font_id",
+        "font_sha256",
+        "generation_config_hash",
+        "primary",
+        "render_config_hash",
+        "render_seed",
+        "sample_id",
+        "source_id",
+        "variant_id",
+        "variant_seed"
+      ],
+      "sample_id": "<source_id>__<variant_id>, following the Milestone 2 and Milestone 7B convention.",
+      "scheme_version": "v1",
+      "seed_rule": "The render seed is derive_noise_seed(dataset_seed, 'render', font_key, str(case_index)). The corruption seed is derive_noise_seed(dataset_seed, 'variant', source_id, family, severity_level). Both are pure functions of documented inputs, so the same source and corruption configuration always reproduce the same realisation and two severity levels never share a random field.",
+      "source_id": "src-<first 16 hex characters of the SHA-256 digest of the canonical source payload>. The payload distinguishes the text case identifier, the font identifier, the pinned font SHA-256, the generation configuration hash, the per-case render configuration hash, the render seed, the exact text and the text length. The identifier therefore changes if the case, the face, the font file, the renderer configuration or the generation configuration changes, and it never depends on directory traversal order, wall-clock time, absolute paths, runtime randomness or row ordering.",
+      "source_id_payload": [
+        "case_id",
+        "font_id",
+        "font_sha256",
+        "generation_config_hash",
+        "render_config_hash",
+        "render_seed",
+        "text",
+        "text_length"
+      ],
+      "split": "eval",
+      "split_group_id_rule": "The split group identifier is the source identifier, so every variant of a source and every font render of a case stay groupable.",
+      "variant_id": "clean_s0 for the clean reference of a source, and <family>_s<severity> for every corruption, following the Milestone 2 identifier scheme."
+    },
+    "renderer": {
+      "background_max": 255,
+      "background_min": 240,
+      "background_mode": "flat_random",
+      "canvas_height": 64,
+      "canvas_width": 192,
+      "center_ink": true,
+      "engine": "Pillow ImageDraw + FreeType",
+      "fit_fraction": 0.86,
+      "image_format": "PNG",
+      "image_mode": "L",
+      "jitter_fraction": 0.05,
+      "placement_jitter_fraction": 0.02,
+      "png_encoding": "8-bit grayscale PNG written through the repository PNG writer; the image dimensions are exactly canvas_width x canvas_height and the mode is L (8-bit greyscale). No palette, no alpha channel and no re-encoding of the clean reference are permitted.",
+      "reference_rule": "The clean reference is rendered once per source from the same render seed and is retained read-only. The SSIM target is computed from that exact byte sequence.",
+      "renderer_identity": "The rendering implementation is pinned by source hash in the lifecycle protocol (src/captcha_quality/render.py, 729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e), so a change to the renderer must be reviewed as a protocol change.",
+      "spacing_jitter_fraction": 0.03,
+      "strict_bounds": true,
+      "vertical_padding": 0.1
+    }
+  },
+  "groups": {
+    "familiar": {
+      "diagnostic_rows": 180,
+      "fonts": 3,
+      "primary_rows": 1710,
+      "rows": 1890,
+      "sources": 90
+    },
+    "m7b_held_out": {
+      "diagnostic_rows": 180,
+      "fonts": 3,
+      "primary_rows": 1710,
+      "rows": 1890,
+      "sources": 90
+    },
+    "new_held_out": {
+      "diagnostic_rows": 240,
+      "fonts": 4,
+      "primary_rows": 2280,
+      "rows": 2520,
+      "sources": 120
+    }
+  },
+  "hashes": {
+    "feature_table_sha256": "fa2d79c85d682b26545dc2c4e3ec5ece2a41d85aea7e1ea1070f7256ff8519bb"
+  },
+  "images": {
+    "count": 6300,
+    "dimensions": [
+      192,
+      64
+    ],
+    "distinct_pixel_hashes": 6300,
+    "distinct_reference_pixel_hashes": 300,
+    "format": "PNG",
+    "image_pixel_hash_set_sha256": "c39a9fbdfced9de8e55733302bdc966d8431ff70337f5abc13bc1dfd3ab4c695",
+    "mode": "L",
+    "per_subdirectory": {
+      "arc_strokes": 1200,
+      "clean": 300,
+      "elastic": 1200,
+      "gaussian_blur": 1200,
+      "gaussian_noise": 1200,
+      "thin_lines": 1200
+    },
+    "reference_pixel_hash_set_sha256": "fccb970e62c699c3eb3ae76053eddfdeb5b43c9d797c6327f2e1a327051ba72d"
+  },
+  "milestone": "M8C",
+  "protocol": {
+    "generation_config_hash": "147df5002e93e5f280d60ed10ed417d3100c8c9ccb24191b065f486d3b580e06",
+    "name": "cross-font-benchmark",
+    "scheme_version": "v1",
+    "seed": 20260821,
+    "sha256": "059388572f264fb2332f3427da774f1ab30f1339a27f19fd3e98e98163d4574c",
+    "version": "v0.2.0"
+  },
+  "targets": {
+    "by_family_severity": [
+      {
+        "family": "gaussian_blur",
+        "max": 0.9346378064509335,
+        "mean": 0.8959544182484627,
+        "min": 0.8439404127430857,
+        "n": 300,
+        "sd": 0.01748238469169068,
+        "severity": 1
+      },
+      {
+        "family": "gaussian_blur",
+        "max": 0.7679282070313529,
+        "mean": 0.6702212251047485,
+        "min": 0.5100243819336744,
+        "n": 300,
+        "sd": 0.04671377119950903,
+        "severity": 2
+      },
+      {
+        "family": "gaussian_blur",
+        "max": 0.6124430908446857,
+        "mean": 0.4543010210930694,
+        "min": 0.2776515543620842,
+        "n": 300,
+        "sd": 0.05564772214830409,
+        "severity": 3
+      },
+      {
+        "family": "gaussian_blur",
+        "max": 0.5529451897912908,
+        "mean": 0.3736554907404754,
+        "min": 0.17234526326187197,
+        "n": 300,
+        "sd": 0.069008220185605,
+        "severity": 4
+      },
+      {
+        "family": "gaussian_noise",
+        "max": 0.9404719960921176,
+        "mean": 0.8719941400076476,
+        "min": 0.78865433869506,
+        "n": 300,
+        "sd": 0.03121079623645943,
+        "severity": 1
+      },
+      {
+        "family": "gaussian_noise",
+        "max": 0.852771282779923,
+        "mean": 0.7495614814632078,
+        "min": 0.619082658639287,
+        "n": 300,
+        "sd": 0.04487755148482063,
+        "severity": 2
+      },
+      {
+        "family": "gaussian_noise",
+        "max": 0.7629786637563115,
+        "mean": 0.6499884597597593,
+        "min": 0.5094522122313119,
+        "n": 300,
+        "sd": 0.04658663199707173,
+        "severity": 3
+      },
+      {
+        "family": "gaussian_noise",
+        "max": 0.6674053552869057,
+        "mean": 0.5607404801767868,
+        "min": 0.42821439662325056,
+        "n": 300,
+        "sd": 0.046985007142522746,
+        "severity": 4
+      },
+      {
+        "family": "thin_lines",
+        "max": 0.9892103998752027,
+        "mean": 0.9452240466225976,
+        "min": 0.870631192731683,
+        "n": 300,
+        "sd": 0.02569731498775413,
+        "severity": 1
+      },
+      {
+        "family": "thin_lines",
+        "max": 0.9840483635724953,
+        "mean": 0.8926635973745084,
+        "min": 0.7649827620707255,
+        "n": 300,
+        "sd": 0.03795743559839833,
+        "severity": 2
+      },
+      {
+        "family": "thin_lines",
+        "max": 0.9476406527551277,
+        "mean": 0.8038805550196211,
+        "min": 0.6766771563737749,
+        "n": 300,
+        "sd": 0.0500851118697326,
+        "severity": 3
+      },
+      {
+        "family": "thin_lines",
+        "max": 0.8976086329361728,
+        "mean": 0.696462716762298,
+        "min": 0.569829669351475,
+        "n": 300,
+        "sd": 0.06386671611145912,
+        "severity": 4
+      },
+      {
+        "family": "arc_strokes",
+        "max": 0.9935905005733748,
+        "mean": 0.9554967418200572,
+        "min": 0.8862787471453444,
+        "n": 300,
+        "sd": 0.019888380768394047,
+        "severity": 1
+      },
+      {
+        "family": "arc_strokes",
+        "max": 0.9872388531848098,
+        "mean": 0.912187996742912,
+        "min": 0.8198383371109411,
+        "n": 300,
+        "sd": 0.029527509176626977,
+        "severity": 2
+      },
+      {
+        "family": "arc_strokes",
+        "max": 0.968150311467511,
+        "mean": 0.8381787807520792,
+        "min": 0.746742548861759,
+        "n": 300,
+        "sd": 0.04216828526740028,
+        "severity": 3
+      },
+      {
+        "family": "arc_strokes",
+        "max": 0.9086987033515476,
+        "mean": 0.7412378392487781,
+        "min": 0.5653660769866368,
+        "n": 300,
+        "sd": 0.05758728017924291,
+        "severity": 4
+      },
+      {
+        "family": "elastic",
+        "max": 0.9971976578329425,
+        "mean": 0.9913377339617523,
+        "min": 0.981218501205516,
+        "n": 300,
+        "sd": 0.002791318324466324,
+        "severity": 1
+      },
+      {
+        "family": "elastic",
+        "max": 0.9896304111978844,
+        "mean": 0.9686684401734394,
+        "min": 0.9352741183280967,
+        "n": 300,
+        "sd": 0.009424440099675796,
+        "severity": 2
+      },
+      {
+        "family": "elastic",
+        "max": 0.9560758733046825,
+        "mean": 0.9000386816747128,
+        "min": 0.7984272455186929,
+        "n": 300,
+        "sd": 0.02703937090531561,
+        "severity": 3
+      },
+      {
+        "family": "elastic",
+        "max": 0.9251733556704296,
+        "mean": 0.8259397166013365,
+        "min": 0.6578406506648269,
+        "n": 300,
+        "sd": 0.04183844315149172,
+        "severity": 4
+      }
+    ],
+    "definition": "SSIM between the corrupted image and its source-specific clean reference; PSNR is recorded as a diagnostic only",
+    "name": "ssim_target"
+  },
+  "text_cases": {
+    "charset": "23456789ABCDEFGHJKMNPQRSTUVWXYZ",
+    "file_sha256": "fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48",
+    "manifest_hash": "d1d55b841d96d507f5e8031268ce454bbec238e6bfc32f9aaa47322f3eeeb010",
+    "n_cases": 30,
+    "normalization": "none",
+    "version": "v0.1.0"
+  }
+}

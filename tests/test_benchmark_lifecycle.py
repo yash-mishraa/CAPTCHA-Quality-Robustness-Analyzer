@@ -161,26 +161,35 @@ def _verify_in(root: Path, state: str = "auto") -> bl.VerificationReport:
 # ---------------------------------------------------------------------------
 
 
-def test_historical_m7d_verification_still_passes():
+def test_historical_m7d_verification_preserves_the_planning_state_check():
     report = ep.verify_plan(Path("configs/evaluation_design_plan_v0_1_0.toml"))
-    assert report.ok, [f"{c.name}: {c.detail}" for c in report.failures()]
+    assert not report.ok
+    assert {check.name for check in report.failures()} == {
+        "table:isolation_checks.csv",
+        "isolation_checks",
+    }
+    transition = bl._m7d_verifier_report()
+    assert transition["planning_state_failed"] is True
+    assert transition["other_failures"] == []
     rows = pd.read_csv(REPO_ROOT / "reports/evaluation_design_plan_v0_1_0/isolation_checks.csv")
     assert bl.M7D_PLANNING_STATE_CHECK in set(rows["check"])
     assert bool(rows.loc[rows["check"] == bl.M7D_PLANNING_STATE_CHECK, "passed"].iloc[0])
 
 
-def test_lifecycle_is_valid_in_the_authorized_but_not_executed_state(config):
-    report = _verify_in(REPO_ROOT)
+def test_lifecycle_is_valid_in_the_authorized_but_not_executed_state(config, tmp_path):
+    root = _shadow_repo(config, tmp_path / "repo")
+    report = _verify_in(root)
     assert report.ok, [f"{c.name}: {c.detail}" for c in report.failures()]
     mapped = {check.name: check for check in report.checks}
     assert "pre-execution" in mapped["state"].detail
     assert mapped["pre_execution_paths"].passed
 
 
-def test_transition_does_not_require_the_planned_outputs_to_exist(config):
-    assert not (REPO_ROOT / config.authorised_execution.dataset_output).exists()
-    assert not (REPO_ROOT / config.authorised_execution.report_output).exists()
-    report = _verify_in(REPO_ROOT)
+def test_transition_does_not_require_the_planned_outputs_to_exist(config, tmp_path):
+    root = _shadow_repo(config, tmp_path / "repo")
+    assert not (root / config.authorised_execution.dataset_output).exists()
+    assert not (root / config.authorised_execution.report_output).exists()
+    report = _verify_in(root)
     assert report.ok
 
 
@@ -413,20 +422,29 @@ def test_repeated_lifecycle_verification_is_deterministic():
     assert [(c.name, c.passed) for c in first.checks] == [(c.name, c.passed) for c in second.checks]
 
 
-def test_previous_milestone_verifiers_retain_their_behaviour():
+def test_previous_milestone_verifiers_retain_their_behaviour(tmp_path):
     from captcha_quality import cross_font_analysis as cfa
 
     m7c = cfa.verify_analysis(Path("configs/cross_font_analysis_v0_1_0.toml"))
     assert m7c.ok, [f"{c.name}: {c.detail}" for c in m7c.failures()]
-    m7d = ep.verify_plan(Path("configs/evaluation_design_plan_v0_1_0.toml"))
-    assert m7d.ok
-    m7e = fra.verify_audit(Path("configs/font_roster_audit_v0_2_0.toml"))
+    transition = bl._m7d_verifier_report()
+    assert transition["planning_state_failed"] is True
+    assert transition["other_failures"] == []
+    shadow = _shadow_repo(bl.load_config(LIFECYCLE_CONFIG), tmp_path / "repo")
+    previous = Path.cwd()
+    os.chdir(shadow)
+    try:
+        m7e = fra.verify_audit(Path("configs/font_roster_audit_v0_2_0.toml"))
+    finally:
+        os.chdir(previous)
     assert m7e.ok, [f"{c.name}: {c.detail}" for c in m7e.failures()]
 
 
 def test_historical_artifacts_are_untouched():
-    """The M8A milestone changed no historical artifact."""
-    assert sha256_file(LIFECYCLE_CONFIG) == sha256_file(LIFECYCLE_CONFIG)
+    """The executed milestone changed no historical artifact."""
+    assert sha256_file(LIFECYCLE_CONFIG) == (
+        "839934808ede72fd66046a8a4546454b7f85a8e08bdaad664179635df3dbcdc9"
+    )
     m7d_config = REPO_ROOT / "configs" / "evaluation_design_plan_v0_1_0.toml"
     assert sha256_file(m7d_config) == (
         "e9f236b383172217e85096c1e06e81adcbb3fd85dc5c18f6537d824e1c6300d3"
@@ -435,5 +453,14 @@ def test_historical_artifacts_are_untouched():
     assert sha256_file(m7e_config) == (
         "bc319df3cae8114d6ecdcb50310a0c69c54af94cd7399c69e48189dfe0733faa"
     )
-    assert not (REPO_ROOT / "data" / "processed" / "matched_font_benchmark_v0.1.0").exists()
-    assert not (REPO_ROOT / "reports" / "matched_font_benchmark_v0_1_0").exists()
+    lifecycle_v2 = REPO_ROOT / "configs" / "benchmark_lifecycle_v0_2_0.toml"
+    lifecycle_v3 = REPO_ROOT / "configs" / "benchmark_lifecycle_v0_3_0.toml"
+    assert sha256_file(lifecycle_v2) == (
+        "27e4b243f8894a6aba9ebff83376fb4b341857121e8208b1b4af6786c5215ef4"
+    )
+    executed = bl.load_config(lifecycle_v3)
+    assert executed.run.status == "executed"
+    assert executed.run.milestone == "M8C"
+    assert executed.run.supersedes == "v0.2.0"
+    assert (REPO_ROOT / "data" / "processed" / "matched_font_benchmark_v0.1.0").is_dir()
+    assert (REPO_ROOT / "reports" / "matched_font_benchmark_v0_1_0").is_dir()

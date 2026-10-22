@@ -19,7 +19,6 @@ import pytest
 from captcha_quality import benchmark_lifecycle as bl
 from captcha_quality import benchmark_preflight as bp
 from captcha_quality import cross_font_analysis as cfa
-from captcha_quality import evaluation_plan as ep
 from captcha_quality import font_roster_audit as fra
 from captcha_quality import source_identity as si
 from captcha_quality.corruptions import FAMILY_NOISE, apply_corruption
@@ -518,14 +517,21 @@ def test_a_font_binary_in_the_tree_fails(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_the_historical_verifiers_still_pass():
+def test_the_historical_verifiers_still_pass(tmp_path):
     m7c = cfa.verify_analysis(Path("configs/cross_font_analysis_v0_1_0.toml"))
     assert m7c.ok, [f"{c.name}: {c.detail}" for c in m7c.failures()]
-    m7d = ep.verify_plan(Path("configs/evaluation_design_plan_v0_1_0.toml"))
-    assert m7d.ok, [f"{c.name}: {c.detail}" for c in m7d.failures()]
-    m7e = fra.verify_audit(Path("configs/font_roster_audit_v0_2_0.toml"))
+    transition = bl._m7d_verifier_report()
+    assert transition["planning_state_failed"] is True
+    assert transition["other_failures"] == []
+    shadow = _shadow_repo(tmp_path / "repo")
+    previous = Path.cwd()
+    os.chdir(shadow)
+    try:
+        m7e = fra.verify_audit(Path("configs/font_roster_audit_v0_2_0.toml"))
+        m7e_v1 = fra.verify_audit(Path("configs/font_roster_audit_v0_1_0.toml"))
+    finally:
+        os.chdir(previous)
     assert m7e.ok, [f"{c.name}: {c.detail}" for c in m7e.failures()]
-    m7e_v1 = fra.verify_audit(Path("configs/font_roster_audit_v0_1_0.toml"))
     assert m7e_v1.ok, [f"{c.name}: {c.detail}" for c in m7e_v1.failures()]
 
 
@@ -545,11 +551,11 @@ def test_the_m8a_protocol_v1_is_unchanged():
 
 
 # ---------------------------------------------------------------------------
-# 15. the lifecycle stays authorized but not executed
+# 15. the lifecycle transition is versioned, not rewritten
 # ---------------------------------------------------------------------------
 
 
-def test_the_lifecycle_remains_authorized_but_not_executed():
+def test_the_lifecycle_transition_is_versioned():
     lifecycle = tomllib.loads(LIFECYCLE_V2.read_text(encoding="utf-8"))
     assert lifecycle["run"]["status"] == "authorized_not_executed"
     assert lifecycle["authorized_execution"]["dataset_output"] == (
@@ -558,18 +564,25 @@ def test_the_lifecycle_remains_authorized_but_not_executed():
     assert lifecycle["authorized_execution"]["report_output"] == (
         "reports/matched_font_benchmark_v0_1_0"
     )
-    assert not (REPO_ROOT / "data/processed/matched_font_benchmark_v0.1.0").exists()
-    assert not (REPO_ROOT / "reports/matched_font_benchmark_v0_1_0").exists()
+    executed = bl.load_config(REPO_ROOT / "configs" / "benchmark_lifecycle_v0_3_0.toml")
+    assert executed.run.status == "executed"
+    assert executed.run.milestone == "M8C"
+    assert executed.run.supersedes == "v0.2.0"
+    assert (REPO_ROOT / "data/processed/matched_font_benchmark_v0.1.0").is_dir()
+    assert (REPO_ROOT / "reports/matched_font_benchmark_v0_1_0").is_dir()
 
 
 def test_the_preflight_creates_no_benchmark_output(tmp_path):
     before = sorted(path.name for path in (REPO_ROOT / "data" / "processed").iterdir())
+    before_reports = sorted(path.name for path in (REPO_ROOT / "reports").iterdir())
     report = bp.run_generator_preflight(PROTOCOL_V2, manifest=MANIFEST)
     assert report.ok
     after = sorted(path.name for path in (REPO_ROOT / "data" / "processed").iterdir())
+    after_reports = sorted(path.name for path in (REPO_ROOT / "reports").iterdir())
     assert before == after
-    assert not (REPO_ROOT / "data/processed/matched_font_benchmark_v0.1.0").exists()
-    assert not (REPO_ROOT / "reports/matched_font_benchmark_v0_1_0").exists()
+    assert before_reports == after_reports
+    assert (REPO_ROOT / "data/processed/matched_font_benchmark_v0.1.0").is_dir()
+    assert (REPO_ROOT / "reports/matched_font_benchmark_v0_1_0").is_dir()
 
 
 def test_the_m8b_verifier_passes_in_the_repository():

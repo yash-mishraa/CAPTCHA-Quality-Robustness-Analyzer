@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from captcha_quality import evaluation_plan as ep
+from captcha_quality import benchmark_lifecycle as bl
 from captcha_quality import font_roster_audit as fra
 from captcha_quality.provenance import sha256_file
 
@@ -32,21 +32,37 @@ if not (M7D_REPORT_ROOT / "plan_manifest.json").is_file():  # pragma: no cover
     )
 
 
+def _load_in_shadow(config, tmp_path_factory, label: str):
+    """Load inputs in a tree where the authorized benchmark outputs are absent.
+
+    M7E is a pre-execution audit and deliberately refuses to load once the
+    planned benchmark exists. The shadow tree preserves that check while
+    keeping the historical artifacts themselves under verification.
+    """
+    shadow = _shadow_repo(tmp_path_factory.mktemp(label), config.config_path.name)
+    previous = Path.cwd()
+    os.chdir(shadow)
+    try:
+        inputs = fra.load_inputs(config)
+    finally:
+        os.chdir(previous)
+    result = fra.build_audit(inputs)
+    return inputs, result
+
+
 @pytest.fixture(scope="module")
-def v1():
+def v1(tmp_path_factory):
     """The superseded protocol version, loaded but never modified."""
     config = fra.load_config(V1_CONFIG)
-    inputs = fra.load_inputs(config)
-    result = fra.build_audit(inputs)
+    inputs, result = _load_in_shadow(config, tmp_path_factory, "m7e_v1")
     return config, inputs, result
 
 
 @pytest.fixture(scope="module")
-def v2():
+def v2(tmp_path_factory):
     """The current protocol version."""
     config = fra.load_config(V2_CONFIG)
-    inputs = fra.load_inputs(config)
-    result = fra.build_audit(inputs)
+    inputs, result = _load_in_shadow(config, tmp_path_factory, "m7e_v2")
     checks = fra.build_isolation_checks(inputs, result, result.report)
     return config, inputs, result, checks
 
@@ -302,11 +318,16 @@ def test_historical_milestone_artifacts_are_untouched(v2):
     )
 
 
-def test_the_planned_benchmark_paths_are_still_absent(v2):
+def test_the_planned_benchmark_paths_check_is_preserved(v2):
     _, _, _, checks = v2
     assert checks.loc[checks["check"] == "planned_benchmark_paths_absent", "passed"].all()
-    assert not (REPO_ROOT / "data" / "processed" / "matched_font_benchmark_v0.1.0").exists()
-    assert not (REPO_ROOT / "reports" / "matched_font_benchmark_v0_1_0").exists()
+    # The check remains active and still refuses the real repository after the
+    # authorized M8C execution; it is not weakened or removed.
+    config = fra.load_config(V2_CONFIG)
+    with pytest.raises(fra.AuditError, match="planned_benchmark_paths_absent"):
+        fra.load_inputs(config)
+    assert (REPO_ROOT / "data" / "processed" / "matched_font_benchmark_v0.1.0").is_dir()
+    assert (REPO_ROOT / "reports" / "matched_font_benchmark_v0_1_0").is_dir()
     assert fra._font_binary_paths() == []
 
 
@@ -320,8 +341,9 @@ def test_m7c_and_m7d_verifiers_still_pass_and_detect_tampering(v2):
 
     m7c = cfa.verify_analysis(Path("configs/cross_font_analysis_v0_1_0.toml"))
     assert m7c.ok, [f"{c.name}: {c.detail}" for c in m7c.failures()]
-    m7d = ep.verify_plan(Path("configs/evaluation_design_plan_v0_1_0.toml"))
-    assert m7d.ok, [f"{c.name}: {c.detail}" for c in m7d.failures()]
+    transition = bl._m7d_verifier_report()
+    assert transition["planning_state_failed"] is True
+    assert transition["other_failures"] == []
 
     membership = cfa.ProtectedDependencyMembership(
         version="test-v1",
@@ -357,8 +379,9 @@ def test_m7c_and_m7d_verifiers_still_pass_and_detect_tampering(v2):
 # ---------------------------------------------------------------------------
 
 
-def test_repeated_verification_of_the_current_protocol_is_deterministic(v2):
-    first = fra.verify_audit(Path("configs/font_roster_audit_v0_2_0.toml"))
-    second = fra.verify_audit(Path("configs/font_roster_audit_v0_2_0.toml"))
+def test_repeated_verification_of_the_current_protocol_is_deterministic(tmp_path):
+    shadow = _shadow_repo(tmp_path, "font_roster_audit_v0_2_0.toml")
+    first = _verify_in(shadow, "font_roster_audit_v0_2_0.toml")
+    second = _verify_in(shadow, "font_roster_audit_v0_2_0.toml")
     assert first.ok and second.ok
     assert [(c.name, c.passed) for c in first.checks] == [(c.name, c.passed) for c in second.checks]

@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from captcha_quality import evaluation_plan as ep
+from captcha_quality import benchmark_lifecycle as bl
 from captcha_quality import font_roster_audit as fra
 from captcha_quality.provenance import sha256_file
 
@@ -26,26 +26,25 @@ if not (M7D_REPORT_ROOT / "plan_manifest.json").is_file():  # pragma: no cover
 
 
 @pytest.fixture(scope="module")
-def bundle():
-    """Load the frozen inputs and build the deterministic audit once."""
+def bundle(tmp_path_factory):
+    """Load the frozen inputs in a tree where the planned benchmark is absent.
+
+    The M7E protocol deliberately refuses to load its inputs once the planned
+    benchmark exists. Building the audit in a isolated shadow tree preserves
+    that pre-execution check while allowing the historical artifacts to be
+    verified after the authorized M8C execution.
+    """
     config = fra.load_config(CONFIG_PATH)
-    inputs = fra.load_inputs(config)
+    shadow = _shadow_repo(tmp_path_factory.mktemp("m7e_bundle"))
+    previous = Path.cwd()
+    os.chdir(shadow)
+    try:
+        inputs = fra.load_inputs(config)
+    finally:
+        os.chdir(previous)
     result = fra.build_audit(inputs)
     checks = fra.build_isolation_checks(inputs, result, result.report)
     return config, inputs, result, checks
-
-
-@pytest.fixture()
-def output_dir():
-    """Use a Git-ignored scratch directory under reports/."""
-    path = REPO_ROOT / "reports" / "_m7e_test_output"
-    if path.exists():
-        shutil.rmtree(path)
-    try:
-        yield path
-    finally:
-        if path.exists():
-            shutil.rmtree(path)
 
 
 def _verify_in(shadow: Path) -> fra.VerificationReport:
@@ -129,9 +128,10 @@ def test_evidence_records_and_decisions_are_complete(bundle):
     assert checks["passed"].all()
 
 
-def test_audit_passes_with_declared_dependencies_intact(bundle):
+def test_audit_passes_with_declared_dependencies_intact(bundle, tmp_path):
     config, inputs, result, checks = bundle
-    report = fra.verify_audit(Path("configs/font_roster_audit_v0_1_0.toml"))
+    shadow = _shadow_repo(tmp_path)
+    report = _verify_in(shadow)
     assert report.ok, [f"{c.name}: {c.detail}" for c in report.failures()]
     mapped = _check_map(report)
     assert mapped["frozen_dependencies"].passed
@@ -420,25 +420,33 @@ def test_unrelated_config_data_model_and_report_additions_are_accepted(tmp_path)
 # ---------------------------------------------------------------------------
 
 
-def test_repeated_verification_is_deterministic(bundle):
-    first = fra.verify_audit(Path("configs/font_roster_audit_v0_1_0.toml"))
-    second = fra.verify_audit(Path("configs/font_roster_audit_v0_1_0.toml"))
+def test_repeated_verification_is_deterministic(bundle, tmp_path):
+    shadow = _shadow_repo(tmp_path)
+    first = _verify_in(shadow)
+    second = _verify_in(shadow)
     assert first.ok and second.ok
     assert [(c.name, c.passed) for c in first.checks] == [(c.name, c.passed) for c in second.checks]
 
 
-def test_two_runs_produce_identical_outputs(output_dir):
-    first_dir, first_metadata = fra.run_audit(
-        CONFIG_PATH, output_reports=output_dir, overwrite=True
-    )
-    first_hashes = fra._output_hashes(first_dir)
-    second_dir, second_metadata = fra.run_audit(
-        CONFIG_PATH, output_reports=output_dir, overwrite=True
-    )
-    assert second_dir == first_dir
-    assert fra._output_hashes(second_dir) == first_hashes
-    assert first_metadata["summary"] == second_metadata["summary"]
-    assert fra.verify_audit(CONFIG_PATH, output_reports=output_dir).ok
+def test_two_runs_produce_identical_outputs(tmp_path):
+    shadow = _shadow_repo(tmp_path)
+    output_dir = shadow / "reports" / "_m7e_test_output"
+    previous = Path.cwd()
+    os.chdir(shadow)
+    try:
+        first_dir, first_metadata = fra.run_audit(
+            CONFIG_PATH, output_reports=output_dir, overwrite=True
+        )
+        first_hashes = fra._output_hashes(first_dir)
+        second_dir, second_metadata = fra.run_audit(
+            CONFIG_PATH, output_reports=output_dir, overwrite=True
+        )
+        assert second_dir == first_dir
+        assert fra._output_hashes(second_dir) == first_hashes
+        assert first_metadata["summary"] == second_metadata["summary"]
+        assert fra.verify_audit(CONFIG_PATH, output_reports=output_dir).ok
+    finally:
+        os.chdir(previous)
 
 
 # ---------------------------------------------------------------------------
@@ -451,8 +459,9 @@ def test_m7c_and_m7d_verifiers_still_pass_and_still_detect_tampering(bundle):
 
     m7c = cfa.verify_analysis(Path("configs/cross_font_analysis_v0_1_0.toml"))
     assert m7c.ok, [f"{c.name}: {c.detail}" for c in m7c.failures()]
-    m7d = ep.verify_plan(Path("configs/evaluation_design_plan_v0_1_0.toml"))
-    assert m7d.ok, [f"{c.name}: {c.detail}" for c in m7d.failures()]
+    transition = bl._m7d_verifier_report()
+    assert transition["planning_state_failed"] is True
+    assert transition["other_failures"] == []
 
     # M7C still detects a modified declared dependency.
     membership = cfa.ProtectedDependencyMembership(
@@ -499,8 +508,13 @@ def test_no_font_binary_is_present_in_the_working_tree(bundle):
 def test_m7d_lifecycle_check_is_preserved(bundle):
     _, _, _, checks = bundle
     assert checks.loc[checks["check"] == "planned_benchmark_paths_absent", "passed"].all()
-    assert not (REPO_ROOT / "data" / "processed" / "matched_font_benchmark_v0.1.0").exists()
-    assert not (REPO_ROOT / "reports" / "matched_font_benchmark_v0_1_0").exists()
+    # The pre-execution M7E check is not weakened: it still refuses the real
+    # repository now that the authorized M8C outputs exist.
+    config = fra.load_config(CONFIG_PATH)
+    with pytest.raises(fra.AuditError, match="planned_benchmark_paths_absent"):
+        fra.load_inputs(config)
+    assert (REPO_ROOT / "data" / "processed" / "matched_font_benchmark_v0.1.0").is_dir()
+    assert (REPO_ROOT / "reports" / "matched_font_benchmark_v0_1_0").is_dir()
 
 
 def test_gate_is_reported_and_the_unresolved_face_is_retained(bundle):
