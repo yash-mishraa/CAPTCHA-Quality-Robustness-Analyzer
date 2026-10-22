@@ -1,0 +1,39 @@
+check_id,category,expected,actual,passed,details
+package_membership,package,7 declared files,7 files,True,missing=[]; extra=[]
+plan_schema,schema,m9b-interference-experiment-protocol-v1,m9b-interference-experiment-protocol-v1,True,
+plan_milestone,scope,M9B,M9B,True,
+plan_status,scope,preregistered_not_executed,preregistered_not_executed,True,
+hypothesis_ids_unique,schema,"['H1', 'H2', 'H3']","['H1', 'H2', 'H3']",True,count=3
+experiment_required_fields,schema,29 fields per experiment,missing=0; empty=0,True,
+allowed_decision_states,decision,"['not_tested', 'support', 'falsify', 'inconclusive', 'not_testable']",['not_tested'],True,invalid=[]
+m8c_derived_testing_is_exploratory,leakage,every experiment has m8c_role=exploratory_only,non_exploratory=[],True,
+decision_state_registry,decision,"['not_tested', 'support', 'falsify', 'inconclusive', 'not_testable']","['not_tested', 'support', 'falsify', 'inconclusive', 'not_testable']",True,
+m8c_is_not_confirmatory,leakage,false,"{'m8c_can_be_confirmatory': False, 'm9a_associations_are_confirmatory': False}",True,
+frozen_statistical_settings,statistics,"{'seed': 20261023, 'replicates': 2000, 'primary_confidence': 0.9833333333333333}","{'seed': 20261023, 'replicates': 2000, 'primary_confidence': 0.9833333333333333}",True,
+m9c_is_not_automatic,decision,m9c_is_automatic=false,False,True,
+provenance_inputs_present,provenance,non-empty list,27,True,
+matrix_columns,schema,29 matrix columns,29 columns,True,
+matrix_row_count,schema,3,3,True,
+matrix_ids_unique,schema,"['H1', 'H2', 'H3']","['H1', 'H2', 'H3']",True,
+matrix_decision_states,decision,"['not_tested', 'support', 'falsify', 'inconclusive', 'not_testable']","['not_tested', 'not_tested', 'not_tested']",True,
+matrix_not_preempted,decision,all current states are not_tested,"['not_tested', 'not_tested', 'not_tested']",True,
+matrix_plan_consistency,consistency,29 fields for each hypothesis,0 mismatch(es),True,
+verification_columns,verification,"['check_id', 'category', 'expected', 'actual', 'passed', 'details']","['check_id', 'category', 'expected', 'actual', 'passed', 'details']",True,
+verification_ids_unique,verification,38 unique check ids,38 unique / 38 rows,True,
+verification_all_passed,verification,every recorded check passed,38 / 38 passed,True,failed=[]
+provenance_hashes,provenance,27 SHA-256 values,27/27 checked,True,
+m9a_revision_chain,provenance,"{'design_revision': 'e3d8ed36b497347b87606536000114746d27d709', 'm9a_analysis_revision': '37bc86dba3cac8d7cfe2d9e84d83da300974866f', 'm9a_report_revision': 'e3d8ed36b497347b87606536000114746d27d709'}","{'design_revision': 'e3d8ed36b497347b87606536000114746d27d709', 'm9a_analysis_revision': '37bc86dba3cac8d7cfe2d9e84d83da300974866f', 'm9a_report_revision': 'e3d8ed36b497347b87606536000114746d27d709'}",True,
+static_scope_no_execution,scope,"no fitting, prediction, calibration or generation imports/calls",forbidden_imports=[]; forbidden_calls=[],True,
+cli_only_verify,scope,['verify'],['verify'],True,
+m8e_integrity,external_verifier,verification: PASS,verification: PASS,True,python -m captcha_quality.benchmark_integrity verify
+m8c_lifecycle_post_execution,external_verifier,verification: PASS,verification: PASS,True,python -m captcha_quality.benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml --state post-execution
+m8c_full_replay,external_verifier,verification: PASS,verification: PASS,True,python -m captcha_quality.matched_font_benchmark verify --lifecycle configs/benchmark_lifecycle_v0_2_0.toml --lifecycle-post configs/benchmark_lifecycle_v0_3_0.toml
+frozen_m5c_artifact_hash,immutability,c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0,c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0,True,sha256 of models/retention_aware_selection_v0_1_0/selected_policy.joblib
+historical_artifacts_unchanged,immutability,empty git diff and matching provenance hashes,git diff empty; 27/27 provenance hashes match,True,"M8C, M8D, M8E and M9A paths only"
+ground_truth_untracked_ignored,ground_truth_policy,untracked and ignored,untracked; ignored by .gitignore:95,True,text never read or exposed
+no_benchmark_or_model_artifacts_generated,immutability,"no new data, prediction or model artifact","only new source, test and static report files",True,M9B performed no generation or fitting
+focused_protocol_tests,tests,18 passed,18 passed,True,.venv/bin/python -m pytest tests/test_interference_experiment_protocol.py -q
+ruff_lint,quality,All checks passed!,All checks passed!,True,.venv/bin/ruff check src/captcha_quality/interference_experiment_protocol.py tests/test_interference_experiment_protocol.py
+ruff_format,quality,2 files already formatted,2 files already formatted,True,.venv/bin/ruff format --check src/captcha_quality/interference_experiment_protocol.py tests/test_interference_experiment_protocol.py
+full_test_suite,tests,845 passed,845 passed,True,.venv/bin/python -m pytest -q
+git_diff_check,repository,no whitespace errors,no whitespace errors,True,git diff --check

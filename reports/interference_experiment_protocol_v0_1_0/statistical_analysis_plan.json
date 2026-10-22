@@ -1,0 +1,570 @@
+{
+  "schema": "m9b-interference-experiment-protocol-v1",
+  "protocol_id": "m9b-interference-experiment-protocol",
+  "protocol_version": "v0.1.0",
+  "milestone": "M9B",
+  "status": "preregistered_not_executed",
+  "title": "Preregistered experiments for the three M9A interference hypotheses",
+  "predecessor": {
+    "m9a_analysis_revision": "37bc86dba3cac8d7cfe2d9e84d83da300974866f",
+    "m9a_report_revision": "e3d8ed36b497347b87606536000114746d27d709",
+    "m9a_protocol_path": "reports/interference_error_analysis_v0_1_0/analysis_protocol.json",
+    "m9a_hypotheses_path": "reports/interference_error_analysis_v0_1_0/hypotheses_and_followups.md",
+    "m8c_dataset": "data/processed/matched_font_benchmark_v0.1.0",
+    "m8c_report": "reports/matched_font_benchmark_v0_1_0",
+    "frozen_model_artifact": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+    "frozen_model_card": "models/retention_aware_selection_v0_1_0/selected_policy_card.json",
+    "frozen_model_artifact_sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+    "frozen_model_card_sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8",
+    "m8c_predictions_sha256": "e6c1f1ba83bbb05c18fed8a9b0dd1c87014a6f6c3667475971b2834dfedd4dd4",
+    "m8c_manifest_sha256": "35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743"
+  },
+  "scope": {
+    "purpose": "Specify how the three M9A interference hypotheses could be tested fairly, and what evidence would support, falsify or leave each one inconclusive.",
+    "planning_only": true,
+    "experiment_execution_performed": false,
+    "model_fit_performed": false,
+    "model_calibration_performed": false,
+    "feature_change_performed": false,
+    "benchmark_generation_performed": false,
+    "historical_artifact_modified": false,
+    "confirmatory_claim_requires_new_source_set": true,
+    "m8c_can_be_confirmatory": false,
+    "m9a_associations_are_confirmatory": false,
+    "non_claims": [
+      "No human readability, CAPTCHA solvability, CAPTCHA security or production robustness claim.",
+      "No causal mechanism claim for interference, font identity or feature behaviour.",
+      "No model or feature improvement is authorised by this protocol.",
+      "No font-population, user-population or deployment-population inference.",
+      "No claim that synthetic-reference SSIM is a perceptual or human-legibility measure."
+    ]
+  },
+  "data_regimes": {
+    "m8c_observed": {
+      "label": "M8C exploratory reuse",
+      "confirmatory": false,
+      "description": "The frozen M8C benchmark and the M9A report have already been observed. They may motivate hypotheses, describe effect sizes and inform planning variability, but they cannot serve as a pristine confirmatory test set for hypotheses generated from M9A."
+    },
+    "pilot": {
+      "label": "Pilot P",
+      "confirmatory": false,
+      "description": "A new, independently generated source set used only to estimate variability, matching overlap and attainable precision. Pilot outcomes are never used to adjudicate H1, H2 or H3, and pilot source groups, cases and H3 fonts must be disjoint from confirmatory set C."
+    },
+    "confirmatory": {
+      "label": "Confirmatory set C",
+      "confirmatory": true,
+      "description": "A new, independently generated source set. The protocol, sample size, roster, matching rules, thresholds and analysis code are frozen before any C outcome is inspected. C is analysed once for the primary decisions."
+    }
+  },
+  "common_design": {
+    "target": "ssim_target",
+    "target_definition": "SSIM between the corrupted image and its source-specific clean reference at 192x64 8-bit grayscale.",
+    "residual_convention": "ssim_target - prediction",
+    "residual_sign": "positive means underprediction; negative means overprediction",
+    "independent_variable_for_H1": "ssim_target",
+    "severity_role": "Interference severity is an ordinal design label and a secondary diagnostic. It is not assumed to be an interval-scaled independent variable because target-SSIM gaps between rungs are unequal.",
+    "prediction_model": {
+      "name": "frozen M5C champion",
+      "family": "expanded_random_forest",
+      "artifact_path": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+      "artifact_sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+      "model_card_path": "models/retention_aware_selection_v0_1_0/selected_policy_card.json",
+      "model_card_sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8",
+      "evaluation_mode": "zero-shot only; the champion is loaded once and predicts once; no fit, partial_fit, calibration, selector, threshold change or feature change",
+      "target": "ssim_target"
+    },
+    "feature_set": {
+      "feature_set_version": "v1",
+      "feature_names": [
+        "intensity_mean",
+        "intensity_std",
+        "contrast_rms",
+        "ink_fraction",
+        "laplacian_variance",
+        "edge_density",
+        "histogram_entropy",
+        "noise_sigma_immerkaer"
+      ],
+      "extractor_path": "src/captcha_quality/features.py",
+      "extractor_sha256": "ee345d09f3f0898d2b13daec85fa695a7c8f59693e318853cf3bdb20a88a1b30",
+      "descriptor": "the frozen eight whole-image features; no feature is added, removed, reordered or selected"
+    },
+    "source_unit": {
+      "column": "source_id",
+      "definition": "one font rendered with one committed text case",
+      "rows_per_source": 21,
+      "primary_rows_per_source": 19,
+      "interference_rows_per_source": 8,
+      "reference_rows_per_source": 8,
+      "related_variants": "All corruption variants of a source share the same clean reference, text, font and case and are never treated as independent."
+    },
+    "renderer_and_corruptions": {
+      "renderer": "Pillow ImageDraw + FreeType, 192x64 8-bit grayscale PNG, fixed M8C render configuration",
+      "renderer_code_sha256": "729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e",
+      "corruptions_code_sha256": "303136fcf65f92c6d17545d3b56233d827b2ffb98acbb2f2c4aa363789f316a3",
+      "interference_code_sha256": "dbc981a53a6a478bb339256aee603cf8a0f83d11a881576df8611d12acaf7578",
+      "quality_metrics_code_sha256": "5b95a369761166f1b8172966485304143743b982c7b72c24eb5b3b66c267b40b",
+      "ladder": "Gaussian blur s1-s4, Gaussian noise s1-s4, thin-line interference s1-s4, arc-stroke interference s1-s4, elastic geometric s1-s4; clean reference and elastic 0.5 px are diagnostic and excluded from primary estimands",
+      "generation_rule": "C must use its own frozen case manifest, render seeds and corruption seeds. Reusing an M8C image, row identity or corruption realisation is not permitted for confirmatory data."
+    },
+    "statistical_policy": {
+      "primary_hypotheses": 3,
+      "familywise_alpha": 0.05,
+      "multiplicity_method": "Bonferroni simultaneous primary intervals across H1, H2 and H3",
+      "primary_confidence_level": 0.9833333333333333,
+      "primary_percentiles": [0.8333333333333333, 99.16666666666667],
+      "reporting_confidence_level": 0.95,
+      "reporting_percentiles": [2.5, 97.5],
+      "resampling_method": "percentile bootstrap",
+      "resampling_replicates": 2000,
+      "resampling_seed": 20261023,
+      "resampling_unit_H1_H2": "source_id; whole source groups are resampled with replacement and every row of a sampled source is retained",
+      "resampling_unit_H3": "case_id cluster; all fonts, sources and variants of a resampled case are retained together, preserving the font pairing",
+      "subgroup_policy": "Family-specific, font-specific, severity-specific and per-feature subgroup estimates are secondary and exploratory. If p-values are reported they use Benjamini-Hochberg q-values. They cannot change a primary decision and cannot be promoted to confirmatory evidence.",
+      "sensitivity_policy": "Sensitivity analyses are prespecified or clearly labelled exploratory. They are reported beside the primary result and cannot replace it after outcomes are seen.",
+      "threshold_tuning": "No threshold, feature, caliper, bin width, seed or endpoint may be changed after C outcomes are inspected. Any change requires a new protocol version and new independently generated data."
+    },
+    "missing_data": {
+      "imputation": "none",
+      "invalid_prediction_rule": "A missing or non-finite prediction is invalid. Finite predictions outside [0, 1] are retained and reported, because clipping would be a post hoc transformation.",
+      "complete_source_rule": "A source group contributes to a primary estimand only when every row required by that estimand is present, finite and joins exactly once. Otherwise the whole source group is excluded from that estimand.",
+      "minimum_retention_rule": "A primary result is not_testable if fewer than 90% of planned eligible source groups remain for that estimand.",
+      "matching_failure_rule": "H2 is not_testable if the predeclared balance or coverage checks fail. H3 is not_testable if fewer than 90% of planned matched cases remain or target-overlap checks fail.",
+      "reporting_rule": "Every excluded source, case, row and reason is counted and reported. No excluded row is silently replaced."
+    },
+    "sample_size": {
+      "current_m8c_sources": 300,
+      "current_data_can_support_confirmatory_claim": false,
+      "reason": "M8C has already been observed and motivated the hypotheses. Its 300 sources, ten fonts and thirty cases are not a pristine reuse-free confirmatory set, and ten purposive font identities are not a font population.",
+      "method": "precision simulation from pilot P",
+      "pilot_required": true,
+      "pilot_role": "Estimate source-level and case-level variance, matching yield, target overlap and the attainable simultaneous-interval half-width. Pilot effect estimates are not used for hypothesis decisions.",
+      "precision_targets": {
+        "H1_simultaneous_CI_half_width_max": 0.05,
+        "H2_simultaneous_CI_half_width_max": 0.01,
+        "H3_simultaneous_CI_half_width_max": 0.01
+      },
+      "selection_rule": "Before C is generated, the pilot analysis plan fixes a candidate source-group grid and selects the smallest n whose simulated 90th-percentile simultaneous-interval half-width meets every precision target with at least 80% expected matching coverage and at least 90% expected complete-source retention. Add 10% inflation for attrition. Freeze n and the exact roster before any C outcome exists.",
+      "power_claim": false,
+      "optional_stopping": false
+    },
+    "leakage_controls": [
+      {
+        "control_id": "L1_source_text_overlap",
+        "rule": "C uses a new committed case manifest whose text hashes are disjoint from every M8C case and from pilot P. No literal text is copied into the protocol package, logs or report; text stays in the Git-ignored ground-truth file."
+      },
+      {
+        "control_id": "L2_variant_crossing",
+        "rule": "Every estimand keeps all variants of a source in one group. H1/H2 resample whole source groups; H3 resamples whole case clusters. Individual images are never independent observations."
+      },
+      {
+        "control_id": "L3_font_renderer",
+        "rule": "H3 uses new fonts that were not used in M5C training, M8C or pilot P. The renderer is fixed. Any unseen-renderer question requires a separate factor and a separate protocol."
+      },
+      {
+        "control_id": "L4_threshold_selection",
+        "rule": "All primary thresholds, bin widths, calipers, features and endpoints are fixed in this protocol. No confirmatory outcome is used to tune them. Pilot data may inform precision and feasibility only."
+      },
+      {
+        "control_id": "L5_feature_selection",
+        "rule": "H2 uses all eight frozen features as matching covariates. M8C feature-error associations are exploratory and may not be used to choose, rank, add or remove a feature."
+      },
+      {
+        "control_id": "L6_test_set_reuse",
+        "rule": "M8C is exploratory only. C is evaluated once for primary decisions. Any later analysis of C is labelled exploratory and cannot be used for model development or a confirmatory claim."
+      },
+      {
+        "control_id": "L7_frozen_champion",
+        "rule": "The M5C champion remains frozen. Any future model development requires a separately approved development protocol with source-grouped train/validation/test splits and independent evaluation data."
+      },
+      {
+        "control_id": "L8_ground_truth",
+        "rule": "ground_truth.csv remains Git-ignored and untracked. Integrity checks may hash it, but its text is never read, printed, joined to outputs or committed."
+      }
+    ]
+  },
+  "experiments": [
+    {
+      "hypothesis_id": "H1",
+      "short_name": "attenuated_response",
+      "claim": "After removing source-level mean differences, the frozen model's prediction response to target SSIM is more compressed on thin-line and arc-stroke interference than on the original blur/noise reference conditions, and the interference response is itself materially below one-to-one.",
+      "design_type": "observational calibration analysis of the frozen model; no model fit, refit or calibration",
+      "data_regime": "confirmatory_new_independent_source_set_C",
+      "m8c_role": "exploratory_only",
+      "primary_outcome": "prediction",
+      "residual_convention": "ssim_target - prediction",
+      "independent_variable": "ssim_target",
+      "primary_estimand": "theta_h1_paired_slope_deficit",
+      "primary_estimand_definition": "Mean over eligible source groups of (within-source OLS slope of prediction on ssim_target across the eight original blur/noise rows minus the corresponding slope across the eight interference rows); each source contributes equally.",
+      "primary_estimand_units": "SSIM per SSIM (dimensionless slope difference)",
+      "primary_metric": "source_grouped_mean_paired_calibration_slope_difference",
+      "independent_unit": "source group: one font rendered with one committed text case",
+      "analysis_unit": "source-level paired slope difference",
+      "reference_condition": "original Gaussian blur and Gaussian noise primary rows from the same source",
+      "splits": "evaluation-only confirmatory set C; no model fitting; source groups are never split across analysis sets",
+      "support_rule": "Simultaneous 98.333% source-grouped percentile CI for theta_h1 has lower bound > 0.10, the simultaneous CI for the mean interference slope has upper bound < 0.80, and both thin-line and arc-stroke mean slopes have point estimates < 1.0.",
+      "falsify_rule": "Simultaneous 98.333% CI for theta_h1 has upper bound <= 0.00, or the simultaneous CI for the mean interference slope has lower bound >= 0.90.",
+      "inconclusive_rule": "Any result not meeting the support or falsification rule; also if fewer than 90% of planned source groups are eligible or the precision target is not met.",
+      "secondary_metrics": [
+        "mean within-source interference slope for thin lines and for arc strokes separately",
+        "mean within-source original blur/noise slope",
+        "source-level intercepts and mean bias",
+        "residual-target Spearman correlation by family",
+        "s4 target-prediction gap",
+        "s4 large-error proportion at the predeclared 0.20 exploratory threshold",
+        "interference MAE, RMSE, R2 and bias",
+        "source-level squared-error concentration"
+      ],
+      "diagnostic_metrics": [
+        "conditional calibration by severity rung",
+        "prediction/target SD ratio by source",
+        "paired condition contrasts within source",
+        "comparison against the already observed M8C values, explicitly exploratory"
+      ],
+      "main_confounders": [
+        "source composition and target range differ across fonts and cases",
+        "thin-line and arc-stroke severity ladders have unequal target gaps",
+        "the M5C training distribution does not include the full interference ladder, so distribution shift is an alternative explanation",
+        "target SSIM is a synthetic reference metric, not a perceptual scale",
+        "a slope is a summary of a possibly nonlinear calibration curve"
+      ],
+      "what_cannot_be_separated": "This design cannot separate attenuation caused by training-distribution shift from attenuation caused by model capacity, target construction or feature limitations. It also cannot establish that attenuation is the sole or main source of interference error.",
+      "new_data_required": "Confirmatory set C with new source groups, new cases, new render/corruption seeds and the frozen champion evaluated zero-shot. C must include complete thin-line, arc-stroke, blur and noise ladders for every eligible source.",
+      "followup_if_supported": "A separately approved intervention-development protocol may test a controlled calibration or retraining intervention on source-disjoint development data, with independent evaluation. This protocol does not authorise model changes.",
+      "followup_if_falsified": "Deprioritise the attenuation mechanism and redirect the next milestone to a different preregistered error source; do not calibrate or retrain on this basis.",
+      "followup_if_inconclusive": "Revise precision, target-range overlap or family-specific design in a new planning protocol; do not treat a wide interval as support.",
+      "current_decision_state": "not_tested"
+    },
+    {
+      "hypothesis_id": "H2",
+      "short_name": "edge_sharpness_conflation",
+      "claim": "The frozen eight-feature representation does not adequately distinguish interference-induced edge/sharpness changes from benign image-quality variation, so an interference-specific absolute-error excess remains after matching on the frozen features and target SSIM within source.",
+      "design_type": "observational matched diagnostic analysis; no feature change and no model fit",
+      "data_regime": "confirmatory_new_independent_source_set_C",
+      "m8c_role": "exploratory_only",
+      "primary_outcome": "absolute residual |ssim_target - prediction|",
+      "residual_convention": "ssim_target - prediction",
+      "independent_variable": "interference versus benign condition after matching on the eight frozen features and target SSIM",
+      "primary_estimand": "theta_h2_matched_abs_residual_excess",
+      "primary_estimand_definition": "Mean over eligible source groups of the within-source mean paired difference |ssim_target - prediction| for matched interference rows minus matched benign rows; pairs are within the same source and a target-SSIM bin of width 0.05, selected by nearest neighbour on the eight frozen features after pilot-fixed standardisation, with a 0.25 SD caliper and deterministic tie-break; each source contributes equally.",
+      "primary_estimand_units": "SSIM units on the 0-1 scale (absolute residual difference)",
+      "primary_metric": "source_grouped_mean_matched_absolute_residual_difference",
+      "independent_unit": "source group: one font rendered with one committed text case",
+      "analysis_unit": "matched row pair, aggregated within source before source-level averaging",
+      "reference_condition": "benign primary rows from the same source: Gaussian blur and Gaussian noise; geometric primary is a secondary reference only",
+      "splits": "evaluation-only confirmatory set C; matching uses covariates only and never predictions or residuals",
+      "support_rule": "Simultaneous 98.333% source-grouped percentile CI for theta_h2 has lower bound > 0.02, post-match absolute standardised mean difference is <= 0.10 for target and every one of the eight frozen features, at least 80% of eligible interference rows are matched, and at least 90% of eligible source groups contribute at least one pair.",
+      "falsify_rule": "Simultaneous 98.333% CI for theta_h2 has upper bound <= 0.02.",
+      "inconclusive_rule": "Any result not meeting the support or falsification rule; also matching overlap or balance failure, coverage below the predeclared thresholds, or precision target not met.",
+      "secondary_metrics": [
+        "signed matched residual difference",
+        "per-feature post-match standardised mean differences",
+        "target-SSIM post-match standardised mean difference",
+        "geometric-primary secondary reference",
+        "per-font and per-severity descriptive matched contrasts"
+      ],
+      "diagnostic_metrics": [
+        "exploratory within-font and within-severity rank associations of laplacian_variance and edge_density with absolute error",
+        "feature correlation structure and redundancy",
+        "unmatched-row counts and reasons",
+        "comparison against M9A exploratory associations, explicitly exploratory"
+      ],
+      "main_confounders": [
+        "the eight features are correlated with target SSIM, source content and severity",
+        "matching on features and target can induce selection and regression-to-the-mean effects",
+        "benign blur/noise and interference differ in mechanism, not only in feature values",
+        "the feature vector may not contain the relevant texture information at all",
+        "target-SSIM bin width and feature caliper are finite-resolution design choices"
+      ],
+      "what_cannot_be_separated": "This design cannot identify which feature, if any, causes the error, whether the random forest uses a feature as a benign cue, or whether omitted texture information would repair the problem. It also cannot separate feature inadequacy from training-distribution shift.",
+      "new_data_required": "Confirmatory set C with new source groups, new cases, new render/corruption seeds and the frozen eight-feature extractor. The pilot must demonstrate adequate feature/target overlap and fix the feature standardisation and caliper before C is generated.",
+      "followup_if_supported": "A separately approved feature-diagnostic or development protocol may test feature-level explanations with independent source-grouped train/validation/test data. No feature may be selected on C, and no feature addition is authorised by this protocol.",
+      "followup_if_falsified": "Deprioritise the conflation mechanism and do not add or replace features on this basis.",
+      "followup_if_inconclusive": "Improve overlap, matching resolution or precision in a new pilot; do not treat unmatched or imbalanced data as support.",
+      "current_decision_state": "not_tested"
+    },
+    {
+      "hypothesis_id": "H3",
+      "short_name": "font_glyph_difficulty",
+      "claim": "Apparent font-related interference error differences persist after matching on target SSIM, text case and interference condition/severity, and are ordered by a predeclared glyph-stroke group. This is a conditional association under the fixed renderer, not a causal font effect.",
+      "design_type": "observational matched font-group comparison; new fonts evaluated zero-shot",
+      "data_regime": "confirmatory_new_independent_source_set_C",
+      "m8c_role": "exploratory_only",
+      "primary_outcome": "absolute residual |ssim_target - prediction|",
+      "residual_convention": "ssim_target - prediction",
+      "independent_variable": "predeclared new thin-stroke font group versus predeclared new thick-stroke font group",
+      "primary_estimand": "theta_h3_font_group_matched_abs_residual_contrast",
+      "primary_estimand_definition": "Mean over eligible matched cases of (mean matched |ssim_target - prediction| for the predeclared thin-stroke new fonts minus mean matched |ssim_target - prediction| for the predeclared thick-stroke new fonts), after matching rows within case x interference family x severity and a target-SSIM bin of width 0.05; fonts contribute equally within each group and each case contributes equally.",
+      "primary_estimand_units": "SSIM units on the 0-1 scale (absolute residual difference)",
+      "primary_metric": "case_cluster_mean_matched_font_group_absolute_residual_contrast",
+      "independent_unit": "source group for measurement; matched case cluster for resampling and font contrast",
+      "analysis_unit": "case-level font-group contrast",
+      "reference_condition": "predeclared thick-stroke new-font group under the same fixed renderer, cases and corruption ladder",
+      "splits": "evaluation-only confirmatory set C; new fonts and new cases not used in M5C training, M8C or pilot P; no font or case crosses a fitting boundary because no fitting is performed",
+      "support_rule": "Simultaneous 98.333% case-cluster percentile CI for theta_h3 has lower bound > 0.02, and every predeclared per-font sign check holds: each thin font has a higher matched mean absolute residual than the mean of all thick fonts, and each thick font has a lower matched mean absolute residual than the mean of all thin fonts.",
+      "falsify_rule": "Simultaneous 98.333% case-cluster CI for theta_h3 has upper bound <= 0.02.",
+      "inconclusive_rule": "Any result not meeting the support or falsification rule; also target-overlap failure, sign-check inconsistency, fewer than 90% of planned matched cases, or precision target not met.",
+      "secondary_metrics": [
+        "per-font matched mean absolute residuals and pairwise font contrasts",
+        "target-SSIM distributions by font and severity",
+        "severity-specific font-group contrasts",
+        "source-grouped bootstrap sensitivity",
+        "interference MAE, bias and large-error proportion by font"
+      ],
+      "diagnostic_metrics": [
+        "clean-reference and s1 target distributions by font",
+        "text-length and case composition checks",
+        "descriptive comparison against the already observed M8C font ordering, explicitly exploratory"
+      ],
+      "main_confounders": [
+        "font identity is entangled with glyph shape, stroke width, font metrics and hinting",
+        "all fonts use the same fixed renderer, so renderer effects are not varied",
+        "the SSIM target is computed against each font's own clean reference, so target construction differs by font",
+        "target difficulty differs across fonts and is matched only within finite bins",
+        "a small purposive roster of at least two fonts per group is not a font population"
+      ],
+      "what_cannot_be_separated": "This design cannot separate a causal font property from glyph shape, font metrics, hinting, rasterisation, target construction or case composition. The small purposive roster (at least two fonts per group) cannot support inference to a font population, an unseen renderer or human difficulty.",
+      "new_data_required": "Confirmatory set C with at least two new thin-stroke and two new thick-stroke fonts, classified before outcomes by a predeclared external stroke-width measure, all licence-eligible and unused by M5C training, M8C and pilot P. New cases and new seeds are required. The exact roster is frozen after the pilot and before C generation.",
+      "followup_if_supported": "A separately approved new-font characterisation or font-stratified benchmark may replicate the conditional contrast on a new roster. This protocol does not authorise a model or feature change and does not claim a font-population effect.",
+      "followup_if_falsified": "Deprioritise the font-specific modifier and do not build a font-specific model or feature on this basis.",
+      "followup_if_inconclusive": "Increase the matched font roster, improve target overlap or separate the renderer factor in a new pilot; do not reinterpret a failed match as a null font effect.",
+      "current_decision_state": "not_tested"
+    }
+  ],
+  "decision_states": {
+    "allowed": [
+      "not_tested",
+      "support",
+      "falsify",
+      "inconclusive",
+      "not_testable"
+    ],
+    "definitions": {
+      "not_tested": "No confirmatory data have been evaluated under this preregistered protocol.",
+      "support": "The predeclared support rule is met for the primary estimand and all guards pass.",
+      "falsify": "The predeclared falsification rule is met for the primary estimand.",
+      "inconclusive": "Neither support nor falsification is established, including intervals that cross the decision threshold or fail a precision target.",
+      "not_testable": "Required data, overlap, balance, integrity or completeness conditions cannot be met, so no hypothesis adjudication is possible."
+    },
+    "current_hypothesis_states": {
+      "H1": "not_tested",
+      "H2": "not_tested",
+      "H3": "not_tested"
+    }
+  },
+  "next_milestone": {
+    "m9c_is_automatic": false,
+    "default": "M9B authorises no experiment and no model or feature change. M9C requires a separate decision after the preregistered gates, a written prioritisation memo and a new protocol version.",
+    "rules": [
+      {
+        "outcome": "H1 support",
+        "next_step": "A separately approved controlled intervention-development protocol may be written. It must use source-grouped training/validation/test data, held-out fonts and cases, and independent evaluation. No model change occurs in M9B or automatically in M9C."
+      },
+      {
+        "outcome": "H2 support",
+        "next_step": "A separately approved feature-diagnostic or development protocol may be written. It must not select features on confirmatory set C and must use independent source-grouped development and evaluation data."
+      },
+      {
+        "outcome": "H3 support",
+        "next_step": "A separately approved new-font characterisation or font-stratified benchmark may be written. It must not claim a font-population or causal effect and must not change the frozen champion."
+      },
+      {
+        "outcome": "Any falsification",
+        "next_step": "Deprioritise that mechanism. Do not build a feature, calibration or model intervention on a falsified hypothesis. Redirect to another preregistered error source or stop."
+      },
+      {
+        "outcome": "Any inconclusive or not_testable result",
+        "next_step": "Revise the pilot, precision, overlap or data factor in a new planning protocol. Do not treat the result as support and do not proceed to model changes."
+      },
+      {
+        "outcome": "Multiple supports",
+        "next_step": "Do not automatically start multiple development tracks. Require a written prioritisation memo that respects the preregistered gates and available independent data."
+      },
+      {
+        "outcome": "Integrity or protocol failure",
+        "next_step": "Stop. Do not analyse C, do not relax the contract and do not repair historical data. Report the blocker."
+      }
+    ]
+  },
+  "limitations": [
+    "This is a planning artifact. No experiment, model fit, calibration, feature change or benchmark generation was performed.",
+    "M8C and M9A are observed data. Any follow-up on them is exploratory and cannot be presented as confirmatory replication.",
+    "Synthetic-reference SSIM is not human readability, solvability, security or production robustness.",
+    "The proposed confirmatory set C does not yet exist; its sample size, font roster and matching feasibility must be fixed by a pilot before data collection.",
+    "H1 operationalises attenuation with a within-source linear slope. A slope is a summary and may miss nonlinear calibration behaviour.",
+    "H2 matching is observational. It cannot establish that a feature causes the error or that omitted features would fix it.",
+    "H3 cannot separate font identity from glyph shape, font metrics, hinting, rasterisation, target construction or case composition, and a small purposive roster of at least two fonts per group is not a font population.",
+    "The fixed renderer means no unseen-renderer claim is possible. A renderer-generalisation question requires a separate factor.",
+    "The thresholds are predeclared design decisions, not estimates of a universal perceptual effect size. They are chosen to make support and falsification decidable before outcomes are seen.",
+    "No statistical power is claimed. The sample size is chosen by precision simulation, not by a power guarantee."
+  ],
+  "provenance": {
+    "design_revision": "e3d8ed36b497347b87606536000114746d27d709",
+    "origin_main_at_design_start": "e3d8ed36b497347b87606536000114746d27d709",
+    "working_tree_clean_at_design_start": true,
+    "inputs": [
+      {
+        "key": "m9a_analysis_protocol",
+        "path": "reports/interference_error_analysis_v0_1_0/analysis_protocol.json",
+        "sha256": "9611a3ed48eca80dfa32ad27e33e16f06915e81625bd1eae35d5a7ffc6d9a4f1",
+        "role": "M9A recorded analysis decisions, provenance and bootstrap settings"
+      },
+      {
+        "key": "m9a_hypotheses",
+        "path": "reports/interference_error_analysis_v0_1_0/hypotheses_and_followups.md",
+        "sha256": "36bef0136f72f4e072f2da0d218883723750d7315969c5791037ee5771cbab24",
+        "role": "the three exploratory hypotheses and proposed follow-ups"
+      },
+      {
+        "key": "m9a_readme",
+        "path": "reports/interference_error_analysis_v0_1_0/README.md",
+        "sha256": "22de39a32f23f501789f1a771d2c0c4f70eaa0f527988810ff1313f91de5a7c8",
+        "role": "M9A findings and limitations"
+      },
+      {
+        "key": "m9a_config",
+        "path": "configs/interference_error_analysis_v0_1_0.toml",
+        "sha256": "2db5abf5237e3d247d3a358338cd07351a0b001c758632ef0ae8cbde4effd480",
+        "role": "frozen M9A analysis configuration"
+      },
+      {
+        "key": "m8c_protocol",
+        "path": "configs/cross_font_benchmark_protocol_v0_2_0.toml",
+        "sha256": "059388572f264fb2332f3427da774f1ab30f1339a27f19fd3e98e98163d4574c",
+        "role": "frozen M8C benchmark design, roster and corruption ladder"
+      },
+      {
+        "key": "m8c_lifecycle",
+        "path": "configs/benchmark_lifecycle_v0_3_0.toml",
+        "sha256": "3339dc64472b1510cb297d9af0884bb9d3b79e1bf0a8e978f04b72cd64ece83d",
+        "role": "frozen M8C output lifecycle contract"
+      },
+      {
+        "key": "m8e_integrity",
+        "path": "configs/benchmark_integrity_v0_1_0.toml",
+        "sha256": "0b018004f41c2373fce2463eff78e11763ed53fd96f4436d1584ecd3e03707df",
+        "role": "historical M8C integrity contract"
+      },
+      {
+        "key": "m8c_report",
+        "path": "reports/matched_font_benchmark_v0_1_0/report.md",
+        "sha256": "ef266df7d0e3022b7eb0b6ccf08bb97782a8d2741e4f980f51facf94be7ad85f",
+        "role": "observed M8C results used only as exploratory context"
+      },
+      {
+        "key": "m8c_predictions",
+        "path": "reports/matched_font_benchmark_v0_1_0/predictions.csv",
+        "sha256": "e6c1f1ba83bbb05c18fed8a9b0dd1c87014a6f6c3667475971b2834dfedd4dd4",
+        "role": "frozen M8C predictions and targets; exploratory only"
+      },
+      {
+        "key": "m8c_run_metadata",
+        "path": "reports/matched_font_benchmark_v0_1_0/run_metadata.json",
+        "sha256": "930ce8d8767a3e52919e5736ff8a9dfe4b74b008c54e2cc2107fd221d0944ebd",
+        "role": "M8C execution provenance"
+      },
+      {
+        "key": "m8c_dataset_summary",
+        "path": "data/processed/matched_font_benchmark_v0.1.0/dataset_summary.json",
+        "sha256": "40158d7e94208e9eb342e3776d21b7f044b04dd1f3e851ce191e5009eea9795e",
+        "role": "M8C dataset composition and target distributions"
+      },
+      {
+        "key": "m8c_manifest",
+        "path": "data/processed/matched_font_benchmark_v0.1.0/manifest.csv",
+        "sha256": "35ae405fd084070bf4d6c235638cbda6671573389e880dcca2a63d8b66049743",
+        "role": "frozen M8C row, source, font and corruption manifest"
+      },
+      {
+        "key": "m8c_features",
+        "path": "data/processed/matched_font_benchmark_v0.1.0/features.csv",
+        "sha256": "fa2d79c85d682b26545dc2c4e3ec5ece2a41d85aea7e1ea1070f7256ff8519bb",
+        "role": "frozen eight-feature table"
+      },
+      {
+        "key": "m8c_sources",
+        "path": "data/processed/matched_font_benchmark_v0.1.0/sources.csv",
+        "sha256": "a6f721f8e849d44750a3aaeaec74cc1bd93a8122e243985173904b40116d5010",
+        "role": "frozen M8C source groups and font/case metadata"
+      },
+      {
+        "key": "m8c_source_cases",
+        "path": "data/processed/matched_font_benchmark_v0.1.0/source_cases.csv",
+        "sha256": "5e34d6a826b5f4444675113c0030a138ace02d3369f085a6e197613bacf01b88",
+        "role": "frozen M8C matched-case lineage"
+      },
+      {
+        "key": "m8c_ground_truth",
+        "path": "data/processed/matched_font_benchmark_v0.1.0/ground_truth.csv",
+        "sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd",
+        "role": "Git-ignored text lineage; hash-check only, text never read or exposed"
+      },
+      {
+        "key": "model_artifact",
+        "path": "models/retention_aware_selection_v0_1_0/selected_policy.joblib",
+        "sha256": "c9b1625de3bb503f22fa14f9b6468b028e609b6c7febe7c307dafd0e3e1156e0",
+        "role": "frozen M5C champion artifact; hash-check only in M9B"
+      },
+      {
+        "key": "model_card",
+        "path": "models/retention_aware_selection_v0_1_0/selected_policy_card.json",
+        "sha256": "9a75725ba1ccf82ab42f009aa744a102cce86a6a9bb1d1aa86431362213507f8",
+        "role": "frozen M5C champion model card"
+      },
+      {
+        "key": "text_cases",
+        "path": "configs/cross_font_text_cases_v0_1_0.toml",
+        "sha256": "fa9a2c57f7aec6dda214a933f3b639160ef2f2f2996129d64b225f2e60f46f48",
+        "role": "M8C committed case manifest; C must use disjoint cases"
+      },
+      {
+        "key": "features_code",
+        "path": "src/captcha_quality/features.py",
+        "sha256": "ee345d09f3f0898d2b13daec85fa695a7c8f59693e318853cf3bdb20a88a1b30",
+        "role": "frozen eight-feature extractor"
+      },
+      {
+        "key": "modelling_code",
+        "path": "src/captcha_quality/modelling.py",
+        "sha256": "c8c08596f1b60169e6e97c13ec1575911caa96372f6e192e6b33785dfafde682",
+        "role": "frozen metric definitions"
+      },
+      {
+        "key": "splits_code",
+        "path": "src/captcha_quality/splits.py",
+        "sha256": "82b61f6048e09055fa65118313cb5b586ca769cd746df3f492b4eb2ea230ee3f",
+        "role": "grouped split implementation for any future development protocol"
+      },
+      {
+        "key": "m9a_code",
+        "path": "src/captcha_quality/interference_error_analysis.py",
+        "sha256": "11e39fc14e55fe61f3d5aeb57f9e33a9bd3e6249c24e353ce52166e3af3dbc19",
+        "role": "M9A read-only analysis implementation"
+      },
+      {
+        "key": "renderer_code",
+        "path": "src/captcha_quality/render.py",
+        "sha256": "729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e",
+        "role": "frozen renderer used by M8C and required unchanged for C"
+      },
+      {
+        "key": "corruptions_code",
+        "path": "src/captcha_quality/corruptions.py",
+        "sha256": "303136fcf65f92c6d17545d3b56233d827b2ffb98acbb2f2c4aa363789f316a3",
+        "role": "frozen corruption ladder used by M8C and required unchanged for C"
+      },
+      {
+        "key": "interference_code",
+        "path": "src/captcha_quality/interference.py",
+        "sha256": "dbc981a53a6a478bb339256aee603cf8a0f83d11a881576df8611d12acaf7578",
+        "role": "frozen thin-line and arc-stroke interference implementation"
+      },
+      {
+        "key": "quality_metrics_code",
+        "path": "src/captcha_quality/quality_metrics.py",
+        "sha256": "5b95a369761166f1b8172966485304143743b982c7b72c24eb5b3b66c267b40b",
+        "role": "frozen SSIM/PSNR metric implementation used to construct ssim_target"
+      }
+    ]
+  }
+}
