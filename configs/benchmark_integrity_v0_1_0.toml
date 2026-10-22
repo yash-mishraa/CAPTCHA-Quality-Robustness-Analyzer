@@ -1,0 +1,228 @@
+# Milestone M8E benchmark integrity contract, version 0.1.0.
+#
+# This is a new, explicitly versioned maintenance contract around the already
+# completed M8C benchmark. It creates nothing, regenerates nothing, and does not
+# replace the historical M8C protocol or lifecycle protocol.
+#
+# Two modes are deliberately distinguished:
+#
+# * historical-evidence mode verifies the recorded M8C ground truth, input
+#   manifest, run metadata and complete in-repository execution closure. It does
+#   not claim that the historical run used a clean tree. M8C honestly recorded
+#   revision 75c8ef4-dirty.
+# * future-execution mode requires a clean, committed working tree and absent
+#   output paths before any action runs. It also rejects every duplicate input
+#   manifest key; the historical text_case_manifest multiplicity is allowed only
+#   in historical-evidence mode and only under the explicit rule below.
+#
+# The expected ground-truth SHA-256 is copied from the recorded M8C run
+# metadata (and independently reported by M8D). It is never recomputed from the
+# current file during verification. The expected module hashes are the exact
+# file bytes of the complete execution import closure discovered from the M8C
+# execution module. The file set is explicit, so an unrelated file added to a
+# shared directory does not invalidate the contract.
+
+schema = "m8e-integrity-config-v1"
+contract = "m8e-integrity-v1"
+
+[benchmark]
+name = "matched-font-benchmark"
+dataset = "data/processed/matched_font_benchmark_v0.1.0"
+report = "reports/matched_font_benchmark_v0_1_0"
+protocol = "configs/cross_font_benchmark_protocol_v0_2_0.toml"
+protocol_sha256 = "059388572f264fb2332f3427da774f1ab30f1339a27f19fd3e98e98163d4574c"
+lifecycle = "configs/benchmark_lifecycle_v0_3_0.toml"
+lifecycle_sha256 = "3339dc64472b1510cb297d9af0884bb9d3b79e1bf0a8e978f04b72cd64ece83d"
+run_metadata = "reports/matched_font_benchmark_v0_1_0/run_metadata.json"
+run_metadata_sha256 = "930ce8d8767a3e52919e5736ff8a9dfe4b74b008c54e2cc2107fd221d0944ebd"
+root_module = "src/captcha_quality/matched_font_benchmark.py"
+historical_execution_revision = "75c8ef4-dirty"
+
+[ground_truth]
+path = "data/processed/matched_font_benchmark_v0.1.0/ground_truth.csv"
+sha256 = "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd"
+rows = 300
+columns = ["source_id", "case_id", "font_id", "text"]
+unique_columns = ["source_id"]
+regular_file = true
+
+[input_manifest]
+path = "reports/matched_font_benchmark_v0_1_0/input_manifest.csv"
+sha256 = "70f8b0ca8dfc2a9c6742858f8f0bfa3b863ca78fb9a4aacf4bac0a17952d3d71"
+rows = 36
+unique_keys = 35
+key_column = "key"
+columns = ["key", "path", "sha256", "expected_sha256", "matches", "role", "kind"]
+
+# The historical M8C manifest contains two rows for text_case_manifest. They
+# name the same file, record the same observed and expected hash, agree on the
+# match flag and kind, and differ only in descriptive role prose. This is a
+# duplicate record, not an ambiguous resource identity. The historical file is
+# preserved byte-for-byte; future manifests must have unique keys.
+[[input_manifest.legacy_duplicates]]
+key = "text_case_manifest"
+count = 2
+identical_columns = ["path", "sha256", "expected_sha256", "matches", "kind"]
+reason = "historical M8C construction emitted one lifecycle pin and one explicit protocol pin for the same committed text-case manifest; preserving the historical bytes, rejecting the pattern for future runs"
+
+[repository]
+require_clean_worktree = true
+require_committed_revision = true
+require_absent_outputs = true
+
+[environment]
+python_version = "3.13.16"
+python_implementation = "CPython"
+system = "Darwin"
+machine = "arm64"
+
+[[environment.packages]]
+name = "fonttools"
+version = "4.67.0"
+modules = ["fontTools"]
+
+[[environment.packages]]
+name = "joblib"
+version = "1.6.0"
+modules = ["joblib"]
+
+[[environment.packages]]
+name = "numpy"
+version = "2.5.4"
+modules = ["numpy"]
+
+[[environment.packages]]
+name = "opencv-python-headless"
+version = "5.0.0.93"
+modules = []
+
+[[environment.packages]]
+name = "pandas"
+version = "3.0.6"
+modules = ["pandas"]
+
+[[environment.packages]]
+name = "pillow"
+version = "12.3.0"
+modules = ["PIL"]
+
+[[environment.packages]]
+name = "scikit-image"
+version = "0.26.0"
+modules = ["skimage"]
+
+[[environment.packages]]
+name = "scikit-learn"
+version = "1.9.1"
+modules = ["sklearn"]
+
+[[environment.packages]]
+name = "scipy"
+version = "1.18.1"
+modules = []
+
+# The complete in-repository import closure of the M8C execution module. The
+# six modules M8D identified as previously unpinned are included here, together
+# with every other in-repository module reached from the generation, rendering,
+# corruption, feature, prediction, aggregation and reporting paths.
+[[dependencies]]
+key = "benchmark_lifecycle"
+path = "src/captcha_quality/benchmark_lifecycle.py"
+sha256 = "a9d554a0e16d9b1af08ceb9244de0dffcdb0315e6f1c1b3ed7200ba113233b33"
+role = "lifecycle parser and post-execution verifier"
+
+[[dependencies]]
+key = "benchmark_preflight"
+path = "src/captcha_quality/benchmark_preflight.py"
+sha256 = "5baaf9fc75ef52f181cdcbe3ff41916e7db29a09be0e946c7d12f0512e820325"
+role = "frozen execution protocol, case manifest, source and row planning"
+
+[[dependencies]]
+key = "config"
+path = "src/captcha_quality/config.py"
+sha256 = "be7f7529f0792700304d03f9fc24858f12821b92ee97f3d79581df3d7469c877"
+role = "dataset configuration schemas and feature-set identity"
+
+[[dependencies]]
+key = "corruptions"
+path = "src/captcha_quality/corruptions.py"
+sha256 = "303136fcf65f92c6d17545d3b56233d827b2ffb98acbb2f2c4aa363789f316a3"
+role = "frozen corruption operators and seed derivation"
+
+[[dependencies]]
+key = "dataset"
+path = "src/captcha_quality/dataset.py"
+sha256 = "5af5903a38652b68522a09d0f70a7c010e8d787e6630ae758cf23b39bb2587f0"
+role = "dataset schemas, target computation and checks"
+
+[[dependencies]]
+key = "evaluation_plan"
+path = "src/captcha_quality/evaluation_plan.py"
+sha256 = "19900188e5d660cb9d7731dc731e518691058fdd59e25949e726697bd232a1ee"
+role = "M7D plan verifier invoked by the lifecycle"
+
+[[dependencies]]
+key = "features"
+path = "src/captcha_quality/features.py"
+sha256 = "ee345d09f3f0898d2b13daec85fa695a7c8f59693e318853cf3bdb20a88a1b30"
+role = "frozen eight-feature extractor"
+
+[[dependencies]]
+key = "geometric"
+path = "src/captcha_quality/geometric.py"
+sha256 = "c0383c0d72b0754654d9c3e2f7a5d57d187cf14ac8297a73e386d83e0e94526d"
+role = "elastic geometric corruption"
+
+[[dependencies]]
+key = "imaging"
+path = "src/captcha_quality/imaging.py"
+sha256 = "b28dca31c0fc486f259f4357866f79485f81a2c64c388dd0a698025b13e9183a"
+role = "image validation and copying"
+
+[[dependencies]]
+key = "interference"
+path = "src/captcha_quality/interference.py"
+sha256 = "dbc981a53a6a478bb339256aee603cf8a0f83d11a881576df8611d12acaf7578"
+role = "thin-line and arc-stroke interference"
+
+[[dependencies]]
+key = "matched_font_benchmark"
+path = "src/captcha_quality/matched_font_benchmark.py"
+sha256 = "3ec0e93f5d7aa2a773ade5260de4f344c41a68899772767a3b3b7e9ade387506"
+role = "M8C execution and report implementation"
+
+[[dependencies]]
+key = "modelling"
+path = "src/captcha_quality/modelling.py"
+sha256 = "c8c08596f1b60169e6e97c13ec1575911caa96372f6e192e6b33785dfafde682"
+role = "frozen champion loader, prediction and metrics"
+
+[[dependencies]]
+key = "provenance"
+path = "src/captcha_quality/provenance.py"
+sha256 = "af7fc26771a47c56f5884b465247548fb028617404d19c3a3877843b1b73f3cc"
+role = "canonical serialisation, hashing and package version"
+
+[[dependencies]]
+key = "quality_metrics"
+path = "src/captcha_quality/quality_metrics.py"
+sha256 = "5b95a369761166f1b8172966485304143743b982c7b72c24eb5b3b66c267b40b"
+role = "SSIM and PSNR target computation"
+
+[[dependencies]]
+key = "render"
+path = "src/captcha_quality/render.py"
+sha256 = "729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e"
+role = "frozen renderer and font resolution"
+
+[[dependencies]]
+key = "source_identity"
+path = "src/captcha_quality/source_identity.py"
+sha256 = "2de2b6903124d31c6df707549f4b68331ac540090336c7b0e37e18b1d8e7b7be"
+role = "canonical source, variant, sample and row identifiers"
+
+[[dependencies]]
+key = "splits"
+path = "src/captcha_quality/splits.py"
+sha256 = "82b61f6048e09055fa65118313cb5b586ca769cd746df3f492b4eb2ea230ee3f"
+role = "grouped split assignment"
