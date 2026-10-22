@@ -1,0 +1,219 @@
+stage,command,check,passed,expected,as_expected,detail
+live,python -m captcha_quality.matched_font_benchmark verify,dataset_membership,True,pass,True,exactly 6 dataset files and 6 subdirectories
+live,python -m captcha_quality.matched_font_benchmark verify,image_membership,True,pass,True,"6,300 referenced images across exactly six subdirectories"
+live,python -m captcha_quality.matched_font_benchmark verify,planned_identities,True,pass,True,all 6300 row identities and 300 source identities match the plan
+live,python -m captcha_quality.matched_font_benchmark verify,source_tables,True,pass,True,"300 source, source-case and ground-truth rows join exactly to the plan"
+live,python -m captcha_quality.matched_font_benchmark verify,row_labels,True,pass,True,"primary/diagnostic labels, severity levels and corruption assignments are correct"
+live,python -m captcha_quality.matched_font_benchmark verify,feature_join,True,pass,True,every feature row joins one-to-one to a dataset row and is finite
+live,python -m captcha_quality.matched_font_benchmark verify,image_content,True,pass,True,decoded and re-hashed 6300 images and 300 references; targets and features match
+live,python -m captcha_quality.matched_font_benchmark verify,summary,True,pass,True,"dataset summary counts, protocol identity and image totals match the artifacts"
+live,python -m captcha_quality.matched_font_benchmark verify,champion,True,pass,True,the frozen champion loads with the pinned artifact and card hashes
+live,python -m captcha_quality.matched_font_benchmark verify,inputs:pinned,True,pass,True,36 / 36 pinned inputs match
+live,python -m captcha_quality.matched_font_benchmark verify,tables_replay,True,pass,True,all thirteen tables and report.md replay exactly
+live,python -m captcha_quality.matched_font_benchmark verify,run_metadata,True,pass,True,run metadata hashes and membership are consistent
+live,python -m captcha_quality.matched_font_benchmark verify,report_membership,True,pass,True,"exactly 15 declared report files, no more and no fewer"
+live,python -m captcha_quality.matched_font_benchmark verify,predictions:count,True,pass,True,6300 predictions
+live,python -m captcha_quality.matched_font_benchmark verify,predictions:identities,True,pass,True,prediction identities join one-to-one to the dataset
+live,python -m captcha_quality.matched_font_benchmark verify,predictions:finite,True,pass,True,all predictions are finite
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,state,True,pass,True,lifecycle state resolved to post-execution
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,declared_inputs,True,pass,True,23 declared inputs match their recorded SHA-256
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,historical_state,True,pass,True,the M7D plan artifacts and the M7E audit protocols are byte-identical
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,execution_protocol,True,pass,True,the execution protocol is unmodified and declares 0 unresolved item(s)
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence and are all eligible
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,font_binaries,True,pass,True,no font binary is present anywhere in the working tree
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,post_execution_paths,True,pass,True,the authorised dataset and report paths exist
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,dataset_membership,True,pass,True,the dataset holds exactly the declared files and 6300 images
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,report_membership,True,pass,True,the report holds exactly the declared 15 files
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,dataset_matches_protocol,True,pass,True,"the realised dataset matches the protocol: 300 sources, 6300 rows, 5700 primary, 600 diagnostic"
+live,benchmark_lifecycle verify --config configs/benchmark_lifecycle_v0_3_0.toml,m7d_verifier,True,pass,True,the M7D verifier reports only the expected planning-state transition; every M7D artifact check still passes
+live,cross_font_analysis.verify_analysis,table:input_manifest.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:font_metrics.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:family_metrics.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:severity_metrics.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:source_metrics.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:error_concentration.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:uncertainty.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:paired_differences.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:font_differences.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:benchmark_comparison.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:claim_evidence.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,table:isolation_checks.csv,True,pass,True,replayed table matches
+live,cross_font_analysis.verify_analysis,isolation_checks,True,pass,True,all recomputed isolation checks passed
+live,cross_font_analysis.verify_analysis,protocol,True,pass,True,recomputed protocol matches
+live,cross_font_analysis.verify_analysis,report,True,pass,True,recomputed report matches
+live,cross_font_analysis.verify_analysis,metadata,True,pass,True,run_metadata.json is readable
+live,cross_font_analysis.verify_analysis,config_sha256,True,pass,True,recorded config SHA-256 matches
+live,cross_font_analysis.verify_analysis,config_hash,True,pass,True,recorded config identity hash matches
+live,cross_font_analysis.verify_analysis,input_hashes,True,pass,True,recorded input hashes match
+live,cross_font_analysis.verify_analysis,output_hashes,True,pass,True,recorded output hashes match
+live,cross_font_analysis.verify_analysis,frozen_dependency_manifest,True,pass,True,recorded frozen-asset snapshot is internally consistent
+live,cross_font_analysis.verify_analysis,frozen_dependencies,True,pass,True,311 declared protected dependencies are unchanged
+live,cross_font_analysis.verify_analysis,output_file_set,True,pass,True,the M7C output file set is exactly as declared
+live,evaluation_plan.verify_plan,table:input_manifest.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:font_inventory.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:direction_assessment.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:research_questions.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:independent_units.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:split_hierarchy.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:endpoints.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:sample_size_scenarios.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:leakage_controls.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:success_criteria.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:stopping_rules.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:claims_and_limits.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:evidence_snapshot.csv,True,pass,True,replayed table matches
+live,evaluation_plan.verify_plan,table:isolation_checks.csv,False,fail,True,"AssertionError: DataFrame.iloc[:, 1] (column name=""passed"") are different
+
+DataFrame.iloc[:, 1] (column name=""passed"") values are different (5.0 %)
+[index]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+[left]:  [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+[right]: [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False]
+At positional index 19, first diff: True != False"
+live,evaluation_plan.verify_plan,isolation_checks,False,fail,True,all recomputed isolation checks passed
+live,evaluation_plan.verify_plan,plan_manifest,True,pass,True,recomputed plan manifest matches
+live,evaluation_plan.verify_plan,report,True,pass,True,recomputed report matches
+live,evaluation_plan.verify_plan,metadata,True,pass,True,run_metadata.json is readable
+live,evaluation_plan.verify_plan,config_sha256,True,pass,True,recorded config SHA-256 matches
+live,evaluation_plan.verify_plan,config_hash,True,pass,True,recorded config identity hash matches
+live,evaluation_plan.verify_plan,input_hashes,True,pass,True,recorded input hashes match
+live,evaluation_plan.verify_plan,output_hashes,True,pass,True,recorded output hashes match
+live,evaluation_plan.verify_plan,frozen_dependency_manifest,True,pass,True,recorded frozen-asset snapshot is internally consistent
+live,evaluation_plan.verify_plan,frozen_dependency_anchors,True,pass,True,the recorded M7D snapshot and the committed configuration agree on 39 declared dependencies
+live,evaluation_plan.verify_plan,frozen_dependencies,True,pass,True,39 declared protected dependencies are unchanged
+live,evaluation_plan.verify_plan,output_file_set,True,pass,True,the M7D plan output file set is exactly as declared
+live,font_roster_audit.verify_audit v0.2.0,verifier_exception,False,fail,True,expected_failure=True: AuditError: M7E input checks failed: planned_benchmark_paths_absent: AuditError: the planned benchmark path already exists: data/processed/matched_font_benchmark_v0.1.0
+live,benchmark_lifecycle verify v0_1_0,state,True,pass,True,lifecycle state resolved to post-execution
+live,benchmark_lifecycle verify v0_1_0,declared_inputs,True,pass,True,20 declared inputs match their recorded SHA-256
+live,benchmark_lifecycle verify v0_1_0,historical_state,True,pass,True,the M7D plan artifacts and the M7E audit protocols are byte-identical
+live,benchmark_lifecycle verify v0_1_0,execution_protocol,True,pass,True,the execution protocol is unmodified and declares 2 unresolved item(s)
+live,benchmark_lifecycle verify v0_1_0,roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence and are all eligible
+live,benchmark_lifecycle verify v0_1_0,font_binaries,True,pass,True,no font binary is present anywhere in the working tree
+live,benchmark_lifecycle verify v0_1_0,post_execution_paths,True,pass,True,the authorised dataset and report paths exist
+live,benchmark_lifecycle verify v0_1_0,dataset_membership,True,pass,True,the dataset holds exactly the declared files and 6300 images
+live,benchmark_lifecycle verify v0_1_0,report_membership,True,pass,True,the report holds exactly the declared 15 files
+live,benchmark_lifecycle verify v0_1_0,dataset_matches_protocol,True,pass,True,"the realised dataset matches the protocol: 300 sources, 6300 rows, 5700 primary, 600 diagnostic"
+live,benchmark_lifecycle verify v0_1_0,m7d_verifier,True,pass,True,the M7D verifier reports only the expected planning-state transition; every M7D artifact check still passes
+live,benchmark_lifecycle verify v0_2_0,state,True,pass,True,lifecycle state resolved to post-execution
+live,benchmark_lifecycle verify v0_2_0,declared_inputs,True,pass,True,22 declared inputs match their recorded SHA-256
+live,benchmark_lifecycle verify v0_2_0,historical_state,True,pass,True,the M7D plan artifacts and the M7E audit protocols are byte-identical
+live,benchmark_lifecycle verify v0_2_0,execution_protocol,True,pass,True,the execution protocol is unmodified and declares 0 unresolved item(s)
+live,benchmark_lifecycle verify v0_2_0,roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence and are all eligible
+live,benchmark_lifecycle verify v0_2_0,font_binaries,True,pass,True,no font binary is present anywhere in the working tree
+live,benchmark_lifecycle verify v0_2_0,post_execution_paths,True,pass,True,the authorised dataset and report paths exist
+live,benchmark_lifecycle verify v0_2_0,dataset_membership,True,pass,True,the dataset holds exactly the declared files and 6300 images
+live,benchmark_lifecycle verify v0_2_0,report_membership,True,pass,True,the report holds exactly the declared 15 files
+live,benchmark_lifecycle verify v0_2_0,dataset_matches_protocol,True,pass,True,"the realised dataset matches the protocol: 300 sources, 6300 rows, 5700 primary, 600 diagnostic"
+live,benchmark_lifecycle verify v0_2_0,m7d_verifier,True,pass,True,the M7D verifier reports only the expected planning-state transition; every M7D artifact check still passes
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),text_case_manifest,True,pass,True,the manifest file hash and the canonical manifest hash match the pins in execution protocol v0.2.0
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),case_identity,True,pass,True,"30 cases with unique identifiers, unique texts and a pinned order"
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),case_encoding,True,pass,True,"all 30 cases carry a matching UTF-8 encoding, text hash, length and canonical case record hash"
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),case_derivation,True,pass,True,the committed cases still match the pinned deterministic derivation rule
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),font_files,True,pass,True,all 10 pinned font files exist and match their pinned hash
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),glyph_coverage,True,pass,True,all 31 distinct case characters are present in the character map of all 10 pinned faces
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),generation_config,True,pass,True,the generation configuration hash matches the pinned value and the render configuration version is v1
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),source_identities,True,pass,True,"300 unique source identifiers, stable across repeated computation and independent of any filesystem traversal"
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),row_plan,True,pass,True,"6300 planned rows, 5700 primary and 600 diagnostic, with 6300 unique image identities across 6 subdirectories"
+live,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),lifecycle_contract,True,pass,True,"the lifecycle verification passes, the lifecycle is authorized but not executed and it authorises the execution protocol under test"
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",text_case_manifest,True,pass,True,the manifest file hash and the canonical manifest hash match the pins in execution protocol v0.2.0
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",case_identity,True,pass,True,"30 cases with unique identifiers, unique texts and a pinned order"
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",case_encoding,True,pass,True,"all 30 cases carry a matching UTF-8 encoding, text hash, length and canonical case record hash"
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",case_derivation,True,pass,True,the committed cases still match the pinned deterministic derivation rule
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",font_files,True,pass,True,all 10 pinned font files exist and match their pinned hash
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",glyph_coverage,True,pass,True,all 31 distinct case characters are present in the character map of all 10 pinned faces
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",generation_config,True,pass,True,the generation configuration hash matches the pinned value and the render configuration version is v1
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",source_identities,True,pass,True,"300 unique source identifiers, stable across repeated computation and independent of any filesystem traversal"
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",row_plan,True,pass,True,"6300 planned rows, 5700 primary and 600 diagnostic, with 6300 unique image identities across 6 subdirectories"
+live,"benchmark_preflight.verify_preflight (v0.3.0 lifecycle, by design)",lifecycle_contract,False,fail,True,M8BPreflightError: the lifecycle is not in the authorized-but-not-executed state
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:input_manifest.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:font_inventory.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:direction_assessment.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:research_questions.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:independent_units.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:split_hierarchy.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:endpoints.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:sample_size_scenarios.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:leakage_controls.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:success_criteria.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:stopping_rules.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:claims_and_limits.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:evidence_snapshot.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,table:isolation_checks.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,isolation_checks,True,pass,True,all recomputed isolation checks passed
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,plan_manifest,True,pass,True,recomputed plan manifest matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,report,True,pass,True,recomputed report matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,metadata,True,pass,True,run_metadata.json is readable
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,config_sha256,True,pass,True,recorded config SHA-256 matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,config_hash,True,pass,True,recorded config identity hash matches
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,input_hashes,True,pass,True,recorded input hashes match
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,output_hashes,True,pass,True,recorded output hashes match
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,frozen_dependency_manifest,True,pass,True,recorded frozen-asset snapshot is internally consistent
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,frozen_dependency_anchors,True,pass,True,the recorded M7D snapshot and the committed configuration agree on 39 declared dependencies
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,frozen_dependencies,True,pass,True,39 declared protected dependencies are unchanged
+pre-execution shadow,captcha_quality.evaluation_plan.verify_plan configs/evaluation_design_plan_v0_1_0.toml,output_file_set,True,pass,True,the M7D plan output file set is exactly as declared
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,table:input_manifest.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,table:font_evidence.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,table:eligibility.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,table:roster_coverage.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,table:isolation_checks.csv,True,pass,True,replayed table matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,isolation_checks,True,pass,True,all recomputed isolation checks passed
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,audit_manifest,True,pass,True,recomputed audit manifest matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,report,True,pass,True,recomputed report matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,metadata,True,pass,True,run_metadata.json is readable
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,config_sha256,True,pass,True,recorded config SHA-256 matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,config_hash,True,pass,True,recorded config identity hash matches
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,input_hashes,True,pass,True,recorded input hashes match
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,frozen_dependencies,True,pass,True,declared audit dependencies are unchanged
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,font_hashes,True,pass,True,recorded font hashes match the M7D pins
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,output_hashes,True,pass,True,recorded output hashes match
+pre-execution shadow,captcha_quality.font_roster_audit.verify_audit configs/font_roster_audit_v0_2_0.toml,output_file_set,True,pass,True,the audit output file set is exactly as declared
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,state,True,pass,True,lifecycle state resolved to pre-execution
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,declared_inputs,True,pass,True,20 declared inputs match their recorded SHA-256
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,historical_state,True,pass,True,the M7D plan artifacts and the M7E audit protocols are byte-identical
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,execution_protocol,True,pass,True,the execution protocol is unmodified and declares 2 unresolved item(s)
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence and are all eligible
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,font_binaries,True,pass,True,no font binary is present anywhere in the working tree
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,pre_execution_paths,True,pass,True,the authorised dataset and report paths do not exist
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_1_0.toml,m7d_verifier,True,pass,True,"the M7D verifier passes, including its planning-state check"
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,state,True,pass,True,lifecycle state resolved to pre-execution
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,declared_inputs,True,pass,True,22 declared inputs match their recorded SHA-256
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,historical_state,True,pass,True,the M7D plan artifacts and the M7E audit protocols are byte-identical
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,execution_protocol,True,pass,True,the execution protocol is unmodified and declares 0 unresolved item(s)
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence and are all eligible
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,font_binaries,True,pass,True,no font binary is present anywhere in the working tree
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,pre_execution_paths,True,pass,True,the authorised dataset and report paths do not exist
+pre-execution shadow,captcha_quality.benchmark_lifecycle.verify_lifecycle configs/benchmark_lifecycle_v0_2_0.toml,m7d_verifier,True,pass,True,"the M7D verifier passes, including its planning-state check"
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),text_case_manifest,True,pass,True,the manifest file hash and the canonical manifest hash match the pins in execution protocol v0.2.0
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),case_identity,True,pass,True,"30 cases with unique identifiers, unique texts and a pinned order"
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),case_encoding,True,pass,True,"all 30 cases carry a matching UTF-8 encoding, text hash, length and canonical case record hash"
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),case_derivation,True,pass,True,the committed cases still match the pinned deterministic derivation rule
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),font_files,True,pass,True,all 10 pinned font files exist and match their pinned hash
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),glyph_coverage,True,pass,True,all 31 distinct case characters are present in the character map of all 10 pinned faces
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),generation_config,True,pass,True,the generation configuration hash matches the pinned value and the render configuration version is v1
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),source_identities,True,pass,True,"300 unique source identifiers, stable across repeated computation and independent of any filesystem traversal"
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),row_plan,True,pass,True,"6300 planned rows, 5700 primary and 600 diagnostic, with 6300 unique image identities across 6 subdirectories"
+pre-execution shadow,benchmark_preflight.verify_preflight (v0.2.0 lifecycle),lifecycle_contract,True,pass,True,"the lifecycle verification passes, the lifecycle is authorized but not executed and it authorises the execution protocol under test"
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),state,True,pass,True,lifecycle state resolved to post-execution
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),declared_inputs,True,pass,True,23 declared inputs match their recorded SHA-256
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),historical_state,True,pass,True,the M7D plan artifacts and the M7E audit protocols are byte-identical
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),execution_protocol,True,pass,True,the execution protocol is unmodified and declares 0 unresolved item(s)
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),roster,True,pass,True,10 roster members match the M7D plan and the M7E v0.2.0 evidence and are all eligible
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),font_binaries,True,pass,True,no font binary is present anywhere in the working tree
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),post_execution_paths,False,fail,True,"LifecycleError: the authorised paths are missing: ['data/processed/matched_font_benchmark_v0.1.0', 'reports/matched_font_benchmark_v0_1_0']"
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),dataset_membership,False,fail,True,FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/matched_font_benchmark_v0.1.0'
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),report_membership,False,fail,True,FileNotFoundError: [Errno 2] No such file or directory: 'reports/matched_font_benchmark_v0_1_0'
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),dataset_matches_protocol,False,fail,True,LifecycleError: the dataset manifest or source table is missing
+pre-execution shadow,benchmark_lifecycle verify v0.3.0 (must fail closed),m7d_verifier,False,fail,True,LifecycleError: the M7D planning-state check did not report the expected transition
+shadow copy,baseline verify,all checks,True,pass,True,unmodified copy passes
+shadow copy,predictions.csv: +0.001 on one row,"tables_replay, run_metadata",False,fail,True,prediction replay and output hash both fail
+shadow copy,ground_truth.csv: delete file,dataset loader,False,fail,True,MatchedFontBenchmarkError: missing M8C ground_truth
+shadow copy,ground_truth.csv: alter one text,"source_tables, tables_replay",False,fail,True,text mismatch; output hash also fails
+shadow copy,ground_truth.csv: append duplicate row,"source_tables, tables_replay",False,fail,True,"301 rows, expected 300"
+shadow copy,report: add unexpected file,report_membership,False,fail,True,exactly 15 declared files enforced
+shadow copy,image: change one decoded pixel,"image_content, tables_replay",False,fail,True,pixel hash and target replay fail
+shadow copy,image: flip a non-pixel trailing PNG byte,all checks,True,pass,True,not detected: verification is pixel-level; Git protects tracked file bytes
+shadow copy,ground_truth.csv: reverse row order,all checks,True,pass,True,semantics preserved; recorded byte hash is not re-checked (documented gap)
+focused suite,pytest tests/test_benchmark_lifecycle.py,21 lifecycle/tamper tests,True,pass,True,21 passed
+focused suite,pytest tests/test_benchmark_provenance_audit.py,8 provenance/isolation tests,True,pass,True,8 passed

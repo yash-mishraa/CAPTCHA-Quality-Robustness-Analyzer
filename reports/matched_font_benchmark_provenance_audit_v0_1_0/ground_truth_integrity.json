@@ -1,0 +1,40 @@
+{
+  "case_font_lineage_exact": true,
+  "columns": [
+    "source_id",
+    "case_id",
+    "font_id",
+    "text"
+  ],
+  "committed_in_any_reachable_history": false,
+  "duplicate_source_ids": 0,
+  "git_ignored": true,
+  "git_tracked": false,
+  "ground_truth_role": "source text labels and source lineage; they are rendering inputs and verification anchors, not the regression target",
+  "hash_matches_recorded": true,
+  "history_evidence": "`git rev-list --all --objects | grep ground_truth.csv` returns no match; the file never entered the object database",
+  "in_committed_tree": false,
+  "manifest_text_hashes_consistent": true,
+  "not_used_by": [
+    "_merge_features (manifest + features.csv only)",
+    "_build_prediction_frame / model_inputs (eight image features only)",
+    "regression metrics (ssim_target + prediction only)"
+  ],
+  "path": "data/processed/matched_font_benchmark_v0.1.0/ground_truth.csv",
+  "recorded_hash_enforced_by_verify_outputs": false,
+  "recorded_hash_enforcement_note": "verify_outputs re-derives ground-truth content from the frozen plan and rejects missing, altered, lineage-inconsistent or extra rows, but it does not re-hash the file against run_metadata.dataset.ground_truth_sha256. A semantics-preserving row reordering is therefore accepted while the recorded byte hash becomes stale. This does not change any label; it is a byte-integrity gap, not a benchmark-validity gap.",
+  "recorded_sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd",
+  "regression_target": "ssim_target in manifest.csv, computed between each authorised corrupted image and its source-specific clean reference",
+  "rows": 300,
+  "sha256": "426fa41949223ebc481e88b0c42a22770df80d30d3ed8f951fa0f52b92b39dfd",
+  "source_join_exact": true,
+  "text_charset_ok": true,
+  "text_hashes_ok": true,
+  "text_lengths_ok": true,
+  "text_nfc_ascii": true,
+  "unique_source_ids": 300,
+  "used_by": [
+    "_verify_source_tables (text and lineage equality)",
+    "report composition counts (row count only)"
+  ]
+}

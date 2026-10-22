@@ -1,0 +1,280 @@
+{
+  "audited_commit": "ce5963f3bbc53bfaa4675357b3dee023de5599ce",
+  "audited_commit_short": "ce5963f",
+  "code": {
+    "execution_module": {
+      "committed_blob_sha256": "3ec0e93f5d7aa2a773ade5260de4f344c41a68899772767a3b3b7e9ade387506",
+      "matches": true,
+      "observed_sha256": "3ec0e93f5d7aa2a773ade5260de4f344c41a68899772767a3b3b7e9ade387506",
+      "path": "src/captcha_quality/matched_font_benchmark.py",
+      "recorded_sha256": "3ec0e93f5d7aa2a773ade5260de4f344c41a68899772767a3b3b7e9ade387506"
+    },
+    "input_manifest": {
+      "duplicate_key": [
+        "text_case_manifest"
+      ],
+      "expected_hashes_match": true,
+      "observed_hashes_match_current_files": true,
+      "rows": 36,
+      "rows_with_expected_hash": 34,
+      "self_pins_without_expected_hash": [
+        "execution_module",
+        "lifecycle_protocol"
+      ],
+      "unique_keys": 35
+    },
+    "pinned_stack": [
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "b9d6686",
+        "last_commit_date": "2026-10-20T12:35:53+05:30",
+        "last_commit_subject": "feat: add reproducible dataset and image features",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/features.py",
+        "pinned_in_run_metadata": true,
+        "role": "feature extraction",
+        "sha256": "ee345d09f3f0898d2b13daec85fa695a7c8f59693e318853cf3bdb20a88a1b30"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "b9d6686",
+        "last_commit_date": "2026-10-20T12:35:53+05:30",
+        "last_commit_subject": "feat: add reproducible dataset and image features",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/render.py",
+        "pinned_in_run_metadata": true,
+        "role": "clean rendering",
+        "sha256": "729322c5edc4ba0734674778d12fb4295978e7e2c4279c40f51fe19ce517cd3e"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "92ecf33",
+        "last_commit_date": "2026-10-20T12:08:41+05:30",
+        "last_commit_subject": "feat: validate synthetic image quality targets",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/corruptions.py",
+        "pinned_in_run_metadata": true,
+        "role": "corruption ladders",
+        "sha256": "303136fcf65f92c6d17545d3b56233d827b2ffb98acbb2f2c4aa363789f316a3"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "b9d6686",
+        "last_commit_date": "2026-10-20T12:35:53+05:30",
+        "last_commit_subject": "feat: add reproducible dataset and image features",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/dataset.py",
+        "pinned_in_run_metadata": true,
+        "role": "dataset assembly",
+        "sha256": "5af5903a38652b68522a09d0f70a7c010e8d787e6630ae758cf23b39bb2587f0"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "b9d6686",
+        "last_commit_date": "2026-10-20T12:35:53+05:30",
+        "last_commit_subject": "feat: add reproducible dataset and image features",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/splits.py",
+        "pinned_in_run_metadata": true,
+        "role": "grouped splits",
+        "sha256": "82b61f6048e09055fa65118313cb5b586ca769cd746df3f492b4eb2ea230ee3f"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "c781938",
+        "last_commit_date": "2026-10-20T13:05:16+05:30",
+        "last_commit_subject": "feat: benchmark conventional image quality models",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/modelling.py",
+        "pinned_in_run_metadata": true,
+        "role": "feature-only model input and metrics",
+        "sha256": "c8c08596f1b60169e6e97c13ec1575911caa96372f6e192e6b33785dfafde682"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "6631df5",
+        "last_commit_date": "2026-10-21T11:47:06+05:30",
+        "last_commit_subject": "feat: benchmark held-out font generalization",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/heldout_font_benchmark.py",
+        "pinned_in_run_metadata": true,
+        "role": "frozen inference path",
+        "sha256": "0c32c1a754016154675aac2a274d1f679ce62a9a4e722780149fa30f5cc159eb"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "a3d98d2",
+        "last_commit_date": "2026-10-21T15:39:24+05:30",
+        "last_commit_subject": "fix: scope M7D verification to declared dependencies",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/evaluation_plan.py",
+        "pinned_in_run_metadata": true,
+        "role": "M7D plan verifier",
+        "sha256": "19900188e5d660cb9d7731dc731e518691058fdd59e25949e726697bd232a1ee"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "48426ec",
+        "last_commit_date": "2026-10-21T14:45:35+05:30",
+        "last_commit_subject": "fix: scope M7C verification to declared dependencies",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/cross_font_analysis.py",
+        "pinned_in_run_metadata": true,
+        "role": "M7C analysis verifier",
+        "sha256": "e26db288c4d9ce696b1ba8412aa98e961027b3d295de068a07a61a84ac2a40b2"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "882c0cd",
+        "last_commit_date": "2026-10-21T22:22:14+05:30",
+        "last_commit_subject": "feat: resolve Luminari font-roster eligibility",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/font_roster_audit.py",
+        "pinned_in_run_metadata": true,
+        "role": "M7E roster verifier",
+        "sha256": "1adfaaf7d264f3207a3e9c39adc0e1998ec99461be0bfe19487e4355ed11b3c4"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "75c8ef4",
+        "last_commit_date": "2026-10-21T23:38:13+05:30",
+        "last_commit_subject": "feat: define deterministic cross-font source cases",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/source_identity.py",
+        "pinned_in_run_metadata": true,
+        "role": "source and row identity scheme",
+        "sha256": "2de2b6903124d31c6df707549f4b68331ac540090336c7b0e37e18b1d8e7b7be"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": true,
+        "last_commit": "ce5963f",
+        "last_commit_date": "2026-10-22T10:40:33+05:30",
+        "last_commit_subject": "feat: run frozen cross-font generalization benchmark",
+        "observed_equals_recorded_pin": true,
+        "path": "src/captcha_quality/matched_font_benchmark.py",
+        "pinned_in_run_metadata": true,
+        "role": "M8C execution and verification",
+        "sha256": "3ec0e93f5d7aa2a773ade5260de4f344c41a68899772767a3b3b7e9ade387506"
+      }
+    ],
+    "unpinned_imported_stack": [
+      {
+        "changed_between_75c8ef4_and_ce5963f": true,
+        "last_commit": "ce5963f",
+        "last_commit_date": "2026-10-22T10:40:33+05:30",
+        "last_commit_subject": "feat: run frozen cross-font generalization benchmark",
+        "observed_equals_recorded_pin": null,
+        "path": "src/captcha_quality/benchmark_lifecycle.py",
+        "pinned_in_run_metadata": false,
+        "role": "lifecycle state parsing and verification",
+        "sha256": "a9d554a0e16d9b1af08ceb9244de0dffcdb0315e6f1c1b3ed7200ba113233b33"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "75c8ef4",
+        "last_commit_date": "2026-10-21T23:38:13+05:30",
+        "last_commit_subject": "feat: define deterministic cross-font source cases",
+        "observed_equals_recorded_pin": null,
+        "path": "src/captcha_quality/benchmark_preflight.py",
+        "pinned_in_run_metadata": false,
+        "role": "protocol loading and plan derivation",
+        "sha256": "5baaf9fc75ef52f181cdcbe3ff41916e7db29a09be0e946c7d12f0512e820325"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "5213eae",
+        "last_commit_date": "2026-10-20T14:49:56+05:30",
+        "last_commit_subject": "feat: pilot geometric distortion robustness",
+        "observed_equals_recorded_pin": null,
+        "path": "src/captcha_quality/geometric.py",
+        "pinned_in_run_metadata": false,
+        "role": "elastic deformation operator",
+        "sha256": "c0383c0d72b0754654d9c3e2f7a5d57d187cf14ac8297a73e386d83e0e94526d"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "fd98fcf",
+        "last_commit_date": "2026-10-20T14:01:45+05:30",
+        "last_commit_subject": "feat: pilot occlusion and interference robustness",
+        "observed_equals_recorded_pin": null,
+        "path": "src/captcha_quality/interference.py",
+        "pinned_in_run_metadata": false,
+        "role": "thin-line and arc-stroke operators",
+        "sha256": "dbc981a53a6a478bb339256aee603cf8a0f83d11a881576df8611d12acaf7578"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "92ecf33",
+        "last_commit_date": "2026-10-20T12:08:41+05:30",
+        "last_commit_subject": "feat: validate synthetic image quality targets",
+        "observed_equals_recorded_pin": null,
+        "path": "src/captcha_quality/quality_metrics.py",
+        "pinned_in_run_metadata": false,
+        "role": "SSIM and PSNR definitions",
+        "sha256": "5b95a369761166f1b8172966485304143743b982c7b72c24eb5b3b66c267b40b"
+      },
+      {
+        "changed_between_75c8ef4_and_ce5963f": false,
+        "last_commit": "b9d6686",
+        "last_commit_date": "2026-10-20T12:35:53+05:30",
+        "last_commit_subject": "feat: add reproducible dataset and image features",
+        "observed_equals_recorded_pin": null,
+        "path": "src/captcha_quality/provenance.py",
+        "pinned_in_run_metadata": false,
+        "role": "revision and hashing helpers",
+        "sha256": "af7fc26771a47c56f5884b465247548fb028617404d19c3a3877843b1b73f3cc"
+      }
+    ]
+  },
+  "conclusion": "Provenance is fully established for the execution module and every hash-pinned input. The dirty revision is honestly recorded and is explained by uncommitted M8C work. The residual uncertainty is confined to unpinned supporting modules; five are unchanged across the commit and benchmark_lifecycle.py changed only in state parsing. The current verifier behaviourally re-exercises the code that affects recorded values (quality_metrics for targets; the pinned modelling/inference path for predictions). No evidence of divergence or tampering was found.",
+  "recorded_execution": {
+    "commit_delta_caveat": "this is the non-output file set that differs between 75c8ef4 and the execution commit, not a recording of the run-time 'git status'. The execution module and lifecycle v0.3.0 are independently proven to have existed at run time; the test and packaging edits in this delta may have been made after the run. The exact dirty-file list was not captured.",
+    "commit_delta_non_output_files": [
+      "configs/benchmark_lifecycle_v0_3_0.toml",
+      "pyproject.toml",
+      "src/captcha_quality/benchmark_lifecycle.py",
+      "src/captcha_quality/matched_font_benchmark.py",
+      "tests/test_benchmark_lifecycle.py",
+      "tests/test_benchmark_preflight.py",
+      "tests/test_cross_font_analysis_dependencies.py",
+      "tests/test_evaluation_plan.py",
+      "tests/test_evaluation_plan_dependencies.py",
+      "tests/test_font_roster_audit.py",
+      "tests/test_font_roster_audit_v2.py",
+      "tests/test_matched_font_benchmark.py"
+    ],
+    "revision": "75c8ef4-dirty",
+    "revision_commit": "75c8ef428703fc2a57e157cf90653d0389c5de3f",
+    "revision_is_parent_of_audited_commit": true,
+    "revision_is_single_disambiguation": true,
+    "tree_state": "dirty",
+    "tree_state_evidence": [
+      "the recorded revision ends in '-dirty', which provenance.code_revision emits only for a non-empty 'git status --porcelain'",
+      "the execution module did not exist at 75c8ef4 and is absent from that tree",
+      "the run metadata records lifecycle v0.3.0 and its SHA-256; v0.3.0 is absent at 75c8ef4, so it was also uncommitted at run time"
+    ]
+  },
+  "schema": "m8d-execution-provenance-v1",
+  "status": {
+    "inferred": [
+      "the run-time dirty set plausibly included lifecycle parser support for v0.3.0, because the recorded post-execution transition uses v0.3.0 and ce5963f changes benchmark_lifecycle.py; test and packaging edits in the commit delta may postdate the run",
+      "the five unpinned supporting modules other than benchmark_lifecycle.py (geometric, interference, quality_metrics, provenance, benchmark_preflight) were the committed versions at execution: they are tracked and unchanged at 75c8ef4 and across ce5963f; benchmark_lifecycle.py is unchanged at 75c8ef4 and ce5963f changes only its state parsing, with no evidence of a transient edit",
+      "run_metadata.json is the metadata emitted by the run, not a later rewrite: it is internally consistent with every committed output and no contradiction was found (it is not signed)"
+    ],
+    "unavailable": [
+      "the exact `git status --porcelain` output at execution",
+      "the run-time byte hashes of the six unpinned supporting modules",
+      "whether any unpinned file was transiently edited and reverted before the commit",
+      "pre-commit byte history of run_metadata.json"
+    ],
+    "verified": [
+      "the only commit matching the recorded short revision 75c8ef4 is 75c8ef428703fc2a57e157cf90653d0389c5de3f",
+      "that commit is the direct parent of the audited execution commit ce5963f3bbc53bfaa4675357b3dee023de5599ce",
+      "the recorded tree was dirty: the execution module is absent at 75c8ef4 and '-dirty' is emitted only for a non-empty status",
+      "the execution module bytes recorded at run time (3ec0e93f...) are byte-identical to the committed module and to the commit blob",
+      "the lifecycle v0.3.0 bytes recorded at run time (3339dc64...) are byte-identical to the committed config",
+      "every hash-pinned execution input recorded at run time still matches the committed file",
+      "the nine core pipeline modules (features, render, corruptions, dataset, splits, modelling, inference, source identity, preflight) are unchanged between 75c8ef4 and ce5963f"
+    ]
+  }
+}

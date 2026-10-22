@@ -1,0 +1,101 @@
+{
+  "artifacts": {
+    "execution_stack.csv": "2381f1c7e4a2b6cd794d00c8b6150b71c67c1f82962889dee4644b0fdd15d37e",
+    "ground_truth_integrity.json": "1ae4a2e83953d1a796406d02b78ca39ed27b3d666c9f2171e33700455ae08e90",
+    "immutability.csv": "b6b50cdbab897c9ba302a054f1aa17d5037d74f6cd3013ee5d20f9aec006f758",
+    "metric_recomputation.csv": "ce09be864836f37afbbc884eeb13a36a5bfada5a3d61029cc4487fb6693a3735",
+    "provenance.json": "ad504dc480723389cee841c714340374472ab4ff95e1277fcea441bf1e5abdda",
+    "report.md": "00e6279ca88432835dbc95ae802d54cf5fefd34c7ecb5494bd07414548c73596",
+    "verification_checks.csv": "a8234a36478fa2671425ebc43b4c2650d4191327bc70d649a37f81068100119c"
+  },
+  "audit": {
+    "audited_commit": "ce5963f3bbc53bfaa4675357b3dee023de5599ce",
+    "forbidden_actions": [
+      "no benchmark regeneration",
+      "no prediction or target alteration",
+      "no model training, tuning, calibration or re-selection",
+      "no protocol or historical artifact rewrite",
+      "no new benchmark row, image or prediction"
+    ],
+    "generated_at": "2026-10-22T05:57:36Z",
+    "milestone": "M8D",
+    "name": "matched-font-benchmark-provenance-audit",
+    "package_version": "0.1.0",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "python_version": "3.13.16",
+    "recorded_execution_revision": "75c8ef4-dirty",
+    "recorded_execution_revision_commit": "75c8ef428703fc2a57e157cf90653d0389c5de3f",
+    "repository_state_at_audit": "HEAD == origin/main == ce5963f3bbc53bfaa4675357b3dee023de5599ce; no tracked modifications; the audit's new test file is the only untracked path",
+    "scope": [
+      "executed-code provenance",
+      "ground-truth isolation and integrity",
+      "post-execution lifecycle and verifier behaviour",
+      "independent metric recomputation",
+      "artifact immutability and tamper detection"
+    ],
+    "status": "completed_read_only",
+    "version": "v0.1.0"
+  },
+  "environment": {
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "pytest": "9.1.1",
+    "scikit_learn": "1.9.1"
+  },
+  "results": {
+    "full_test_suite": {
+      "command": "python -m pytest -q",
+      "exit_code": 0,
+      "summary": "791 passed in 560.58s (0:09:20)"
+    },
+    "ground_truth": {
+      "committed": false,
+      "git_ignored": true,
+      "rows": 300,
+      "sha256_matches_record": true,
+      "unique_sources": 300
+    },
+    "image_pixel_hash_sets": {
+      "image_pixel_hash_set_sha256": {
+        "dataset_summary": "c39a9fbdfced9de8e55733302bdc966d8431ff70337f5abc13bc1dfd3ab4c695",
+        "distinct_hashes": 6300,
+        "matches": true,
+        "recomputed": "c39a9fbdfced9de8e55733302bdc966d8431ff70337f5abc13bc1dfd3ab4c695",
+        "run_metadata": "c39a9fbdfced9de8e55733302bdc966d8431ff70337f5abc13bc1dfd3ab4c695"
+      },
+      "reference_pixel_hash_set_sha256": {
+        "dataset_summary": "fccb970e62c699c3eb3ae76053eddfdeb5b43c9d797c6327f2e1a327051ba72d",
+        "distinct_hashes": 300,
+        "matches": true,
+        "recomputed": "fccb970e62c699c3eb3ae76053eddfdeb5b43c9d797c6327f2e1a327051ba72d",
+        "run_metadata": "fccb970e62c699c3eb3ae76053eddfdeb5b43c9d797c6327f2e1a327051ba72d"
+      }
+    },
+    "immutability": {
+      "artifacts_checked": 70,
+      "hash_mismatches": 0
+    },
+    "m8c_verify": {
+      "checks": 16,
+      "failed": [],
+      "passed": 16
+    },
+    "m8c_verify_with_lifecycle_post": {
+      "checks": 27,
+      "failed": []
+    },
+    "metric_recomputation": {
+      "comparisons": 1656,
+      "failures": 0,
+      "max_abs_diff": 6.039613253960853e-14,
+      "report_table_cells_checked": 159,
+      "report_table_cells_failures": 0,
+      "report_table_tolerance": 5e-07,
+      "tolerance": 1e-12
+    },
+    "verification_expected_failures": 15,
+    "verification_rows": 212,
+    "verification_rows_not_as_expected": 0
+  },
+  "schema_version": "m8d-provenance-audit-run-metadata-v1"
+}
