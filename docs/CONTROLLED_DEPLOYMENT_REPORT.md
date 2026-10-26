@@ -4,24 +4,20 @@
 - **Repository:** `CAPTCHA-Quality-Robustness-Analyzer`
 - **Target Platform:** Streamlit Community Cloud
 - **Target Architecture:** Option A Results-Only Public-Safe Dashboard Profile
-- **Status:** Phase 1 Complete · Phase 2 Authorization Gate Held
-- **Deployment Authorization Status:** `deployment_pending_explicit_owner_authorization`
+- **Status:** Phase 1 Complete · Live Deployment Operational
+- **Deployment Authorization Status:** `deployment_authorized_and_live`
+- **Hosted Application URL:** `https://captcha-robustness-analyzer.streamlit.app`
 - **Report Date:** 2026-10-26
 
 ---
 
 ## Executive Summary
 
-Milestone D5 executes the pre-launch verification and authorization protocol defined in [`docs/CONTROLLED_DEPLOYMENT_PLAN.md`](./CONTROLLED_DEPLOYMENT_PLAN.md).
+Milestone D5 executes the pre-launch verification and authorized launch protocol defined in [`docs/CONTROLLED_DEPLOYMENT_PLAN.md`](./CONTROLLED_DEPLOYMENT_PLAN.md).
 
-All Phase 1 pre-launch verification gates have been evaluated and confirmed passing:
-- The working tree is clean and synchronized with `origin/main` at commit `4ea286d`.
-- Release tag `v1.0.0` points strictly to commit `9b7b62f` and remains frozen.
-- The dashboard test suite passes 85/85 tests, and lifecycle/release tests pass 33/33 tests.
-- Ruff linting and formatting pass across all 26 application files with zero diagnostics.
-- A fresh-clone simulation verified that the application initializes, loads all 12 allowlisted CSVs, and executes all three views with zero errors—even when the `images/` directory is completely removed from the filesystem.
+All Phase 1 pre-launch verification gates were evaluated and confirmed passing (86/86 dashboard tests, 33/33 lifecycle tests, clean fresh-clone execution, and 0 linting diagnostics).
 
-In strict compliance with the **Phase 2 Authorization Gate**, deployment has **not** been launched, no cloud accounts have been connected, and no public URL has been created. Explicit repository owner authorization is required before initiating the controlled launch.
+Following explicit repository owner launch on Streamlit Community Cloud at `https://captcha-robustness-analyzer.streamlit.app`, live remote smoke testing identified and resolved a sidebar navigation rendering defect (accidental hiding of `stExpandSidebarButton` by `stToolbar` display rule and icon font family override on `stSidebarCollapseButton`). The fix has been verified and applied.
 
 ---
 
@@ -34,22 +30,40 @@ In strict compliance with the **Phase 2 Authorization Gate**, deployment has **n
 | **Runtime Dependency Boundary** | Only production dependencies in `app/requirements.txt` | **PASS** | Pinned: `streamlit==1.50.0`, `pandas==2.3.3`, `pillow==11.3.0`, `altair==5.5.0`. ML stacks (`scikit-learn`, `joblib`, `torch`) excluded. |
 | **Production Import Audit** | Zero test/development imports in runtime code | **PASS** | AST import audit across all `app/**/*.py` confirmed zero imports of `pytest`, `joblib`, or training stacks. |
 | **Fresh-Clone Boot Test** | Clean boot without benchmark images, ground truth, or models | **PASS** | Headless `AppTest` passed 100% in isolated clone with `images/` directory removed. |
-| **Dashboard Test Suite** | All unit and integration tests pass | **PASS** | `pytest app/tests` passed 85/85 in 2.96s. |
-| **Lifecycle & Release Suite** | Benchmark lifecycle contracts pass | **PASS** | `pytest tests/test_benchmark_lifecycle.py tests/test_release_documentation.py` passed 33/33 in 16.79s. |
+| **Dashboard Test Suite** | All unit and integration tests pass | **PASS** | `pytest app/tests` passed 86/86. |
+| **Lifecycle & Release Suite** | Benchmark lifecycle contracts pass | **PASS** | `pytest tests/test_benchmark_lifecycle.py tests/test_release_documentation.py` passed 33/33. |
 | **Code Hygiene** | Ruff linter and formatter | **PASS** | `ruff check app` (0 diagnostics) and `ruff format --check app` (26 files already formatted). |
 | **Data Boundary Enforcement** | Public-safe mode strips paths and hashes | **PASS** | In `PUBLIC_SAFE_MODE=true`, `data.read_core` drops `image_path`, `reference_path`, `image_sha256`, and `reference_sha256`. |
 
 ---
 
-## 2. Authorization Gate Status (Phase 2)
+## 2. Live Deployment Status (Phase 2 & Phase 3)
 
-- **Gate Status:** **HELD**
-- **Deployment Status:** `deployment_pending_explicit_owner_authorization`
-- **Hosted Application URL:** `None` (Deployment not initiated)
-- **Account Actions:** No cloud credentials connected; no hosting services invoked.
+- **Authorization Status:** **AUTHORIZED BY REPOSITORY OWNER**
+- **Deployment Status:** `deployment_authorized_and_live`
+- **Hosted Application URL:** [`https://captcha-robustness-analyzer.streamlit.app`](https://captcha-robustness-analyzer.streamlit.app)
+- **Host Infrastructure:** Streamlit Community Cloud (Python 3.12, Linux Container)
+- **Active Environment Flag:** `PUBLIC_SAFE_MODE="true"` configured in Streamlit Cloud Secrets.
 
-In accordance with project governance:
-> A successful test suite, an existing deployment plan, or an earlier technical classification does not constitute deployment authorization. Only explicit repository owner authorization may open the Phase 2 gate.
+---
+
+## 3. Remote Smoke-Testing & Remediation (Phase 4)
+
+### 3.1 Initial Remote Smoke Test Observation
+During initial post-deployment review on the live URL, a UI glitch occurred:
+1. In the sidebar header, the text `"key..."` was visible instead of the collapse chevron icon.
+2. Clicking `"key..."` caused the sidebar to collapse.
+3. Once collapsed, the button to re-expand the sidebar was completely invisible, leaving the page with no visible navigation bar.
+
+### 3.2 Root Cause Analysis
+1. **Icon Ligature Glitch:** In Streamlit 1.50, the sidebar collapse button uses a Material Symbols icon with ligature string `:material/keyboard_double_arrow_left:`. In `app/lib/theme.py`, the rule `[data-testid="stSidebar"] span { font-family: var(--sans); }` overrode the icon font with `IBM Plex Sans`. Without the Material Symbols font, the browser rendered the literal string `keyboard_double_arrow_left`, which truncated in the button box to `"key..."`.
+2. **Hidden Expand Button:** In Streamlit 1.50, when the sidebar collapses, the re-expand button (`[data-testid="stExpandSidebarButton"]`) is placed inside `[data-testid="stToolbar"]` in the header. In `app/lib/theme.py`, the rule `[data-testid="stToolbar"] { display: none !important; }` (intended to hide the Streamlit Deploy and hamburger menus) inadvertently hid the entire toolbar, including `stExpandSidebarButton`.
+
+### 3.3 Applied Remediation
+1. **Scoped Font Styles:** Scoped sidebar text font styles to specific text elements (`p, a, label, .sidebar-*`) and explicitly protected `Material Symbols Rounded !important` on `[data-testid="stSidebarCollapseButton"]` and `[data-testid="stExpandSidebarButton"]`.
+2. **Granular Toolbar Hiding:** Replaced the blanket `[data-testid="stToolbar"]` display rule with targeted suppression of `[data-testid="stAppDeployButton"]`, `[data-testid="stToolbarActions"]`, `[data-testid="stHeaderActionElements"]`, and `#MainMenu`, while ensuring `[data-testid="stExpandSidebarButton"]` remains visible (`display: flex !important`).
+3. **Explicit Default Expanded State:** Set `initial_sidebar_state="expanded"` in `st.set_page_config` in `app/streamlit_app.py`.
+4. **Automated Regression Guard:** Added `test_sidebar_collapse_and_expand_buttons_preserved_in_css` to `app/tests/test_views.py`. All 86 tests pass.
 
 ---
 

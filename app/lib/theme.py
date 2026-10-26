@@ -76,13 +76,27 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
 }}
 [data-testid="stHeader"] {{
   background: transparent;
+  z-index: 100;
 }}
 [data-testid="stAppDeployButton"],
-[data-testid="stToolbar"] {{
+[data-testid="stToolbarActions"],
+[data-testid="stHeaderActionElements"],
+#MainMenu,
+[data-testid="stDecoration"],
+footer {{
   display: none !important;
 }}
-[data-testid="stDecoration"], #MainMenu, footer {{
-  display: none;
+[data-testid="stToolbar"] {{
+  background: transparent !important;
+}}
+[data-testid="stExpandSidebarButton"] {{
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: var(--ink-muted) !important;
+}}
+[data-testid="stExpandSidebarButton"]:hover {{
+  color: var(--rust) !important;
 }}
 [data-testid="stAppViewContainer"] .main .block-container,
 .block-container {{
@@ -98,9 +112,25 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
 }}
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] a,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] label {{
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .sidebar-wordmark,
+[data-testid="stSidebar"] .sidebar-release,
+[data-testid="stSidebar"] .sidebar-badge,
+[data-testid="stSidebar"] .sidebar-meta,
+[data-testid="stSidebar"] .sidebar-note {{
   font-family: var(--sans);
+}}
+[data-testid="stSidebarCollapseButton"] span,
+[data-testid="stExpandSidebarButton"] span,
+button[data-testid="stSidebarCollapseButton"],
+button[data-testid="stExpandSidebarButton"] {{
+  font-family: "Material Symbols Rounded" !important;
+}}
+[data-testid="stSidebarCollapseButton"] {{
+  color: var(--ink-muted) !important;
+}}
+[data-testid="stSidebarCollapseButton"]:hover {{
+  color: var(--rust) !important;
 }}
 
 h1, h2, h3, h4, h5, h6,

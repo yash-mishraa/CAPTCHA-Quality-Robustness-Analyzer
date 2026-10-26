@@ -18,7 +18,7 @@ from app.views import benchmark, error_analysis, overview  # noqa: E402
 st.set_page_config(
     page_title="CAPTCHA Quality & Robustness Analyzer",
     layout="wide",
-    initial_sidebar_state="auto",
+    initial_sidebar_state="expanded",
 )
 
 theme.inject()

@@ -208,3 +208,16 @@ def test_contracts_forbid_untracked_tables() -> None:
     assert "ground_truth.csv" in contracts.FORBIDDEN_FILES
     assert "run_metadata.json" in contracts.FORBIDDEN_FILES
     assert "input_manifest.csv" in contracts.FORBIDDEN_FILES
+
+
+def test_sidebar_collapse_and_expand_buttons_preserved_in_css() -> None:
+    from app.lib import theme
+
+    css = theme.build_css()
+    # Ensure stToolbar as a whole is not hidden so the sidebar expand button remains usable
+    assert '[data-testid="stToolbar"] {\n  display: none !important;' not in css
+    # Ensure stExpandSidebarButton is explicitly visible
+    assert 'data-testid="stExpandSidebarButton"' in css
+    # Ensure Material Symbols icon font is preserved for collapse and expand buttons
+    assert "Material Symbols Rounded" in css
+    assert 'data-testid="stSidebarCollapseButton"' in css
