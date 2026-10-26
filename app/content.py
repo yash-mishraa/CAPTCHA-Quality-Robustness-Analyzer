@@ -54,19 +54,33 @@ PLAIN_ENGLISH_SUMMARY = {
     ),
     "takeaways": [
         (
-            "🟢 What Works Well",
-            "On smooth, natural distortions like **Gaussian Blur** and **Image Noise**, the model is highly accurate "
-            "($R^2 > 0.88$). Its average prediction error is under 4%, accurately tracking how visual quality degrades.",
+            "takeaway-badge--strength",
+            "Observed Strength",
+            "What Works Well",
+            (
+                "On smooth, natural distortions like <strong>Gaussian blur</strong> and "
+                "<strong>image noise</strong>, the model is highly accurate (<em>R</em>² &gt; 0.88). "
+                "Its average prediction error is under 4%, accurately tracking how visual quality degrades."
+            ),
         ),
         (
-            "🔴 Where It Fails",
-            "When images are corrupted with **thin lines** or **arc strokes** crossing the letters (common in real-world CAPTCHAs), "
-            "the model is fooled. At high severity, it overestimates clarity and performs worse than a simple baseline average.",
+            "takeaway-badge--blindspot",
+            "Critical Blindspot",
+            "Where It Fails",
+            (
+                "When images are corrupted with <strong>thin lines</strong> or <strong>arc strokes</strong> "
+                "crossing the characters, the model fails. At high severity, it overestimates clarity and "
+                "performs worse than a baseline average (negative <em>R</em>²)."
+            ),
         ),
         (
-            "💡 Why It Matters",
-            "Automated quality tools cannot rely only on whole-image sharpness or contrast to evaluate CAPTCHAs. "
-            "They need stroke-aware or character-aware models to detect line-cut distortions reliably.",
+            "takeaway-badge--implication",
+            "Practical Takeaway",
+            "Why It Matters",
+            (
+                "Automated quality evaluation cannot rely solely on whole-image sharpness or contrast filters. "
+                "Reliable CAPTCHA assessment requires stroke-aware models capable of detecting localized cuts."
+            ),
         ),
     ],
 }

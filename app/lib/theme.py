@@ -75,7 +75,8 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
   line-height: 1.6;
 }}
 [data-testid="stHeader"] {{
-  background: transparent;
+  background: var(--paper) !important;
+  border-bottom: 1px solid var(--rule);
   z-index: 100;
 }}
 [data-testid="stAppDeployButton"],
@@ -383,6 +384,24 @@ a:focus-visible, button:focus-visible, input:focus-visible,
   padding: 1rem 1.25rem;
   height: 100%;
 }}
+.takeaway-badge {{
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+  display: inline-block;
+}}
+.takeaway-badge--strength {{
+  color: var(--teal);
+}}
+.takeaway-badge--blindspot {{
+  color: var(--rust);
+}}
+.takeaway-badge--implication {{
+  color: var(--umber);
+}}
 .takeaway-title {{
   font-family: var(--serif);
   font-weight: 600;
@@ -395,6 +414,13 @@ a:focus-visible, button:focus-visible, input:focus-visible,
   font-size: 0.88rem;
   line-height: 1.55;
   color: var(--ink-muted);
+}}
+.takeaway-body strong {{
+  font-weight: 600;
+  color: var(--ink);
+}}
+.takeaway-body em {{
+  font-style: italic;
 }}
 .primer-box {{
   background: var(--paper-alt);

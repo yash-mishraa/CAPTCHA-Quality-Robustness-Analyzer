@@ -191,18 +191,19 @@ def render() -> None:
     )
 
     cols = st.columns(3, gap="medium")
-    for col, (title, body) in zip(cols, summary_data["takeaways"], strict=True):
+    for col, (badge_cls, badge_text, title, body) in zip(
+        cols, summary_data["takeaways"], strict=True
+    ):
         with col:
             st.html(
                 '<div class="takeaway-card">'
+                f'<span class="takeaway-badge {badge_cls}">{badge_text}</span>'
                 f'<div class="takeaway-title">{title}</div>'
                 f'<div class="takeaway-body">{body}</div>'
                 "</div>"
             )
 
-    with st.expander(
-        "💡 New to image quality metrics? (Click for a 60-second plain-English guide)"
-    ):
+    with st.expander("Primer: Understanding SSIM, MAE, and R² in Plain English"):
         st.markdown(
             "### 1. What is the SSIM Score?\n"
             "**SSIM (Structural Similarity Index)** is an industry-standard visual quality score ranging from **0.0 to 1.0**:\n"

@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/badge/release-v1.0.0-blue.svg)](https://github.com/yash-mishraa/CAPTCHA-Quality-Robustness-Analyzer/releases/tag/v1.0.0)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 
-> **🌐 Live Research Dashboard:** [captcha-robustness-analyzer.streamlit.app](https://captcha-robustness-analyzer.streamlit.app)  
+> **Live Research Dashboard:** [captcha-robustness-analyzer.streamlit.app](https://captcha-robustness-analyzer.streamlit.app)  
 > Interactive results-only public demo exploring benchmark predictions, distortion profiles, and visual quality error analysis.
 
 A reproducible research repository for measuring how controlled visual
