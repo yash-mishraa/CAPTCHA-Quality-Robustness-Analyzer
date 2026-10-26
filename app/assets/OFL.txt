@@ -1,0 +1,19 @@
+Bundled interface fonts
+=======================
+
+This dashboard bundles three open-license typefaces so that the local app does
+not call a font CDN at runtime:
+
+- Source Serif 4 (display and headings)
+- IBM Plex Sans (body and controls)
+- IBM Plex Mono (metrics, identifiers, and technical metadata)
+
+Each font is distributed under the SIL Open Font License, Version 1.1. The full
+license texts are included next to the font files:
+
+- fonts/OFL-SourceSerif4.txt
+- fonts/OFL-IBMPlexSans.txt
+- fonts/OFL-IBMPlexMono.txt
+
+Only Latin-subset WOFF2 files are included. No font from the ten-typeface
+benchmark roster is bundled, and no benchmark font binary is redistributed.
