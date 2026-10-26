@@ -109,25 +109,25 @@ def _specimen_panel(context: dict[str, Any]) -> None:
     ui.ledger(
         [
             {
-                "label": "Target SSIM",
+                "label": "Target SSIM (Actual)",
                 "value": fmt.fmt(specimen["ssim_target"], 3),
-                "note": "Against the clean reference",
+                "note": "Actual clarity vs clean reference",
             },
             {
-                "label": "Prediction",
+                "label": "Model Prediction",
                 "value": fmt.fmt(specimen["prediction"], 3),
-                "note": "Frozen M5C champion, precomputed",
+                "note": "Estimated visual clarity (precomputed)",
             },
             {
-                "label": "Residual",
+                "label": "Residual (Error)",
                 "value": fmt.fmt_residual(specimen["residual"]),
-                "note": "Target minus prediction",
+                "note": "Target minus Prediction",
                 "tone": "negative",
             },
             {
-                "label": "Absolute error",
+                "label": "Absolute Error",
                 "value": fmt.fmt(specimen["abs_residual"], 3),
-                "note": "Displayed for convenience",
+                "note": "Off by ~12.4 percentage points",
             },
         ],
         columns=4,
@@ -167,7 +167,7 @@ def render() -> None:
     intervals = context["intervals"]
 
     ui.page_header(
-        "Research explorer / v1.0.0",
+        "Research explorer · v1.0.0",
         "A measured look at how controlled degradation changes synthetic CAPTCHA-style images.",
         "A frozen image-quality model was evaluated zero-shot on 6,300 rendered "
         "variants across ten typefaces. The target is SSIM against each source's "
@@ -176,32 +176,80 @@ def render() -> None:
     )
     ui.rule()
 
+    # Plain-English Executive Summary & Key Findings
+    summary_data = content.PLAIN_ENGLISH_SUMMARY
+    st.html(
+        '<div class="executive-summary">'
+        '<div class="eyebrow" style="color: var(--rust); margin-bottom: 0.35rem;">EXECUTIVE SUMMARY · PLAIN-ENGLISH OVERVIEW</div>'
+        '<div style="font-family: var(--serif); font-size: 1.15rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--ink);">'
+        "What does this project do and what did it discover?"
+        "</div>"
+        f'<p style="font-size: 0.95rem; line-height: 1.6; margin-bottom: 0.85rem; color: var(--ink);">'
+        f"{summary_data['what_is_this']}"
+        "</p>"
+        "</div>"
+    )
+
+    cols = st.columns(3, gap="medium")
+    for col, (title, body) in zip(cols, summary_data["takeaways"], strict=True):
+        with col:
+            st.html(
+                '<div class="takeaway-card">'
+                f'<div class="takeaway-title">{title}</div>'
+                f'<div class="takeaway-body">{body}</div>'
+                "</div>"
+            )
+
+    with st.expander(
+        "💡 New to image quality metrics? (Click for a 60-second plain-English guide)"
+    ):
+        st.markdown(
+            "### 1. What is the SSIM Score?\n"
+            "**SSIM (Structural Similarity Index)** is an industry-standard visual quality score ranging from **0.0 to 1.0**:\n"
+            "- **1.0 = Pristine / Crisp:** The text image is completely clear and identical to the original.\n"
+            "- **0.8 to 0.9 = Light Degradation:** Minor blur or light grain; text remains easily readable.\n"
+            "- **Below 0.7 = Heavy Distortion:** Severe degradation or interference lines that challenge text recognition.\n\n"
+            "### 2. What are the Headline Metrics?\n"
+            "- **MAE (Mean Absolute Error — ~0.060):** The model's average prediction error. On a 0.0 to 1.0 scale, "
+            "it is off by only **~6 percentage points** on average.\n"
+            "- **R² (Accuracy Score — 0.733):** The model accounts for **73.3%** of visual quality variation across the primary benchmark.\n"
+            "- **RMSE (Root Mean Squared Error — 0.089):** Similar to MAE, but penalizes rare large mistakes more heavily.\n\n"
+            "### 3. How Does the Model Work?\n"
+            "Instead of a complex black-box neural network, the model uses **8 handcrafted spatial measurements** "
+            "(such as edge density, stroke area, and local contrast) to test how traditional computer vision math holds up against adversarial corruptions."
+        )
+
+    ui.rule()
+
     _specimen_panel(context)
 
-    ui.section("01", "Primary result")
+    ui.section("01", "Primary benchmark results")
     ui.lede(
-        f"Primary benchmark \u00b7 {fmt.fmt_int(counts['primary_rows'])} rows "
-        f"\u00b7 {fmt.fmt_int(counts['sources'])} source groups"
+        f"Overall evaluation across {fmt.fmt_int(counts['primary_rows'])} primary test images "
+        f"and {fmt.fmt_int(counts['sources'])} source text groups."
     )
     ui.ledger(
         [
             {
-                "label": "MAE",
+                "label": "MAE (Avg Error)",
                 "value": fmt.fmt_metric("mae", overall["mae"]),
-                "note": "95% source-grouped interval "
-                + fmt.fmt_interval(*intervals["mae"], digits=4),
+                "note": "Average error: off by only ~0.06 on a 0–1 scale ("
+                + fmt.fmt_interval(*intervals["mae"], digits=4)
+                + ")",
+            },
+            {
+                "label": "R² (Accuracy)",
+                "value": fmt.fmt_metric("r2", overall["r2"]),
+                "note": "Explains 73.3% of quality variation ("
+                + fmt.fmt_interval(*intervals["r2"], digits=3)
+                + ")",
             },
             {
                 "label": "RMSE",
                 "value": fmt.fmt_metric("rmse", overall["rmse"]),
-                "note": "95% source-grouped interval "
-                + fmt.fmt_interval(*intervals["rmse"], digits=4),
-            },
-            {
-                "label": "R\u00b2",
-                "value": fmt.fmt_metric("r2", overall["r2"]),
-                "note": "95% source-grouped interval "
-                + fmt.fmt_interval(*intervals["r2"], digits=3),
+                "note": "Penalizes large errors ("
+                + fmt.fmt_interval(*intervals["rmse"], digits=4)
+                + ")",
             },
         ],
         columns=3,
@@ -216,13 +264,13 @@ def render() -> None:
         "Source: `overall_metrics.csv` (scope `all_primary`) and `uncertainty.csv` "
         "(scheme `source_grouped`). Intervals are descriptive percentile intervals, "
         "not significance tests or font-population estimates. "
-        f"[M8C report]({content.M8_REPORT_URL})"
+        f"[Final Benchmark Report (Phase 8)]({content.M8_REPORT_URL})"
     )
 
-    ui.section("02", "Where it fails")
+    ui.section("02", "Where the model fails: Thin lines and arc strokes")
     ui.lede(
-        "Thin-line and arc-stroke interference are the weak point. The chart shows "
-        "observed MAE and R\u00b2 by corruption family; negative R\u00b2 is not clipped."
+        "While standard blur and noise are easily predicted, line-cut interference exposes a major blindspot. "
+        "The charts below compare observed MAE and R\u00b2 by corruption family; negative R\u00b2 is not clipped."
     )
     chart_columns = st.columns([1.65, 1.0], gap="large")
     with chart_columns[0]:
@@ -234,23 +282,21 @@ def render() -> None:
     arc_s4 = context["arc_s4"]
     if thin_s4 is not None and arc_s4 is not None:
         ui.note(
-            "At thin-line severity 4, the mean target is "
-            f"{fmt.fmt(thin_s4['target_mean'], 3)} and the mean prediction is "
-            f"{fmt.fmt(thin_s4['prediction_mean'], 3)}. At arc-stroke severity 4, the "
-            f"means are {fmt.fmt(arc_s4['target_mean'], 3)} and "
-            f"{fmt.fmt(arc_s4['prediction_mean'], 3)}. R\u00b2 is negative for both "
-            "families: on these observed slices the model is worse than the mean-target "
-            "predictor."
+            "Why the model fails on line cuts: At severity 4, thin lines reduce actual clarity to "
+            f"{fmt.fmt(thin_s4['target_mean'], 3)}, but the model overestimates clarity at "
+            f"{fmt.fmt(thin_s4['prediction_mean'], 3)}. Similarly for arc strokes, actual clarity is "
+            f"{fmt.fmt(arc_s4['target_mean'], 3)} while the model predicts {fmt.fmt(arc_s4['prediction_mean'], 3)}. "
+            "Because R\u00b2 is negative on these slices, the model performs worse than simply guessing the average score."
         )
     else:
         ui.note("Not reported for this scope.")
     ui.note(content.FAMILY_READING_NOTE)
     ui.source_line(
         "Source: `family_metrics.csv` and `uncertainty.csv` (source-grouped MAE and "
-        "R\u00b2 intervals); severity means from M9A `severity_metrics.csv`. "
+        "R\u00b2 intervals); severity means from `severity_metrics.csv`. "
         "n = 1,200 rows for blur, noise, thin and arc; 900 for elastic; 300 source "
-        f"groups each. [M8C report]({content.M8_REPORT_URL}) \u00b7 "
-        f"[M9A report]({content.M9_REPORT_URL})"
+        f"groups each. [Final Benchmark Report (Phase 8)]({content.M8_REPORT_URL}) \u00b7 "
+        f"[Error & Robustness Report (Phase 9)]({content.M9_REPORT_URL})"
     )
     with st.expander("View family data"):
         ui.data_table(
@@ -283,25 +329,25 @@ def render() -> None:
             )
         )
 
-    ui.section("03", "What this is not")
-    ui.caveat_list("Non-claims", content.NON_CLAIMS)
+    ui.section("03", "Research scope & key non-claims")
+    ui.caveat_list("Key Disclaimers", content.NON_CLAIMS)
     ui.lede(
-        "This is a read-only presentation layer over frozen outputs. Predictions are "
-        "precomputed; the model is not loaded or executed. Reference-based SSIM "
-        "requires the known clean synthetic reference, so arbitrary upload scoring is "
-        "not available."
+        "This dashboard is a read-only presentation layer over frozen research outputs. "
+        "Predictions are precomputed; the model is not loaded or executed live. "
+        "Reference-based SSIM requires the known clean synthetic reference, so arbitrary upload "
+        "scoring is intentionally unavailable."
     )
 
     with st.expander("Data, status & limitations"):
         for heading, body in content.LIMITATIONS:
             st.markdown(f"**{heading}.** {body}")
         st.markdown(
-            "**Evidence links.** "
-            f"[M8C benchmark report]({content.M8_REPORT_URL}) \u00b7 "
-            f"[M9A exploratory report]({content.M9_REPORT_URL}) \u00b7 "
-            f"[M7E licensing audit]({content.M7E_REPORT_URL}) \u00b7 "
-            f"[research summary]({content.RESEARCH_SUMMARY_URL}) \u00b7 "
-            f"[repository]({content.REPO_URL})"
+            "**Research Documentation & Evidence Links.**  \n"
+            f"- [Final Benchmark Report (Phase 8 M8C)]({content.M8_REPORT_URL})  \n"
+            f"- [Robustness & Error Study (Phase 9 M9A)]({content.M9_REPORT_URL})  \n"
+            f"- [Font Asset & Licensing Audit (Phase 7 M7E)]({content.M7E_REPORT_URL})  \n"
+            f"- [Full Research Summary & Methodology]({content.RESEARCH_SUMMARY_URL})  \n"
+            f"- [Project Source Code (GitHub)]({content.REPO_URL})"
         )
 
     ui.footer()

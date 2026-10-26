@@ -83,10 +83,10 @@ with st.sidebar:
             "</div>"
         )
     st.markdown(
-        f"[Repository]({content.REPO_URL})  \n"
-        f"[M8C benchmark]({content.M8_REPORT_URL})  \n"
-        f"[M9A exploratory analysis]({content.M9_REPORT_URL})  \n"
-        f"[M7E licensing audit]({content.M7E_REPORT_URL})",
+        f"[📁 Project Code (GitHub)]({content.REPO_URL})  \n"
+        f"[📊 Benchmark Evaluation Report (Phase 8)]({content.M8_REPORT_URL})  \n"
+        f"[🔍 Error & Robustness Study (Phase 9)]({content.M9_REPORT_URL})  \n"
+        f"[📜 Font Asset & Licensing Audit (Phase 7)]({content.M7E_REPORT_URL})",
         unsafe_allow_html=False,
     )
     if is_public_safe:

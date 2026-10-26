@@ -194,25 +194,25 @@ def _record_ledger(row: pd.Series, columns: int = 4) -> None:
     ui.ledger(
         [
             {
-                "label": "Target SSIM",
+                "label": "Target SSIM (Actual)",
                 "value": fmt.fmt(row["ssim_target"], 3),
-                "note": "SSIM against the clean reference",
+                "note": "Actual clarity vs clean reference",
             },
             {
-                "label": "Prediction",
+                "label": "Model Prediction",
                 "value": fmt.fmt(row["prediction"], 3),
-                "note": "Frozen M5C champion, precomputed",
+                "note": "Estimated clarity (precomputed)",
             },
             {
-                "label": "Residual",
+                "label": "Residual (Error)",
                 "value": fmt.fmt_residual(row["residual"]),
-                "note": "Target minus prediction",
+                "note": "Target minus Prediction",
                 "tone": "negative" if float(row["residual"]) < 0 else "",
             },
             {
-                "label": "Absolute error",
+                "label": "Absolute Error",
                 "value": fmt.fmt(row["abs_residual"], 3),
-                "note": "Displayed for convenience",
+                "note": "Discrepancy magnitude",
             },
         ],
         columns=columns,
@@ -290,9 +290,9 @@ def _scatter(frame: pd.DataFrame, selected: pd.Series | None, diagnostic: bool) 
                 width="stretch",
             )
     ui.source_line(
-        "Source: `predictions.csv` joined one-to-one to `manifest.csv` and "
-        "`features.csv`. Scatter: 5,700 primary rows; 300 source groups. "
-        f"[M8C report]({content.M8_REPORT_URL})"
+        "Source: Precomputed predictions joined to manifest and handcrafted features. "
+        "Scatter: 5,700 primary rows; 300 source groups. "
+        f"[Final Benchmark Report (Phase 8)]({content.M8_REPORT_URL})"
     )
 
 
@@ -305,11 +305,10 @@ def render() -> None:
         return
 
     ui.page_header(
-        "Benchmark explorer / M8C",
-        "Inspect one case, not a leaderboard.",
-        "Choose a font, case, corruption family, and severity to see the clean "
-        "reference, the degraded image, the precomputed prediction, and the eight "
-        "frozen image features. This is evidence and provenance, not a ranking.",
+        "Benchmark explorer · v1.0.0",
+        "Inspect individual image records and feature measurements.",
+        "Choose any typeface, text case, and distortion condition to see how the model "
+        "calculated its quality score using eight handcrafted visual features.",
     )
     ui.rule()
 
@@ -366,9 +365,9 @@ def render() -> None:
             "allowlisted frozen artifacts."
         )
         st.markdown(
-            f"[M8C benchmark report]({content.M8_REPORT_URL}) \u00b7 "
-            f"[manifest on GitHub]({content.MANIFEST_URL}) \u00b7 "
-            f"[M7E licensing audit]({content.M7E_REPORT_URL})"
+            f"[Final Benchmark Report (Phase 8 M8C)]({content.M8_REPORT_URL}) \u00b7 "
+            f"[Data Manifest on GitHub]({content.MANIFEST_URL}) \u00b7 "
+            f"[Font Asset & Licensing Audit (Phase 7 M7E)]({content.M7E_REPORT_URL})"
         )
 
     ui.footer()

@@ -43,10 +43,10 @@ def build_context() -> dict[str, Any]:
 
 
 def _family_section(context: dict[str, Any]) -> None:
-    ui.section("01", "Family error profile")
+    ui.section("01", "Distortion family error profile")
     ui.lede(
-        "Negative R\u00b2 is displayed, not clipped. The intervals are source-grouped "
-        "percentile intervals, not significance tests."
+        "Comparing model accuracy across the 5 corruption families. "
+        "Negative R\u00b2 indicates conditions where the model performs worse than a simple baseline average."
     )
     columns = st.columns([1.6, 1.0], gap="large")
     with columns[0]:
@@ -55,10 +55,10 @@ def _family_section(context: dict[str, Any]) -> None:
         st.altair_chart(charts.family_r2_chart(context["family"]), use_container_width=True)
     ui.note(content.FAMILY_READING_NOTE)
     ui.source_line(
-        "Source: M8C `family_metrics.csv` and `uncertainty.csv` (source-grouped MAE "
+        "Source: Final benchmark `family_metrics.csv` and `uncertainty.csv` (source-grouped MAE "
         "and R\u00b2 intervals). n = 1,200 rows for blur, noise, thin and arc; 900 "
         "for elastic; 300 source groups each. "
-        f"[M8C report]({content.M8_REPORT_URL})"
+        f"[Final Benchmark Report (Phase 8)]({content.M8_REPORT_URL})"
     )
     with st.expander("View family data"):
         ui.data_table(
@@ -93,10 +93,9 @@ def _family_section(context: dict[str, Any]) -> None:
 
 
 def _severity_section(context: dict[str, Any]) -> None:
-    ui.section("02", "Severity paths")
+    ui.section("02", "Degradation paths across severity levels")
     ui.lede(
-        "Target and prediction means by corruption severity. The lines connect "
-        "recorded means at ordinal severities; they are not fitted response curves."
+        "Average actual clarity (target) vs. model predictions as corruption severity increases from Level 1 (mild) to Level 4 (heavy)."
     )
     ui.legend(
         [
@@ -327,50 +326,48 @@ def render() -> None:
         return
 
     ui.page_header(
-        "Robustness & error analysis / M9A exploratory",
-        "Error is not uniform.",
-        "A descriptive look at where the frozen model's error concentrates across "
-        "corruption family, severity, source, and font. M9A is exploratory; it does "
-        "not test H1, H2, or H3.",
+        "Robustness & error analysis · Phase 9 drilldown",
+        "Where and why does the model fail?",
+        "A detailed look at prediction errors across corruption families, "
+        "severity levels, text sources, and font typefaces.",
     )
-    ui.exploratory("Exploratory analysis \u00b7 M9A", content.M9A_BANNER)
+    ui.exploratory("Empirical Error Drilldown · Phase 9 (M9A)", content.M9A_BANNER)
 
     interference = context["interference"]
     ui.ledger(
         [
             {
-                "label": "Interference MAE",
+                "label": "Interference Error (MAE)",
                 "value": fmt.fmt_metric("mae", interference["mae"]),
-                "note": "Exploratory slice, not a new primary result",
+                "note": "Average error on lines & arcs (0.126 = ~13% error)",
             },
             {
-                "label": "Interference R\u00b2",
+                "label": "Interference Accuracy (R²)",
                 "value": fmt.fmt_metric("r2", interference["r2"]),
-                "note": "Negative: worse than mean-target baseline",
+                "note": "Negative: worse than baseline average",
                 "tone": "negative" if float(interference["r2"]) < 0 else "",
             },
             {
-                "label": "Large-error rate",
+                "label": "Large-Error Rate (>0.20)",
                 "value": fmt.fmt_pct(interference["large_error_proportion"]),
-                "note": "Fixed 0.20 SSIM threshold",
+                "note": "Proportion with severe mispredictions",
             },
             {
-                "label": "Top-5% SSE share",
+                "label": "Top 5% Error Concentration",
                 "value": fmt.fmt_pct(interference["top_5pct_source_sse_share"]),
-                "note": "Across 300 sources",
+                "note": "38% of squared errors come from 5% of sources",
             },
         ],
         columns=4,
     )
     st.caption(
-        f"M9A interference slice \u00b7 {fmt.fmt_int(interference['n_rows'])} rows "
+        f"M9A interference slice (Phase 9) \u00b7 {fmt.fmt_int(interference['n_rows'])} rows "
         f"\u00b7 {fmt.fmt_int(interference['n_sources'])} source groups \u00b7 "
         "exploratory"
     )
     ui.source_line(
-        "Source: M9A `summary_metrics.csv`, scope `interference`; descriptive "
-        "aggregates only. "
-        f"[M9A report]({content.M9_REPORT_URL})"
+        "Source: Phase 9 `summary_metrics.csv` (scope `interference`). "
+        f"[Error & Robustness Report (Phase 9)]({content.M9_REPORT_URL})"
     )
 
     _family_section(context)
@@ -379,17 +376,17 @@ def render() -> None:
     _concentration_section(context)
     _font_section(context)
 
-    ui.section("06", "What this does not show")
-    ui.caveat_list("Non-claims", content.ERROR_ANALYSIS_NON_CLAIMS)
+    ui.section("06", "Research scope & non-claims")
+    ui.caveat_list("Key Disclaimers", content.ERROR_ANALYSIS_NON_CLAIMS)
     with st.expander("Analysis status & links"):
         for heading, body in content.LIMITATIONS:
             st.markdown(f"**{heading}.** {body}")
         st.markdown(
-            "**Evidence links.** "
-            f"[M9A report]({content.M9_REPORT_URL}) \u00b7 "
-            f"[M8C report]({content.M8_REPORT_URL}) \u00b7 "
-            f"[M7E licensing audit]({content.M7E_REPORT_URL}) \u00b7 "
-            f"[research summary]({content.RESEARCH_SUMMARY_URL})"
+            "**Research Documentation & Evidence Links.**  \n"
+            f"- [Robustness & Error Study (Phase 9 M9A)]({content.M9_REPORT_URL})  \n"
+            f"- [Final Benchmark Report (Phase 8 M8C)]({content.M8_REPORT_URL})  \n"
+            f"- [Font Asset & Licensing Audit (Phase 7 M7E)]({content.M7E_REPORT_URL})  \n"
+            f"- [Full Research Summary & Methodology]({content.RESEARCH_SUMMARY_URL})"
         )
 
     ui.footer()

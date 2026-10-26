@@ -369,6 +369,42 @@ a:focus-visible, button:focus-visible, input:focus-visible,
 }}
 
 /* Notes, caveats, chips -------------------------------------------------- */
+.executive-summary {{
+  background: var(--paper-alt);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0 1.75rem;
+}}
+.takeaway-card {{
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  height: 100%;
+}}
+.takeaway-title {{
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.02rem;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}}
+.takeaway-body {{
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}}
+.primer-box {{
+  background: var(--paper-alt);
+  border-left: 3px solid var(--blue);
+  border-radius: 0 4px 4px 0;
+  padding: 0.85rem 1.15rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}}
 .note {{
   background: transparent;
   border-left: 2px solid var(--teal);

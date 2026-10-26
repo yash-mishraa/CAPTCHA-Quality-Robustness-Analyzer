@@ -104,6 +104,15 @@ def exploratory(title: str, body: str) -> None:
     )
 
 
+def primer(title: str, body: str) -> None:
+    st.html(
+        '<div class="primer-box">'
+        f'<div class="caveat-title" style="color: var(--blue);">{escape(title)}</div>'
+        f"<p>{escape(body)}</p>"
+        "</div>"
+    )
+
+
 def source_line(text: str) -> None:
     st.caption(text)
 
