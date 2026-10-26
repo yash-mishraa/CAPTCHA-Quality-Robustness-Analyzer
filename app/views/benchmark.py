@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from app import content
-from app.lib import charts, data, ui
+from app.lib import charts, contracts, data, ui
 from app.lib import format as fmt
 from app.lib.contracts import (
     DIAGNOSTIC_MESSAGE,
@@ -122,7 +122,10 @@ def _specimen(row: pd.Series) -> None:
     family_label = fmt.family_label(family)
     severity = fmt.severity_label(family, row["severity_level"], row["amplitude_px"])
 
-    if family == "clean":
+    if contracts.is_public_safe_mode():
+        ui.subhead("Selected record exhibit (results-only)")
+        ui.note(content.PUBLIC_SAFE_SPECIMEN_NOTE)
+    elif family == "clean":
         columns = st.columns(2, gap="large")
         with columns[0]:
             ui.specimen_label("Clean reference (diagnostic)")

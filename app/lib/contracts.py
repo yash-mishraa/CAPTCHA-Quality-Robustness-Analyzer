@@ -8,9 +8,34 @@ untracked ground-truth table.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+PUBLIC_SAFE_MODE_ENV = "PUBLIC_SAFE_MODE"
+
+
+def is_public_safe_mode() -> bool:
+    """Return True if public-safe results-only mode is active.
+
+    Active when the environment variable PUBLIC_SAFE_MODE is set to 'true',
+    '1', 'yes', or 'on' (case-insensitive), or when streamlit session_state
+    has public_safe_mode=True.
+    """
+
+    raw = os.getenv(PUBLIC_SAFE_MODE_ENV, "").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state") and st.session_state.get("public_safe_mode"):
+            return True
+    except Exception:
+        pass
+    return False
+
 
 DATA_ROOT = REPO_ROOT / "data" / "processed" / "matched_font_benchmark_v0.1.0"
 IMAGES_ROOT = DATA_ROOT / "images"
@@ -52,6 +77,22 @@ MANIFEST_COLUMNS = (
     "width",
     "image_sha256",
     "reference_sha256",
+    "protocol_scope",
+)
+
+PUBLIC_SAFE_MANIFEST_COLUMNS = (
+    "sample_id",
+    "source_id",
+    "case_id",
+    "case_index",
+    "font_id",
+    "text_length",
+    "variant_family",
+    "severity_level",
+    "amplitude_px",
+    "ssim_target",
+    "height",
+    "width",
     "protocol_scope",
 )
 
@@ -244,6 +285,12 @@ IMAGE_HASH_MESSAGE = "This record failed its image integrity check."
 NO_MATCH_MESSAGE = "No public row matches this selection."
 DIAGNOSTIC_MESSAGE = "Diagnostic record: excluded from primary metrics."
 
+PUBLIC_SAFE_NOTE = (
+    "Results-Only Profile: Public-safe mode is active. Benchmark CAPTCHA images, "
+    "ground truth, and model checkpoints are excluded to ensure strict licensing "
+    "and privacy compliance."
+)
+
 
 class IntegrityError(RuntimeError):
     """A frozen artifact failed its read-only contract.
@@ -261,5 +308,13 @@ class ImageIntegrityError(IntegrityError):
     """A selected image failed its path, hash, or format check."""
 
     def __init__(self, detail: str, message: str = IMAGE_HASH_MESSAGE) -> None:
+        self.detail = detail
+        RuntimeError.__init__(self, message)
+
+
+class SecurityError(IntegrityError):
+    """Raised when an unauthorized access, path traversal, or forbidden file is requested."""
+
+    def __init__(self, detail: str, message: str = DATA_ERROR_MESSAGE) -> None:
         self.detail = detail
         RuntimeError.__init__(self, message)

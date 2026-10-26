@@ -436,7 +436,23 @@ a:focus-visible, button:focus-visible, input:focus-visible,
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--rust);
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+}}
+.sidebar-badge {{
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.45rem;
+  margin-bottom: 0.75rem;
+  border-radius: 2px;
+}}
+.public-safe-badge {{
+  background: #eef7f6;
+  color: var(--teal);
+  border: 1px solid var(--teal);
 }}
 .sidebar-rule {{
   border-top: 1px solid var(--rule);

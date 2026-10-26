@@ -17,11 +17,12 @@ from io import BytesIO
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from PIL import Image, UnidentifiedImageError
 
 from app.lib import contracts
-from app.lib.contracts import ImageIntegrityError, IntegrityError
+from app.lib.contracts import ImageIntegrityError, IntegrityError, SecurityError
 
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -82,6 +83,12 @@ def resolve_image_path(relative: Any, data_root: Path = contracts.DATA_ROOT) -> 
     symlinks are rejected before any file is opened.
     """
 
+    if contracts.is_public_safe_mode():
+        raise SecurityError(
+            "image path resolution is prohibited in public-safe mode",
+            contracts.IMAGE_UNAVAILABLE_MESSAGE,
+        )
+
     if not isinstance(relative, str):
         raise ImageIntegrityError("image path is not a string", contracts.IMAGE_UNAVAILABLE_MESSAGE)
     if not relative or relative != relative.strip():
@@ -141,6 +148,12 @@ def load_verified_image(
     against ``image.tobytes()``.  The image is only returned after the pixel
     hash and the expected 192x64 grayscale geometry both pass.
     """
+
+    if contracts.is_public_safe_mode():
+        raise SecurityError(
+            "loading benchmark images is prohibited in public-safe mode",
+            contracts.IMAGE_UNAVAILABLE_MESSAGE,
+        )
 
     if role not in {"image", "reference"}:
         raise ValueError("role must be 'image' or 'reference'")
@@ -239,6 +252,7 @@ def validate_core_frames(
     *,
     data_root: Path = contracts.DATA_ROOT,
     strict_release: bool = True,
+    public_safe: bool = False,
 ) -> None:
     """Validate the three core tables and their one-to-one join.
 
@@ -262,6 +276,14 @@ def validate_core_frames(
     )
     _require_values(features, ("sample_id", *contracts.FEATURE_COLUMNS), "features")
     _require_values(predictions, contracts.PREDICTION_COLUMNS, "predictions")
+
+    # Validate finite numeric values across features and predictions
+    for feature in contracts.FEATURE_COLUMNS:
+        if np.isinf(features[feature]).any():
+            raise IntegrityError(f"features contain non-finite values in {feature}")
+    for pred_col in ("ssim_target", "prediction", "residual", "abs_residual"):
+        if np.isinf(predictions[pred_col]).any():
+            raise IntegrityError(f"predictions contain non-finite values in {pred_col}")
 
     if manifest["sample_id"].duplicated().any():
         raise IntegrityError("manifest contains duplicate sample_id values")
@@ -310,7 +332,8 @@ def validate_core_frames(
         raise IntegrityError("manifest contains unexpected image dimensions")
 
     _validate_hashes(manifest)
-    _validate_manifest_paths(manifest, data_root)
+    if not public_safe:
+        _validate_manifest_paths(manifest, data_root)
     _validate_family_severity(manifest)
 
     if not strict_release:
@@ -361,8 +384,12 @@ def read_core(
     report_dir: Path = contracts.M8_REPORT_DIR,
     *,
     verify_hashes: bool = True,
+    public_safe: bool | None = None,
 ) -> pd.DataFrame:
     """Read and validate the manifest, features and prediction tables."""
+
+    if public_safe is None:
+        public_safe = contracts.is_public_safe_mode()
 
     core_paths = {
         "manifest.csv": data_root / "manifest.csv",
@@ -396,6 +423,7 @@ def read_core(
         predictions,
         data_root=data_root,
         strict_release=True,
+        public_safe=public_safe,
     )
 
     prediction_values = predictions.drop(columns=["ssim_target", "font_id"])
@@ -407,6 +435,14 @@ def read_core(
     if joined["sample_id"].duplicated().any():
         raise IntegrityError("the validated core join produced duplicate keys")
 
+    if public_safe:
+        columns_to_drop = [
+            c
+            for c in ("image_path", "reference_path", "image_sha256", "reference_sha256")
+            if c in joined.columns
+        ]
+        joined = joined.drop(columns=columns_to_drop)
+
     return joined.reset_index(drop=True)
 
 
@@ -417,6 +453,9 @@ def read_report_table(
     verify_hashes: bool = True,
 ) -> pd.DataFrame:
     """Read one allowlisted report table and validate its required columns."""
+
+    if filename != Path(filename).name or "/" in filename or "\\" in filename or ".." in filename:
+        raise SecurityError(f"path traversal or directory separator in filename: {filename}")
 
     if kind not in contracts.REPORT_TABLES:
         raise IntegrityError(f"unknown report collection: {kind}")
@@ -434,6 +473,15 @@ def read_report_table(
     _require_columns(frame, required, filename)
     if frame.empty:
         raise IntegrityError(f"required report table is empty: {filename}")
+
+    for col in required:
+        if (
+            col in frame.columns
+            and pd.api.types.is_numeric_dtype(frame[col])
+            and np.isinf(frame[col]).any()
+        ):
+            raise IntegrityError(f"{filename}: column {col} contains non-finite values")
+
     return frame.copy()
 
 
@@ -508,9 +556,15 @@ def _cache_data(**kwargs: Any):
     return st.cache_data(**kwargs)
 
 
-@_cache_data(max_entries=1, show_spinner=False)
-def load_core() -> pd.DataFrame:
-    return read_core()
+@_cache_data(max_entries=2, show_spinner=False)
+def _cached_read_core(public_safe: bool) -> pd.DataFrame:
+    return read_core(public_safe=public_safe)
+
+
+def load_core(public_safe: bool | None = None) -> pd.DataFrame:
+    if public_safe is None:
+        public_safe = contracts.is_public_safe_mode()
+    return _cached_read_core(public_safe)
 
 
 @_cache_data(max_entries=16, show_spinner=False)
@@ -521,6 +575,12 @@ def load_report_table(kind: str, filename: str) -> pd.DataFrame:
 @_cache_data(max_entries=16, show_spinner=False)
 def load_selected_image(sample_id: str, role: str) -> bytes:
     """Load one selected image by manifest record, never by a user path."""
+
+    if contracts.is_public_safe_mode():
+        raise SecurityError(
+            "loading benchmark images is prohibited in public-safe mode",
+            contracts.IMAGE_UNAVAILABLE_MESSAGE,
+        )
 
     core = load_core()
     matches = core[core["sample_id"] == sample_id]

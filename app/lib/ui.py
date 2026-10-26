@@ -156,6 +156,11 @@ def data_table(frame: pd.DataFrame, *, columns: Sequence[str] | None = None) -> 
 
 def footer() -> None:
     disclaimers = "".join(f"<p>{escape(text)}</p>" for text in content.GLOBAL_DISCLAIMERS)
+    build_note = (
+        content.PUBLIC_SAFE_BUILD_NOTE
+        if contracts.is_public_safe_mode()
+        else content.LOCAL_BUILD_NOTE
+    )
     st.html(
         '<div class="footer">'
         "<p><strong>Research presentation layer.</strong> All figures are read from "
@@ -163,7 +168,7 @@ def footer() -> None:
         "or run.</p>"
         f"{disclaimers}"
         f"<p>{escape(content.LICENSING_COPY)}</p>"
-        f"<p>{escape(content.LOCAL_BUILD_NOTE)}</p>"
+        f"<p>{escape(build_note)}</p>"
         '<p class="footer-links">'
         f'<a href="{escape(content.README_URL)}">Repository</a> \u00b7 '
         f'<a href="{escape(content.M8_REPORT_URL)}">M8C report</a> \u00b7 '

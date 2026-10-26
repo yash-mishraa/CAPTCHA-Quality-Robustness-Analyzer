@@ -60,6 +60,17 @@ LOCAL_BUILD_NOTE = (
     "public-display and licensing decision."
 )
 
+PUBLIC_SAFE_BUILD_NOTE = (
+    "Results-only public-safe profile. Exposes verified research metrics, interactive charts, "
+    "and error analysis with zero benchmark CAPTCHA images, proprietary font binaries, or model checkpoints."
+)
+
+PUBLIC_SAFE_SPECIMEN_NOTE = (
+    "Results-only public-safe exhibit: Benchmark CAPTCHA images and proprietary font "
+    "bitmaps are omitted to ensure strict copyright and licensing compliance. Full precomputed "
+    "metrics and handcrafted features are shown below."
+)
+
 NON_CLAIMS = (
     "No human labels, solver data, or production CAPTCHA evidence.",
     "No causal mechanism for the interference error.",

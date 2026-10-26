@@ -35,13 +35,55 @@ Reference-based SSIM requires the known clean synthetic reference. Arbitrary
 upload scoring is therefore unavailable, and the ten-font roster is not a
 sample of fonts.
 
+## Profiles: Local Full vs. Results-Only Public-Safe
+
+The application supports two operating profiles selected by the `PUBLIC_SAFE_MODE` environment variable:
+
+### 1. Default Profile (Local Full Review)
+- **Activation:** default (`PUBLIC_SAFE_MODE=false`).
+- **Features:** Displays both quantitative metrics and local specimen CAPTCHA image pairs (clean reference and degraded variant).
+- **Security & Integrity:** Resolves local relative PNG paths, verifies decoded pixel SHA-256 hashes against the manifest, and validates schemas.
+- **Licensing Constraint:** Local/private execution only. Public deployment and hosted image distribution remain blocked under M7E §11.
+
+### 2. Results-Only Profile (Public-Safe)
+- **Activation:** `PUBLIC_SAFE_MODE=true`.
+- **Command:**
+  ```bash
+  PUBLIC_SAFE_MODE=true .venv-dashboard/bin/streamlit run app/streamlit_app.py
+  ```
+- **Features:** Exposes 100% of the verified quantitative research findings (headline $R^2 = 0.733$, family breakdown, thin-line/arc-stroke degradation patterns, interactive 5,700-point Altair scatter plot, handcrafted feature tables, error calibration, and source concentration) using tabular data only.
+- **Excluded Assets & Operations:**
+  - **Zero Benchmark Images:** Never loads, reads, decodes, hashes, or serves files from `data/processed/.../images/**`. Specimen plates are replaced with clean editorial record and feature ledger cards.
+  - **Zero Ground Truth:** `ground_truth.csv` is untracked, forbidden, and never accessed.
+  - **Zero Model Inference:** Does not load `model.joblib` or execute training, fitting, or benchmark replay. Runs exclusively on precomputed predictions.
+  - **Zero Proprietary Fonts:** No font binaries or local font paths are accessed or bundled. Interface fonts are open SIL OFL-1.1 assets.
+  - **Zero External Dependencies:** Public-safe mode does not require the local `images/` directory, `ground_truth.csv`, or model checkpoint to be present on disk.
+- **Artifacts Read in Public-Safe Mode:**
+  - `data/processed/matched_font_benchmark_v0.1.0/manifest.csv` (tabular join only; image paths/hashes stripped)
+  - `data/processed/matched_font_benchmark_v0.1.0/features.csv`
+  - `reports/matched_font_benchmark_v0_1_0/predictions.csv`
+  - `reports/matched_font_benchmark_v0_1_0/overall_metrics.csv`
+  - `reports/matched_font_benchmark_v0_1_0/family_metrics.csv`
+  - `reports/matched_font_benchmark_v0_1_0/uncertainty.csv`
+  - `reports/matched_font_benchmark_v0_1_0/dataset_composition.csv`
+  - `reports/interference_error_analysis_v0_1_0/summary_metrics.csv`
+  - `reports/interference_error_analysis_v0_1_0/severity_metrics.csv`
+  - `reports/interference_error_analysis_v0_1_0/condition_calibration.csv`
+  - `reports/interference_error_analysis_v0_1_0/error_concentration.csv`
+  - `reports/interference_error_analysis_v0_1_0/font_condition_metrics.csv`
+- **Scientific Nature:** An explanatory research interface over precomputed scientific benchmark data, not a deployed model or live CAPTCHA solver. SSIM measures synthetic pixel similarity, not human solvability or security.
+
 ## Run locally
 
 ```bash
 python3 -m venv .venv-dashboard
 .venv-dashboard/bin/python -m pip install -r app/requirements.txt
 
+# Run default profile (with local images):
 .venv-dashboard/bin/streamlit run app/streamlit_app.py
+
+# Run public-safe profile (results-only, zero images):
+PUBLIC_SAFE_MODE=true .venv-dashboard/bin/streamlit run app/streamlit_app.py
 ```
 
 The three routes are `/overview` (the bare root redirects here), `/benchmark`,

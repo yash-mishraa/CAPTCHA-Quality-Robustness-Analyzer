@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from app import content
-from app.lib import analysis, charts, data, ui
+from app.lib import analysis, charts, contracts, data, ui
 from app.lib import format as fmt
 from app.lib.contracts import ImageIntegrityError, IntegrityError
 
@@ -76,30 +76,34 @@ def _specimen_panel(context: dict[str, Any]) -> None:
         specimen["amplitude_px"],
     )
 
-    ui.subhead("Illustrative record")
-    columns = st.columns(2, gap="large")
-    with columns[0]:
-        ui.specimen_label("Reference")
-        try:
-            reference = data.load_selected_image(sample_id, "reference")
-            st.image(
-                reference,
-                caption=f"Clean source-specific reference. {font}, {case}.",
-                width="stretch",
-            )
-        except ImageIntegrityError as error:
-            ui.empty_state(str(error))
-    with columns[1]:
-        ui.specimen_label("Corrupted")
-        try:
-            corrupted = data.load_selected_image(sample_id, "image")
-            st.image(
-                corrupted,
-                caption=f"{family}, {severity}. {font}, {case}.",
-                width="stretch",
-            )
-        except ImageIntegrityError as error:
-            ui.empty_state(str(error))
+    if contracts.is_public_safe_mode():
+        ui.subhead("Illustrative record exhibit (results-only)")
+        ui.note(content.PUBLIC_SAFE_SPECIMEN_NOTE)
+    else:
+        ui.subhead("Illustrative record")
+        columns = st.columns(2, gap="large")
+        with columns[0]:
+            ui.specimen_label("Reference")
+            try:
+                reference = data.load_selected_image(sample_id, "reference")
+                st.image(
+                    reference,
+                    caption=f"Clean source-specific reference. {font}, {case}.",
+                    width="stretch",
+                )
+            except ImageIntegrityError as error:
+                ui.empty_state(str(error))
+        with columns[1]:
+            ui.specimen_label("Corrupted")
+            try:
+                corrupted = data.load_selected_image(sample_id, "image")
+                st.image(
+                    corrupted,
+                    caption=f"{family}, {severity}. {font}, {case}.",
+                    width="stretch",
+                )
+            except ImageIntegrityError as error:
+                ui.empty_state(str(error))
 
     ui.specimen_label("Record")
     ui.ledger(
